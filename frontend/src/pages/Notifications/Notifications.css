@@ -1,0 +1,56 @@
+.notif-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 900px;
+}
+
+.notif-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.notif-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.notif-page__delete-btn {
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.notif-page__delete-btn:hover {
+  background: #fff5f5;
+  border-color: #fca5a5;
+}
+
+.notif-page__summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notif-page__count {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.notif-page__unread-chip {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+
+.notif-page__list-card {
+  overflow: hidden;
+}

@@ -1,0 +1,84 @@
+:root {
+  /* ── Brand colours ── */
+  --clr-primary:        #2563eb;
+  --clr-primary-dark:   #1d4ed8;
+  --clr-primary-light:  #dbeafe;
+  --clr-primary-faint:  #eff6ff;
+
+  /* ── Sidebar ── */
+  --clr-sidebar-from:  #1a3a6b;
+  --clr-sidebar-to:    #1d4ed8;
+  --sidebar-width:     210px;
+
+  /* ── Neutrals ── */
+  --clr-bg:            #f1f5f9;
+  --clr-surface:       #ffffff;
+  --clr-border:        #e2e8f0;
+  --clr-border-light:  #f1f5f9;
+
+  /* ── Text ── */
+  --clr-text-1: #0f172a;
+  --clr-text-2: #334155;
+  --clr-text-3: #64748b;
+  --clr-text-4: #94a3b8;
+
+  /* ── Status ── */
+  --clr-success:        #22c55e;
+  --clr-success-light:  #dcfce7;
+  --clr-warning:        #f59e0b;
+  --clr-warning-light:  #fff7ed;
+  --clr-danger:         #ef4444;
+  --clr-danger-light:   #fee2e2;
+  --clr-info:           #3b82f6;
+  --clr-info-light:     #dbeafe;
+  --clr-purple:         #8b5cf6;
+  --clr-purple-light:   #ede9fe;
+
+  /* ── Shadows ── */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+  --shadow-xl: 0 20px 60px rgba(0,0,0,0.16);
+
+  /* ── Border radius ── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+
+  /* ── Spacing ── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+
+  /* ── Typography ── */
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-size-xs:   11px;
+  --font-size-sm:   12.5px;
+  --font-size-base: 13.5px;
+  --font-size-md:   15px;
+  --font-size-lg:   18px;
+  --font-size-xl:   22px;
+  --font-size-2xl:  28px;
+
+  /* ── Transitions ── */
+  --transition-fast:   all 0.15s ease;
+  --transition-base:   all 0.2s ease;
+  --transition-slow:   all 0.3s ease;
+
+  /* ── Z-index ── */
+  --z-dropdown:    100;
+  --z-sticky:      200;
+  --z-overlay:     300;
+  --z-modal:       400;
+  --z-notification: 500;
+  --z-tooltip:     600;
+}

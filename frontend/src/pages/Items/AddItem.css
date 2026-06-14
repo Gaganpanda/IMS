@@ -1,0 +1,33 @@
+    .add-item-page {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ── Breadcrumb ── */
+    .add-item-page__breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .add-item-page__crumb-link {
+      color: #64748b;
+      cursor: pointer;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .add-item-page__crumb-link:hover { color: #2563eb; }
+
+    .add-item-page__crumb-arrow {
+      width: 14px;
+      height: 14px;
+      color: #cbd5e1;
+    }
+
+    .add-item-page__crumb-current {
+      color: #1e293b;
+      font-weight: 600;
+    }

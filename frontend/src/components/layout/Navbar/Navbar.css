@@ -1,0 +1,182 @@
+.navbar {
+  height: 85px;
+  background: #ffffff;
+  /* border-bottom: 1px solid #e8edf5; */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 28px 0px 22px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  /* box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04); */
+}
+
+/* ── Title Block ── */
+.navbar__title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navbar__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.navbar__subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ── Actions ── */
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Add Item button */
+.navbar__add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  height: 38px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.navbar__add-btn:hover { background: #1d4ed8; }
+
+.navbar__add-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Bell */
+.navbar__bell {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: all 0.18s ease;
+}
+
+.navbar__bell:hover,
+.navbar__bell--active {
+  background: #f0f4ff;
+  color: #2563eb;
+}
+
+.navbar__bell svg { width: 20px; height: 20px; }
+
+.navbar__bell-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 99px;
+  min-width: 16px;
+  text-align: center;
+  border: 1.5px solid #fff;
+}
+
+/* Divider */
+.navbar__divider {
+  width: 1px;
+  height: 28px;
+  background: #e2e8f0;
+  margin: 0 4px;
+}
+
+/* User chip */
+.navbar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.navbar__user:hover { background: #f8fafc; }
+
+.navbar__user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    #2563eb,
+    #3b82f6
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.navbar__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navbar__user-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.navbar__user-role {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.navbar__user-chevron {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+
+.navbar__user-chevron:hover { color: #ef4444; }
+.navbar__user-chevron svg { width: 16px; height: 16px; }
+

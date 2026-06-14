@@ -1,0 +1,119 @@
+.confirm-popup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+.confirm-popup__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.confirm-popup__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.confirm-popup__title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.confirm-popup__message {
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.55;
+  margin-bottom: 24px;
+  max-width: 300px;
+}
+
+.confirm-popup__actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.confirm-popup__btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.confirm-popup__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Cancel */
+.confirm-popup__btn--cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.confirm-popup__btn--cancel:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+/* Confirm variants */
+.confirm-popup__btn--danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.confirm-popup__btn--danger:hover:not(:disabled) {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+.confirm-popup__btn--warning {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.confirm-popup__btn--warning:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.confirm-popup__btn--info {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.confirm-popup__btn--info:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+/* Spinner inside button */
+.confirm-popup__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

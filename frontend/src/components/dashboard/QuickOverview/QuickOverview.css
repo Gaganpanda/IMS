@@ -1,0 +1,127 @@
+.quick-overview {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e8edf5;
+  padding: 20px;
+  margin-top: 4px;
+}
+
+.quick-overview__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 16px;
+}
+
+.quick-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+.quick-overview__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  color: #2563eb; /* temporary test */
+}
+.quick-overview__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+
+  padding: 16px;
+  border-radius: 14px;
+
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+}
+
+.quick-overview__item:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}.quick-overview__item--blue .quick-overview__icon {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.quick-overview__item--green .quick-overview__icon {
+  background: #dcfce7;
+  color: #22c55e;
+}
+
+.quick-overview__item--orange .quick-overview__icon {
+  background: #fff7ed;
+  color: #f59e0b;
+}
+
+.quick-overview__item--yellow .quick-overview__icon {
+  background: #fef9c3;
+  color: #eab308;
+}
+
+.quick-overview__item--red .quick-overview__icon {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.quick-overview__item--teal .quick-overview__icon {
+  background: #ccfbf1;
+  color: #14b8a6;
+}
+@media (max-width: 1200px) { .quick-overview__grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px)  { .quick-overview__grid { grid-template-columns: repeat(2, 1fr); } }
+
+.quick-overview__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.quick-overview__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.quick-overview__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.quick-overview__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-overview__value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.quick-overview__pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}

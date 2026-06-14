@@ -1,0 +1,70 @@
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ── Stat cards ── */
+  .dashboard__stats {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+  }
+
+  @media (max-width: 1400px) { .dashboard__stats { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 900px)  { .dashboard__stats { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ── Middle row ── */
+  .dashboard__mid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 1100px) { .dashboard__mid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 768px)  { .dashboard__mid { grid-template-columns: 1fr; } }
+
+  /* ── Bottom row ── */
+  .dashboard__bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 1100px) { .dashboard__bottom { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 768px)  { .dashboard__bottom { grid-template-columns: 1fr; } }
+
+
+  .stats-card--blue .stats-card__icon {
+    background: #dbeafe;
+    color: #3b82f6;
+  }
+
+  .stats-card--green .stats-card__icon {
+    background: #dcfce7;
+    color: #22c55e;
+  }
+
+  .stats-card--orange .stats-card__icon {
+    background: #fff7ed;
+    color: #f59e0b;
+  }
+
+  .stats-card--purple .stats-card__icon {
+    background: #ede9fe;
+    color: #a855f7;
+  }
+
+  .stats-card--red .stats-card__icon {
+    background: #fee2e2;
+    color: #ef4444;
+  }
+
+  .stats-card--teal .stats-card__icon {
+    background: #ccfbf1;
+    color: #14b8a6;
+  }
+  .stats-card__icon svg {
+    width: 22px;
+    height: 22px;
+  }

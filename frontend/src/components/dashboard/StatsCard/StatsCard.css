@@ -1,0 +1,124 @@
+.stats-card {
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #fcfdff 100%
+  );
+
+  border: 1px solid #e7edf5;
+  border-radius: 18px;
+
+  padding: 22px;
+
+  min-height: 180px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 12px rgba(15, 23, 42, 0.05);
+
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+
+  box-shadow:
+    0 10px 25px rgba(15, 23, 42, 0.08),
+    0 4px 10px rgba(15, 23, 42, 0.06);
+
+  border-color: #dbe4f0;
+}
+
+
+.stats-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.stats-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* Color variants for icon bg */
+.stats-card--blue   .stats-card__icon { background: #dbeafe; }
+.stats-card--green  .stats-card__icon { background: #dcfce7; }
+.stats-card--orange .stats-card__icon { background: #fff7ed; }
+.stats-card--purple .stats-card__icon { background: #ede9fe; }
+.stats-card--red    .stats-card__icon { background: #fee2e2; }
+.stats-card--teal   .stats-card__icon { background: #ccfbf1; }
+
+.stats-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.stats-card__title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #94a3b8;
+}
+
+.stats-card__value {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.stats-card__subtitle {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+/* ── Sparkline ── */
+.stats-card__sparkline {
+  height: 30px;
+  width: 90%;
+  margin-top: 18px;
+}
+
+.stats-card__sparkline svg {
+  width: 90%;
+  height: 100%;
+}
+
+.stats-card__sparkline-line {
+  fill: none;
+
+  stroke-width: 2.4;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  filter: drop-shadow(
+    0 2px 4px rgba(0,0,0,0.08)
+  );
+}
+
+.stats-card--blue   .stats-card__sparkline-line { stroke: #3b82f6; }
+.stats-card--green  .stats-card__sparkline-line { stroke: #22c55e; }
+.stats-card--orange .stats-card__sparkline-line { stroke: #f59e0b; }
+.stats-card--purple .stats-card__sparkline-line { stroke: #a855f7; }
+.stats-card--red    .stats-card__sparkline-line { stroke: #ef4444; }
+.stats-card--teal   .stats-card__sparkline-line { stroke: #14b8a6; }
