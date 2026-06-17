@@ -1,14 +1,13 @@
 /* ── Development Status ── */
 export const DEVELOPMENT_STATUS = {
-  DEVELOPED:         "Developed",
-  IN_PROGRESS:       "In Progress",
-
+  DEVELOPED:   "Developed",
+  IN_PROGRESS: "In Progress",
 };
 
 /* ── ToT Status ── */
 export const TOT_STATUS = {
-  FILED_TNF:     "Filled (TnF)",
-  FILED_TAC:     "Filled (TAC)",
+  FILED_TNF:      "Filled (TnF)",
+  FILED_TAC:      "Filled (TAC)",
   TO_BE_FILLED:   "To Be Filled",
   NOT_APPLICABLE: "Not Applicable",
 };
@@ -69,26 +68,22 @@ export const DOCUMENTATION_ITEMS = [
 /* ── Items page tabs ── */
 export const ITEM_TABS = [
   { key: "all",        label: "All Items",   filterKey: null },
-  { key: "developed",  label: "Developed",   filterKey: "developmentStatus", filterVal: "Developed" },
-  { key: "inProgress", label: "In Progress", filterKey: "developmentStatus", filterVal: "In Progress" },
-  { key: "trials",     label: "Trials",      filterKey: "trialsStatus",      filterVal: "In Progress" },
+  { key: "developed",  label: "Developed",   filterKey: "developmentStatus", filterVal: "Developed"    },
+  { key: "inProgress", label: "In Progress", filterKey: "developmentStatus", filterVal: "In Progress"  },
+  { key: "trials",     label: "Trials",      filterKey: "trialsStatus",      filterVal: "In Progress"  },
   { key: "iprFiled",   label: "IPR Filed",   filterKey: "iprStatus",         filterVal: "Patent Filed" },
 ];
 
 /* ── Item detail tabs ── */
+/* Matches the TAB_CONTENT map in ItemDetails.jsx exactly */
 export const ITEM_DETAIL_TABS = [
-  "Overview", "Development", "Trials", "IPR", "ToT",
-  "Procurement", "Documents", "Stakeholders", "History",
-];
-
-/* ── Add Item form steps ── */
-export const ADD_ITEM_STEPS = [
-  { id: 1, label: "Basic Information" },
-  { id: 2, label: "Development & ToT" },
-  { id: 3, label: "Trials & Stakeholders" },
-  { id: 4, label: "Documentation" },
-  { id: 5, label: "Procurement & Others" },
-  { id: 6, label: "Review" },
+  "Overview",
+  "Development",
+  "Trials",
+  "IPR",
+  "Procurement",
+  "Documents",
+  "History",
 ];
 
 /* ── Page size options ── */

@@ -4,7 +4,6 @@
   gap: 16px;
 }
 
-/* ── Breadcrumb (matches AddItem pattern) ── */
 .edit-item-page__breadcrumb {
   display: flex;
   align-items: center;
@@ -18,16 +17,5 @@
   font-weight: 500;
   transition: color 0.15s;
 }
-
 .edit-item-page__crumb-link:hover { color: #2563eb; }
-
-.edit-item-page__crumb-arrow {
-  width: 14px;
-  height: 14px;
-  color: #cbd5e1;
-}
-
-.edit-item-page__crumb-current {
-  color: #1e293b;
-  font-weight: 600;
-}
+.edit-item-page__crumb-cur { color: #1e293b; font-weight: 600; }
