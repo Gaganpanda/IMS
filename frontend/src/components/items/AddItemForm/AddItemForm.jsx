@@ -181,7 +181,17 @@ const saveDocument = () => {
   };
 
   const onSubmit = async (data) => {
-    const payload = { ...data, totStatus, totCerts, totPartners, iprData, stakeholders, documentation: [...checkedDocs], procurements };
+    const payload = {
+      ...data,
+      totStatus,
+      totCerts,
+      totPartners,
+      iprData,
+      stakeholders,
+      documentation: [...checkedDocs],
+      procurements
+    };
+
     try {
       const result = await dispatch(createItemAsync(payload)).unwrap();
       setSuccessData(result);

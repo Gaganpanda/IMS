@@ -1,12 +1,14 @@
 package com.ims.service;
 
+import com.ims.dto.IPRDetailDTO;
 import com.ims.dto.ItemDTO;
+import com.ims.dto.ProcurementDetailDTO;
+import com.ims.dto.ToTPartnerDTO;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.model.Item;
 import com.ims.model.Notification;
 import com.ims.model.User;
-import com.ims.repository.ItemRepository;
-import com.ims.repository.UserRepository;
+import com.ims.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,6 +33,9 @@ public class ItemService {
     private final ItemRepository       itemRepository;
     private final UserRepository       userRepository;
     private final NotificationService  notificationService;
+    private final ToTPartnerRepository totPartnerRepository;
+    private final ProcurementDetailRepository procurementDetailRepository;
+    private final IPRDetailRepository iprDetailRepository;
 
     /* ── GET ALL with filters ── */
     @Transactional(readOnly = true)
@@ -256,6 +262,48 @@ public class ItemService {
     }
 
     private ItemDTO.Response toResponse(Item item) {
+
+        List<ToTPartnerDTO> totPartners =
+                totPartnerRepository.findByItemId(item.getId())
+                        .stream()
+                        .map(t -> ToTPartnerDTO.builder()
+                                .id(t.getId())
+                                .partnerName(t.getPartnerName())
+                                .totCertificate(t.getTotCertificate())
+                                .sampleSubmittedForTac(t.getSampleSubmittedForTac())
+                                .latotSignature(t.getLatotSignature())
+                                .build())
+                        .toList();
+
+        List<ProcurementDetailDTO> procurementDetails =
+                procurementDetailRepository.findByItemId(item.getId())
+                        .stream()
+                        .map(p -> ProcurementDetailDTO.builder()
+                                .id(p.getId())
+                                .organisationName(p.getOrganisationName())
+                                .itemsProcured(p.getItemsProcured())
+                                .orderNumber(p.getOrderNumber())
+                                .orderDate(p.getOrderDate())
+                                .build())
+                        .toList();
+
+        IPRDetailDTO iprDetail = iprDetailRepository.findByItemId(item.getId())
+                .map(i -> IPRDetailDTO.builder()
+                        .patentFiled(i.getPatentFiled())
+                        .patentGranted(i.getPatentGranted())
+                        .patentNumber(i.getPatentNumber())
+                        .patentGrantedNumber(i.getPatentGrantedNumber())
+                        .trademarkFiled(i.getTrademarkFiled())
+                        .trademarkGranted(i.getTrademarkGranted())
+                        .trademarkNumber(i.getTrademarkNumber())
+                        .trademarkGrantedNumber(i.getTrademarkGrantedNumber())
+                        .designFiled(i.getDesignFiled())
+                        .designGranted(i.getDesignGranted())
+                        .designNumber(i.getDesignNumber())
+                        .designGrantedNumber(i.getDesignGrantedNumber())
+                        .build())
+                .orElse(null);
+
         return ItemDTO.Response.builder()
                 .id(item.getId())
                 .name(item.getName())
@@ -291,6 +339,9 @@ public class ItemService {
                 .createdBy(item.getCreatedBy() != null ? item.getCreatedBy().getName() : null)
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
+                .totPartners(totPartners)
+                .procurementDetails(procurementDetails)
+                .iprDetail(iprDetail)
                 .build();
     }
 

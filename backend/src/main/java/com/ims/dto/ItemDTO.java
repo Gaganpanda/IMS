@@ -132,6 +132,12 @@ public class ItemDTO {
         private String createdBy;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
+
+        private List<ToTPartnerDTO> totPartners;
+
+        private List<ProcurementDetailDTO> procurementDetails;
+
+        private IPRDetailDTO iprDetail;
     }
 
     /* ─────────────────────────── Summary ─────────────────────────── */

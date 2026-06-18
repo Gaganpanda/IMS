@@ -21,12 +21,12 @@ const Icons = {
 };
 
 const TABS = [
-  { id:"overview",     label:"Overview",         icon:"box"    },
-  { id:"tot",          label:"ToT Details",      icon:"file"   },
-  { id:"ipr",          label:"IPR Details",      icon:"shield" },
-  { id:"trials",       label:"Trial Stakeholders",icon:"box"   },
-  { id:"docs",         label:"Documentation",    icon:"file"   },
-  { id:"procurement",  label:"Procurement",      icon:"cart"   },
+  { id:"basic", label:"Basic Information" },
+  { id:"tot", label:"ToT Details" },
+  { id:"ipr", label:"IPR Details" },
+  { id:"trials", label:"Trial Stakeholders" },
+  { id:"docs", label:"Documentation" },
+  { id:"procurement", label:"Procurement" },
 ];
 
 /* ── Field row ── */
@@ -53,57 +53,41 @@ function Section({ title, icon, color = "blue", children }) {
 }
 
 /* ── OVERVIEW TAB ── */
-function OverviewTab({ item }) {
+function BasicTab({ item }) {
   return (
-    <div className="idet__overview-grid">
-      <Section title="Basic Information" icon="box" color="blue">
-        <div className="idet__fields">
-          <Field label="Item Code"          value={item.code} />
-          <Field label="Category"           value={item.category} />
-          <Field label="Priority"           value={item.priority} />
-          <Field label="Expected Completion" value={formatDate(item.expectedCompletionDate)} />
-          <Field label="Created By"         value={item.createdBy || "Admin"} />
-          <Field label="Created On"         value={formatDateLong(item.createdAt)} />
-          <Field label="Last Updated"       value={formatDateLong(item.updatedAt)} />
-        </div>
-        <div className="idet__desc-block">
-          <span className="idet__field-label">Description</span>
-          <p className="idet__desc">{item.description || "—"}</p>
-        </div>
-      </Section>
+    <Section title="Basic Information" icon="box" color="blue">
+      <div className="idet__fields">
 
-      <Section title="Status Summary" icon="shield" color="purple">
-        {[
-          { label:"Development", value: item.developmentStatus },
-          { label:"ToT",         value: item.totStatus         },
-          { label:"IPR",         value: item.iprStatus         },
-          { label:"Trials",      value: item.trialsStatus      },
-        ].map(({ label, value }) => (
-          <div key={label} className="idet__status-row">
-            <span className="idet__status-label">{label}</span>
-            <StatusBadge status={value} />
-          </div>
-        ))}
-      </Section>
+        <Field label="Item Name" value={item.name} />
+        <Field label="Item Code" value={item.code} />
+        <Field label="Category" value={item.category} />
 
-      <Section title="Recent Activity" icon="box" color="teal">
-        {(item.recentActivity || []).length === 0
-          ? <p className="idet__empty">No recent activity.</p>
-          : (item.recentActivity || []).slice(0, 6).map((a, i) => (
-              <div key={i} className="idet__activity-row">
-                <span className="idet__activity-dot" style={{ background: a.color || "#3b82f6" }} />
-                <div>
-                  <div className="idet__activity-msg">{a.message}</div>
-                  <div className="idet__activity-time">{timeAgo(a.createdAt)}</div>
-                </div>
-              </div>
-            ))
-        }
-      </Section>
-    </div>
+        <Field
+          label="Development Status"
+          value={<StatusBadge status={item.developmentStatus} />}
+        />
+
+        <Field label="Priority" value={item.priority} />
+
+        <Field
+          label="Expected Completion"
+          value={formatDate(item.expectedCompletionDate)}
+        />
+
+      </div>
+
+      <div className="idet__desc-block">
+        <span className="idet__field-label">
+          Description
+        </span>
+
+        <p className="idet__desc">
+          {item.description || "—"}
+        </p>
+      </div>
+    </Section>
   );
 }
-
 /* ── TOT TAB ── */
 function TotTab({ item }) {
   return (
@@ -118,16 +102,42 @@ function TotTab({ item }) {
         </div>
       </Section>
 
-      <Section title="ToT Documents Available" icon="file" color="blue">
-        <div className="idet__cert-row">
-          {["TNF","TAC","TEC"].map((c) => (
-            <div key={c} className="idet__cert-chip">
-              <span className="idet__cert-check">{Icons.check}</span>
-              {c}
-            </div>
-          ))}
-        </div>
-      </Section>
+     <Section title="ToT Partners" icon="file" color="blue">
+
+       {item.totPartners?.length ? (
+
+         <table className="idet__tbl">
+           <thead>
+             <tr>
+               <th>Partner</th>
+               <th>Certificate</th>
+               <th>TAC Sample</th>
+               <th>LATOT</th>
+             </tr>
+           </thead>
+
+           <tbody>
+
+             {item.totPartners.map((partner) => (
+               <tr key={partner.id}>
+                 <td>{partner.partnerName}</td>
+                 <td>{partner.totCertificate ? "Yes" : "No"}</td>
+                 <td>{partner.sampleSubmittedForTac ? "Yes" : "No"}</td>
+                 <td>{partner.latotSignature ? "Yes" : "No"}</td>
+               </tr>
+             ))}
+
+           </tbody>
+
+         </table>
+
+       ) : (
+         <p className="idet__empty">
+           No ToT Partners Added
+         </p>
+       )}
+
+     </Section>
     </div>
   );
 }
@@ -135,33 +145,26 @@ function TotTab({ item }) {
 /* ── IPR TAB ── */
 function IprTab({ item }) {
   return (
-    <div className="idet__tab-grid">
-      {[
-        { title:"Patent",    fileLabel:"Patent / File Number",    fileVal: item.patentNumber, grantVal:"—" },
-        { title:"Trademark", fileLabel:"Trademark / File Number", fileVal:"—",               grantVal:"—" },
-        { title:"Design",    fileLabel:"Design / File Number",    fileVal:"—",               grantVal:"—" },
-      ].map(({ title, fileLabel, fileVal, grantVal }) => (
-        <Section key={title} title={title} icon="shield" color="purple">
-          <div className="idet__ipr-grid">
-            <div className="idet__ipr-check-row">
-              <div className="idet__ipr-check idet__ipr-check--on">{Icons.check}</div>
-              <span className="idet__ipr-lbl">Filed</span>
-            </div>
-            <Field label={fileLabel} value={fileVal} />
-            <div className="idet__ipr-check-row">
-              <div className="idet__ipr-check">{}</div>
-              <span className="idet__ipr-lbl">Granted</span>
-            </div>
-            <Field label="Granted Number" value={grantVal} />
-          </div>
-        </Section>
-      ))}
-      <Section title="IPR Status" icon="shield" color="red">
-        <Field label="IPR Status"   value={<StatusBadge status={item.iprStatus} />} />
-        <Field label="Patent Number" value={item.patentNumber} />
-        <Field label="Filing Date"   value={formatDate(item.filingDate)} />
-      </Section>
-    </div>
+    <Section title="IPR Details" icon="shield" color="purple">
+      <div className="idet__fields">
+
+        <Field
+          label="Patent Number"
+          value={item.iprDetail?.patentNumber}
+        />
+
+        <Field
+          label="Trademark Number"
+          value={item.iprDetail?.trademarkNumber}
+        />
+
+        <Field
+          label="Design Number"
+          value={item.iprDetail?.designNumber}
+        />
+
+      </div>
+    </Section>
   );
 }
 
@@ -233,34 +236,44 @@ function DocsTab({ item }) {
 /* ── PROCUREMENT TAB ── */
 function ProcurementTab({ item }) {
   return (
-    <Section title="Procurement Status" icon="cart" color="green">
-      {(!item.crbfCount && !item.ssbCount)
-        ? <p className="idet__empty">No procurement data.</p>
-        : (
-          <div className="idet__tbl-wrap">
-            <table className="idet__tbl">
-              <thead><tr>
-                <th>Organisation Type</th>
-                <th>No. of Items Procured</th>
-              </tr></thead>
-              <tbody>
-                {item.crbfCount ? <tr><td style={{fontWeight:600}}>CRBF</td><td>{item.crbfCount}</td></tr> : null}
-                {item.ssbCount  ? <tr><td style={{fontWeight:600}}>SSB</td> <td>{item.ssbCount}</td></tr>  : null}
-              </tbody>
-            </table>
-          </div>
-        )
-      }
+    <Section
+      title="Procurement Status"
+      icon="cart"
+      color="green"
+    >
+      <div className="idet__tbl-wrap">
+        <table className="idet__tbl">
+          <thead>
+            <tr>
+              <th>Organisation</th>
+              <th>Items Procured</th>
+              <th>Order Number</th>
+              <th>Order Date</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {item.procurementDetails?.map((p) => (
+              <tr key={p.id}>
+                <td>{p.organisationName}</td>
+                <td>{p.itemsProcured}</td>
+                <td>{p.orderNumber}</td>
+                <td>{p.orderDate}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Section>
   );
 }
 
 const TAB_PANELS = {
-  overview:    OverviewTab,
-  tot:         TotTab,
-  ipr:         IprTab,
-  trials:      TrialsTab,
-  docs:        DocsTab,
+  basic: BasicTab,
+  tot: TotTab,
+  ipr: IprTab,
+  trials: TrialsTab,
+  docs: DocsTab,
   procurement: ProcurementTab,
 };
 
@@ -269,7 +282,7 @@ export default function ItemDetails() {
   const navigate   = useNavigate();
   const dispatch   = useDispatch();
   const { selectedItem, detailLoading, deleting } = useSelector((s) => s.items);
-  const [tab, setTab]           = useState("overview");
+  const [tab, setTab] = useState("basic");
   const [showDelete, setShowDelete] = useState(false);
 
   useEffect(() => { dispatch(fetchItemByIdAsync(id)); }, [id, dispatch]);
@@ -281,7 +294,7 @@ export default function ItemDetails() {
 
   if (detailLoading || !selectedItem) return <Loader variant="page" text="Loading item..." />;
   const item = selectedItem;
-  const Panel = TAB_PANELS[tab] || OverviewTab;
+  const Panel = TAB_PANELS[tab] || BasicTab;
 
   return (
     <div className="idet">
@@ -300,10 +313,28 @@ export default function ItemDetails() {
         <div className="idet__hero-body">
           {/* Image */}
           <div className="idet__hero-img">
-            {item.imageUrl
-              ? <img src={item.imageUrl} alt={item.name} />
-              : <svg viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{width:36,height:36}}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-            }
+            {item.imageUrl ? (
+              <img
+                src={
+                  item.imageUrl.startsWith("http")
+                    ? item.imageUrl
+                    : `http://localhost:8080${item.imageUrl}`
+                }
+                alt={item.name}
+              />
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#cbd5e1"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ width: 36, height: 36 }}
+              >
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              </svg>
+            )}
           </div>
 
           {/* Info */}
