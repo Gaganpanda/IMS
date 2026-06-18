@@ -11,7 +11,10 @@ export default function ItemCard({ item }) {
       {/* Image */}
       <div className="item-card__image">
         {item.imageUrl ? (
-          <img src={item.imageUrl} alt={item.name} />
+          <img
+  src={`http://localhost:8080${item.imageUrl}`}
+  alt={item.name}
+/>
         ) : (
           <span className="item-card__image-placeholder">📦</span>
         )}

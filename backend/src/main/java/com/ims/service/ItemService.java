@@ -7,6 +7,9 @@ import com.ims.dto.ToTPartnerDTO;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.model.Item;
 import com.ims.model.Notification;
+import com.ims.model.ToTPartner;
+import com.ims.model.ProcurementDetail;
+import com.ims.model.IPRDetail;
 import com.ims.model.User;
 import com.ims.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -84,8 +87,23 @@ public class ItemService {
 
         Item item = fromRequest(request);
         item.setCreatedBy(currentUser());
+
         Item saved = itemRepository.save(item);
 
+        saveTotPartners(
+                saved,
+                request.getTotPartners()
+        );
+
+        saveProcurementDetails(
+                saved,
+                request.getProcurementDetails()
+        );
+
+        saveIprDetail(
+                saved,
+                request.getIprDetail()
+        );
         notificationService.createNotification(
                 "Item added successfully",
                 saved.getName() + " has been added to the system.",
@@ -120,6 +138,21 @@ public class ItemService {
         applyRequest(existing, request);
         Item saved = itemRepository.save(existing);
 
+saveTotPartners(
+        saved,
+        request.getTotPartners()
+);
+
+saveProcurementDetails(
+        saved,
+        request.getProcurementDetails()
+);
+
+saveIprDetail(
+        saved,
+        request.getIprDetail()
+);
+
         // Notify if development status changed
         if (request.getDevelopmentStatus() != null
                 && !request.getDevelopmentStatus().equals(oldDevStatus)) {
@@ -132,10 +165,88 @@ public class ItemService {
             );
         }
 
+
         log.info("Item updated: {} ({})", saved.getName(), saved.getCode());
         return toResponse(saved);
     }
 
+private void saveTotPartners(Item item, List<ToTPartnerDTO> partners) {
+
+    totPartnerRepository.deleteAll(
+            totPartnerRepository.findByItemId(item.getId())
+    );
+
+    if (partners == null) return;
+
+    partners.forEach(dto -> {
+
+        ToTPartner p = new ToTPartner();
+
+        p.setItem(item);
+        p.setPartnerName(dto.getPartnerName());
+        p.setTotCertificate(dto.getTotCertificate());
+        p.setSampleSubmittedForTac(dto.getSampleSubmittedForTac());
+        p.setLatotSignature(dto.getLatotSignature());
+
+        totPartnerRepository.save(p);
+    });
+}
+
+private void saveProcurementDetails(
+        Item item,
+        List<ProcurementDetailDTO> details) {
+
+    procurementDetailRepository.deleteAll(
+            procurementDetailRepository.findByItemId(item.getId())
+    );
+
+    if (details == null) return;
+
+    details.forEach(dto -> {
+
+        ProcurementDetail p = new ProcurementDetail();
+
+        p.setItem(item);
+        p.setOrganisationName(dto.getOrganisationName());
+        p.setItemsProcured(dto.getItemsProcured());
+        p.setOrderNumber(dto.getOrderNumber());
+        p.setOrderDate(dto.getOrderDate());
+
+        procurementDetailRepository.save(p);
+    });
+}
+
+private void saveIprDetail(
+        Item item,
+        IPRDetailDTO dto
+) {
+
+    if (dto == null) return;
+
+    iprDetailRepository.findByItemId(item.getId())
+            .ifPresent(iprDetailRepository::delete);
+
+    IPRDetail ipr = new IPRDetail();
+
+    ipr.setItem(item);
+
+    ipr.setPatentFiled(dto.getPatentFiled());
+    ipr.setPatentGranted(dto.getPatentGranted());
+    ipr.setPatentNumber(dto.getPatentNumber());
+    ipr.setPatentGrantedNumber(dto.getPatentGrantedNumber());
+
+    ipr.setTrademarkFiled(dto.getTrademarkFiled());
+    ipr.setTrademarkGranted(dto.getTrademarkGranted());
+    ipr.setTrademarkNumber(dto.getTrademarkNumber());
+    ipr.setTrademarkGrantedNumber(dto.getTrademarkGrantedNumber());
+
+    ipr.setDesignFiled(dto.getDesignFiled());
+    ipr.setDesignGranted(dto.getDesignGranted());
+    ipr.setDesignNumber(dto.getDesignNumber());
+    ipr.setDesignGrantedNumber(dto.getDesignGrantedNumber());
+
+    iprDetailRepository.save(ipr);
+}
     /* ── DELETE ── */
     @Transactional
     @Caching(evict = {

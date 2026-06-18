@@ -183,13 +183,43 @@ const saveDocument = () => {
   const onSubmit = async (data) => {
     const payload = {
       ...data,
+
       totStatus,
-      totCerts,
-      totPartners,
-      iprData,
-      stakeholders,
-      documentation: [...checkedDocs],
-      procurements
+
+      totPartners: totPartners.map(p => ({
+        partnerName: p.name,
+        totCertificate: p.cert,
+        sampleSubmittedForTac: p.sampleTAC,
+        latotSignature: p.latoT
+      })),
+
+      iprDetail: {
+        patentFiled: iprData.patent.filed,
+        patentGranted: iprData.patent.granted,
+        patentNumber: iprData.patent.fileNo,
+        patentGrantedNumber: iprData.patent.grantedNo,
+
+        trademarkFiled: iprData.trademark.filed,
+        trademarkGranted: iprData.trademark.granted,
+        trademarkNumber: iprData.trademark.fileNo,
+        trademarkGrantedNumber: iprData.trademark.grantedNo,
+
+        designFiled: iprData.design.filed,
+        designGranted: iprData.design.granted,
+        designNumber: iprData.design.fileNo,
+        designGrantedNumber: iprData.design.grantedNo
+      },
+
+      procurementDetails: procurements.map(p => ({
+        organisationName: p.firm,
+        itemsProcured: Number(p.count),
+        orderNumber: p.orderNo,
+        orderDate: p.date
+      })),
+
+      trialStakeholders: stakeholders.map(s => s.name),
+
+      documentation: [...checkedDocs]
     };
 
     try {

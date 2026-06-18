@@ -61,7 +61,10 @@ export default function ItemTable({ items = [], loading }) {
                 <div className="item-table__item-cell">
                   <div className="item-table__thumb">
                     {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} />
+                      <img
+  src={`http://localhost:8080${item.imageUrl}`}
+  alt={item.name}
+/>
                     ) : (
                       <span className="item-table__thumb-placeholder">📦</span>
                     )}

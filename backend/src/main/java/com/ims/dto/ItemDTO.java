@@ -19,6 +19,11 @@ public class ItemDTO {
     @Builder
     public static class Request {
 
+        private List<ToTPartnerDTO> totPartners;
+
+        private IPRDetailDTO iprDetail;
+
+        private List<ProcurementDetailDTO> procurementDetails;
         @NotBlank(message = "Item name is required")
         @Size(max = 200)
         private String name;
