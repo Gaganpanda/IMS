@@ -61,7 +61,7 @@ public class ItemDTO {
         private LocalDate sampleSubmissionDate;
 
         @Builder.Default
-        private List<String> trialStakeholders = new ArrayList<>();
+        private List<TrialStakeholderDTO> trialStakeholders = new ArrayList<>();
 
         /* IPR */
         private String iprStatus;
@@ -115,7 +115,7 @@ public class ItemDTO {
         private String trialsStatus;
         private LocalDate sampleRequestDate;
         private LocalDate sampleSubmissionDate;
-        private List<String> trialStakeholders;
+        private List<TrialStakeholderDTO> trialStakeholders;
 
         private String iprStatus;
         private String patentNumber;

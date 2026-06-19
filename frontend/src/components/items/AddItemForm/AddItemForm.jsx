@@ -217,12 +217,20 @@ const saveDocument = () => {
         orderDate: p.date
       })),
 
-      trialStakeholders: stakeholders.map(s => s.name),
+      trialStakeholders: stakeholders.map(s => ({
+        stakeholderName: s.name,
+        sampleRequestDate: s.sampleReqDate,
+        sampleSubmissionDate: s.sampleSubDate,
+        feedback: s.feedback,
+        correction: s.corrections,
+        furtherAction: s.furtherActions
+      })),
 
       documentation: [...checkedDocs]
     };
 
     try {
+      console.log("PAYLOAD", payload);
       const result = await dispatch(createItemAsync(payload)).unwrap();
       setSuccessData(result);
     } catch (_) {}

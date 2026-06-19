@@ -16,7 +16,7 @@ export default function ItemCard({ item }) {
   alt={item.name}
 />
         ) : (
-          <span className="item-card__image-placeholder">📦</span>
+          <span className="item-card__image-placeholder"></span>
         )}
         <div className="item-card__badge-wrap">
           <StatusBadge status={item.developmentStatus} size="sm" />

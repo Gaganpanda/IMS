@@ -3,7 +3,7 @@
     import jakarta.persistence.*;
     import jakarta.validation.constraints.NotBlank;
     import lombok.*;
-
+    import com.ims.model.TrialStakeholder;
     import java.time.LocalDate;
     import java.time.LocalDateTime;
     import java.util.ArrayList;
@@ -85,12 +85,13 @@
         @Column(name = "sample_submission_date")
         private LocalDate sampleSubmissionDate;
 
-        @ElementCollection(fetch = FetchType.EAGER)
-        @CollectionTable(name = "item_trial_stakeholders",
-                joinColumns = @JoinColumn(name = "item_id"))
-        @Column(name = "stakeholder", length = 50)
+        @OneToMany(
+            mappedBy = "item",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+        )
         @Builder.Default
-        private List<String> trialStakeholders = new ArrayList<>();
+        private List<TrialStakeholder> trialStakeholders = new ArrayList<>();
 
         /* ── IPR ── */
         @Enumerated(EnumType.STRING)

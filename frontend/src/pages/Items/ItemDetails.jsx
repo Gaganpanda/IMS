@@ -149,19 +149,34 @@ function IprTab({ item }) {
       <div className="idet__fields">
 
         <Field
-          label="Patent Number"
-          value={item.iprDetail?.patentNumber}
-        />
+  label="Patent File Number"
+  value={item.iprDetail?.patentNumber}
+/>
 
-        <Field
-          label="Trademark Number"
-          value={item.iprDetail?.trademarkNumber}
-        />
+<Field
+  label="Patent Granted Number"
+  value={item.iprDetail?.patentGrantedNumber}
+/>
 
-        <Field
-          label="Design Number"
-          value={item.iprDetail?.designNumber}
-        />
+<Field
+  label="Trademark File Number"
+  value={item.iprDetail?.trademarkNumber}
+/>
+
+<Field
+  label="Trademark Granted Number"
+  value={item.iprDetail?.trademarkGrantedNumber}
+/>
+
+<Field
+  label="Design File Number"
+  value={item.iprDetail?.designNumber}
+/>
+
+<Field
+  label="Design Granted Number"
+  value={item.iprDetail?.designGrantedNumber}
+/>
 
       </div>
     </Section>
@@ -171,42 +186,42 @@ function IprTab({ item }) {
 /* ── TRIALS TAB ── */
 function TrialsTab({ item }) {
   return (
-    <div className="idet__tab-grid">
-      <Section title="Trial Stakeholders" icon="box" color="teal">
-        {(!item.trialStakeholders || item.trialStakeholders.length === 0)
-          ? <p className="idet__empty">No stakeholders added.</p>
-          : (
-            <div className="idet__tbl-wrap">
-              <table className="idet__tbl">
-                <thead><tr>
-                  <th>Stakeholder Name</th>
-                  <th>Sample Request Date</th>
-                  <th>Sample Submission Date</th>
-                  <th>Status</th>
-                </tr></thead>
-                <tbody>
-                  {item.trialStakeholders.map((s, i) => (
-                    <tr key={i}>
-                      <td style={{fontWeight:600}}>{s}</td>
-                      <td>{formatDate(item.sampleRequestDate) || "—"}</td>
-                      <td>{formatDate(item.sampleSubmissionDate) || "—"}</td>
-                      <td><StatusBadge status={item.trialsStatus} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-        }
-      </Section>
-      <Section title="Trial Details" icon="box" color="orange">
-        <div className="idet__fields">
-          <Field label="Trials Status"        value={<StatusBadge status={item.trialsStatus} />} />
-          <Field label="Sample Request Date"  value={formatDate(item.sampleRequestDate)} />
-          <Field label="Sample Submission"    value={formatDate(item.sampleSubmissionDate)} />
+    <Section title="Trial Stakeholders" icon="box" color="teal">
+
+      {!item.trialStakeholders?.length ? (
+        <p className="idet__empty">No stakeholders added.</p>
+      ) : (
+        <div className="idet__tbl-wrap">
+          <table className="idet__tbl">
+            <thead>
+              <tr>
+                <th>Stakeholder Name</th>
+                <th>Sample Request Date</th>
+                <th>Sample Submission Date</th>
+                <th>Feedback</th>
+                <th>Correction</th>
+                <th>Further Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {item.trialStakeholders.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.stakeholderName}</td>
+                  <td>{formatDate(s.sampleRequestDate)}</td>
+                  <td>{formatDate(s.sampleSubmissionDate)}</td>
+                  <td>{s.feedback || "—"}</td>
+                  <td>{s.correction || "—"}</td>
+                  <td>{s.furtherAction || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+
+          </table>
         </div>
-      </Section>
-    </div>
+      )}
+
+    </Section>
   );
 }
 
