@@ -34,10 +34,10 @@
 }
 
 .idet__hero-img {
-  width: 88px;
-  height: 88px;
+  width: 150px;
+  height: 150px;
   border-radius: 12px;
-  background: #f8fafc;
+  background-color: white
   border: 1px solid #e8edf5;
   display: flex;
   align-items: center;
@@ -45,7 +45,7 @@
   overflow: hidden;
   flex-shrink: 0;
 }
-.idet__hero-img img { width: 100%; height: 100%; object-fit: cover; }
+.idet__hero-img img { width: 100%; height: 100%; object-fit: contain; }
 
 .idet__hero-info { flex: 1; min-width: 0; }
 
@@ -172,10 +172,15 @@
 
 /* ── Tab grid ── */
 .idet__tab-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (max-width: 1200px) {
+  .idet__tab-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Section card ── */
@@ -185,11 +190,15 @@
   border-radius: 14px;
   padding: 18px 20px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
 
+  min-width: 600px;
+  width: fit-content;
+  max-width: 100%;
+}
 .idet__section-head {
   display: flex;
   align-items: center;

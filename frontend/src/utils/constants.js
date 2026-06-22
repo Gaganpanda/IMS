@@ -42,10 +42,10 @@ export const PRIORITY = {
   LOW:    "Low",
 };
 
-/* ── Trial Stakeholders ── */
-export const TRIAL_STAKEHOLDERS = [
-  "CRBF", "CISF", "BSF", "SSB", "ITBP", "CRPF", "Army", "Navy", "Air Force",
-];
+// /* ── Trial Stakeholders ── */
+// export const TRIAL_STAKEHOLDERS = [
+//   "CRBF", "CISF", "BSF", "SSB", "ITBP", "CRPF", "Army", "Navy", "Air Force",
+// ];
 
 /* ── Categories ── */
 export const CATEGORIES = [
