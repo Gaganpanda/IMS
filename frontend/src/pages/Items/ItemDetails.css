@@ -240,6 +240,43 @@
   flex: 1;
 }
 
+.idet__field--full { flex-direction: column; gap: 6px; }
+.idet__field--full .idet__field-label { width: auto; padding-top: 0; }
+
+.idet__tot-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 6px 10px;
+  border-radius: 6px;
+  width: fit-content;
+}
+.idet__tot-pending svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+.idet__doc-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.idet__doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #1d4ed8;
+  background: #dbeafe;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+.idet__doc-chip svg { width: 11px; height: 11px; flex-shrink: 0; }
+
 /* ── Description ── */
 .idet__desc-block { display: flex; flex-direction: column; gap: 5px; border-top: 1px solid #f1f5f9; padding-top: 12px; }
 .idet__desc { font-size: 13px; color: #64748b; line-height: 1.6; margin: 0; }
@@ -318,3 +355,58 @@
 .idet__doc-name { font-size: 13px; font-weight: 500; color: #374151; flex: 1; }
 .idet__doc-file { color: #94a3b8; }
 .idet__doc-file svg { width: 15px; height: 15px; }
+/* ── IPR sections (per-type blocks) ── */
+.idet__ipr-sections { display: flex; flex-direction: column; gap: 14px; }
+
+.idet__ipr-block {
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: #fafbfc;
+}
+
+.idet__ipr-block-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.idet__ipr-block-grid {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 10px 20px;
+  align-items: center;
+}
+
+.idet__ipr-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.idet__ipr-check {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid #cbd5e1;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.idet__ipr-check--on { background: #2563eb; border-color: #2563eb; }
+.idet__ipr-check--on svg { width: 9px; height: 9px; }
+.idet__ipr-lbl { font-size: 12.5px; font-weight: 600; color: #475569; }
+
+/* ── Boolean badges (Yes/No) for ToT partners ── */
+.idet__bool-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.idet__bool-badge--yes { background: #dcfce7; color: #15803d; }
+.idet__bool-badge--no  { background: #f1f5f9; color: #64748b; }

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "../StatusBadge/StatusBadge";
 import { formatDate } from "../../../utils/formatDate";
+import { getImageUrl } from "../../../utils/imageUrl";
 import "./ItemCard.css";
 
 export default function ItemCard({ item }) {
@@ -12,12 +13,16 @@ export default function ItemCard({ item }) {
       <div className="item-card__image">
         {item.imageUrl ? (
           <img
-  src={`http://localhost:8080${item.imageUrl}`}
-  alt={item.name}
-/>
+            src={getImageUrl(item.imageUrl)}
+            alt={item.name}
+            onError={(e) => {
+              e.target.style.display = "none";
+            }}
+          />
         ) : (
           <span className="item-card__image-placeholder"></span>
         )}
+
         <div className="item-card__badge-wrap">
           <StatusBadge status={item.developmentStatus} size="sm" />
         </div>

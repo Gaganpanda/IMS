@@ -54,15 +54,17 @@
 .item-table__item-cell {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
 }
 
+/* Thumbnail — bumped to 44×44 for clearer image display */
 .item-table__thumb {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
-  background: #f1f5f9;
-  border: 1px solid #e8edf5;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e8edf5 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -74,10 +76,13 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .item-table__thumb-placeholder {
-  font-size: 18px;
+  font-size: 20px;
+  opacity: 0.5;
+  user-select: none;
 }
 
 .item-table__name {
@@ -85,6 +90,9 @@
   font-weight: 600;
   color: #1e293b;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .item-table__code {

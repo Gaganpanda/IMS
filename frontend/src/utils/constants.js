@@ -6,10 +6,16 @@ export const DEVELOPMENT_STATUS = {
 
 /* ── ToT Status ── */
 export const TOT_STATUS = {
-  FILED_TNF:      "Filled (TnF)",
-  FILED_TAC:      "Filled (TAC)",
-  TO_BE_FILLED:   "To Be Filled",
-  NOT_APPLICABLE: "Not Applicable",
+  FILED: "Filed",
+  TO_BE_FILED: "To Be Filed",
+};
+
+/* ── ToT documents — shown as checkboxes when ToT Status = "Filed" ── */
+export const TOT_DOCUMENTS = {
+  TTD: "TTD",
+  TNF: "TNF",
+  TAC: "TAC",
+  CEC: "CEC",
 };
 
 /* ── IPR Status ── */
@@ -105,10 +111,8 @@ export const STATUS_BADGE_MAP = {
   "Under Development": { bg: "#fff7ed", color: "#c2410c" },
   "Not Started":       { bg: "#f1f5f9", color: "#475569" },
   // ToT
-  "Filled (TnF)":      { bg: "#dbeafe", color: "#1d4ed8" },
-  "Filled (TAC)":      { bg: "#dbeafe", color: "#1d4ed8" },
-  "To Be Filled":      { bg: "#fee2e2", color: "#dc2626" },
-  "Not Applicable":    { bg: "#f1f5f9", color: "#475569" },
+  "Filed":             { bg: "#dbeafe", color: "#1d4ed8" },
+  "To Be Filed":       { bg: "#fee2e2", color: "#dc2626" },
   // IPR
   "Patent Filed":      { bg: "#ede9fe", color: "#6d28d9" },
   "Granted":           { bg: "#dcfce7", color: "#15803d" },

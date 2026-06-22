@@ -55,6 +55,9 @@ public class ItemDTO {
         private String totDocumentNo;
         private LocalDate filledDate;
 
+        @Builder.Default
+        private List<String> totDocumentsFiled = new ArrayList<>();
+
         /* Trials */
         private String trialsStatus;
         private LocalDate sampleRequestDate;
@@ -111,6 +114,7 @@ public class ItemDTO {
         private String totStatus;
         private String totDocumentNo;
         private LocalDate filledDate;
+        private List<String> totDocumentsFiled;
 
         private String trialsStatus;
         private LocalDate sampleRequestDate;

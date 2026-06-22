@@ -98,6 +98,14 @@ CREATE TABLE IF NOT EXISTS item_documentation (
   CONSTRAINT fk_id_item FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Item ToT Documents Filed (TTD / TNF / TAC / CEC) ─
+CREATE TABLE IF NOT EXISTS item_tot_documents (
+  item_id       BIGINT      NOT NULL,
+  document_code VARCHAR(20) NOT NULL,
+  KEY idx_itd_item (item_id),
+  CONSTRAINT fk_itd_item FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── Notifications ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS notifications (
   id         BIGINT       NOT NULL AUTO_INCREMENT,

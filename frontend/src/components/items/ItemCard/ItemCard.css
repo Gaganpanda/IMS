@@ -19,23 +19,30 @@
 /* ── Image ── */
 .item-card__image {
   position: relative;
-  height: 130px;
-  background: #f8fafc;
+  height: 160px;                        /* ↑ was 130px — taller card image */
+  background: linear-gradient(135deg, #f1f5f9 0%, #e8edf5 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   border-bottom: 1px solid #f1f5f9;
+  overflow: hidden;
 }
 
 .item-card__image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.item-card:hover .item-card__image img {
+  transform: scale(1.04);               /* subtle zoom on hover */
 }
 
 .item-card__image-placeholder {
-  font-size: 44px;
-  opacity: 0.35;
+  font-size: 48px;
+  opacity: 0.25;
+  user-select: none;
 }
 
 .item-card__badge-wrap {

@@ -45,7 +45,7 @@ public class DashboardService {
                 List.of(Item.IPRStatus.PATENT_FILED, Item.IPRStatus.GRANTED, Item.IPRStatus.TRADEMARK));
 
         long totFilled = itemRepository.countByTotStatusIn(
-                List.of(Item.ToTStatus.FILLED_TNF, Item.ToTStatus.FILLED_TAC));
+                List.of(Item.ToTStatus.FILED));
 
         /* Percentages */
         double developedPct        = percent(developed,        total);

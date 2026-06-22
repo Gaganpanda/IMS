@@ -5,6 +5,7 @@ com\ims\model\DashboardStats$RecentActivityItem$RecentActivityItemBuilder.class
 com\ims\dto\NotificationDTO$Response$ResponseBuilder.class
 com\ims\model\DashboardStats$MonthlyProgressItem.class
 com\ims\service\ItemService.class
+com\ims\model\ToTStatusConverter.class
 com\ims\config\WebSocketConfig.class
 com\ims\dto\AuthDTO$LoginResponse.class
 com\ims\dto\AuthDTO$LoginResponse$LoginResponseBuilder.class

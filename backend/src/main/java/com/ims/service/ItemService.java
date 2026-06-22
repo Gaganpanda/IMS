@@ -1,39 +1,39 @@
-        package com.ims.service;
+package com.ims.service;
 
-        import com.ims.dto.IPRDetailDTO;
-        import com.ims.dto.ItemDTO;
-        import com.ims.dto.ProcurementDetailDTO;
-        import com.ims.dto.ToTPartnerDTO;
+import com.ims.dto.IPRDetailDTO;
+import com.ims.dto.ItemDTO;
+import com.ims.dto.ProcurementDetailDTO;
+import com.ims.dto.ToTPartnerDTO;
 import com.ims.dto.TrialStakeholderDTO;
 import com.ims.exception.ResourceNotFoundException;
-        import com.ims.model.Item;
-        import com.ims.model.Notification;
-        import com.ims.model.ToTPartner;
+import com.ims.model.Item;
+import com.ims.model.Notification;
+import com.ims.model.ToTPartner;
 import com.ims.model.TrialStakeholder;
 import com.ims.model.ProcurementDetail;
-        import com.ims.model.IPRDetail;
-        import com.ims.model.User;
-        import com.ims.repository.*;
-        import lombok.RequiredArgsConstructor;
-        import lombok.extern.slf4j.Slf4j;
-        import org.springframework.cache.annotation.CacheEvict;
-        import org.springframework.cache.annotation.Cacheable;
-        import org.springframework.cache.annotation.Caching;
-        import org.springframework.data.domain.*;
-        import org.springframework.security.core.context.SecurityContextHolder;
-        import org.springframework.stereotype.Service;
-        import org.springframework.transaction.annotation.Transactional;
-        import org.springframework.web.multipart.MultipartFile;
+import com.ims.model.IPRDetail;
+import com.ims.model.User;
+import com.ims.repository.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.*;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-        import java.io.IOException;
-        import java.nio.file.*;
-        import java.util.List;
-        import java.util.UUID;
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.List;
+import java.util.UUID;
 
-        @Service
-        @RequiredArgsConstructor
-        @Slf4j
-        public class ItemService {
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ItemService {
 
         private final ItemRepository       itemRepository;
         private final UserRepository       userRepository;
@@ -84,8 +84,8 @@ import com.ims.model.ProcurementDetail;
         })
         public ItemDTO.Response createItem(ItemDTO.Request request) {
                 if (itemRepository.existsByCode(request.getCode())) {
-                throw new IllegalArgumentException(
-                        "Item with code '" + request.getCode() + "' already exists");
+                        throw new IllegalArgumentException(
+                                "Item with code '" + request.getCode() + "' already exists");
                 }
 
                 Item item = fromRequest(request);
@@ -135,8 +135,8 @@ import com.ims.model.ProcurementDetail;
                 // Check code uniqueness if code changed
                 if (!existing.getCode().equals(request.getCode())
                         && itemRepository.existsByCode(request.getCode())) {
-                throw new IllegalArgumentException(
-                        "Item with code '" + request.getCode() + "' already exists");
+                        throw new IllegalArgumentException(
+                                "Item with code '" + request.getCode() + "' already exists");
                 }
 
                 String oldDevStatus = existing.getDevelopmentStatus() != null
@@ -145,35 +145,35 @@ import com.ims.model.ProcurementDetail;
                 applyRequest(existing, request);
                 Item saved = itemRepository.save(existing);
 
-        saveTotPartners(
-                saved,
-                request.getTotPartners()
-        );
-        saveTrialStakeholders(
-                saved,
-                request.getTrialStakeholders()
-        );
+                saveTotPartners(
+                        saved,
+                        request.getTotPartners()
+                );
+                saveTrialStakeholders(
+                        saved,
+                        request.getTrialStakeholders()
+                );
 
-        saveProcurementDetails(
-                saved,
-                request.getProcurementDetails()
-        );
+                saveProcurementDetails(
+                        saved,
+                        request.getProcurementDetails()
+                );
 
-        saveIprDetail(
-                saved,
-                request.getIprDetail()
-        );
+                saveIprDetail(
+                        saved,
+                        request.getIprDetail()
+                );
 
                 // Notify if development status changed
                 if (request.getDevelopmentStatus() != null
                         && !request.getDevelopmentStatus().equals(oldDevStatus)) {
-                notificationService.createNotification(
-                        "Development status changed",
-                        "Development status of " + saved.getName() +
-                                " changed to " + formatEnum(saved.getDevelopmentStatus()),
-                        Notification.NotificationType.STATUS_CHANGED,
-                        saved.getId(), saved.getName()
-                );
+                        notificationService.createNotification(
+                                "Development status changed",
+                                "Development status of " + saved.getName() +
+                                        " changed to " + formatEnum(saved.getDevelopmentStatus()),
+                                Notification.NotificationType.STATUS_CHANGED,
+                                saved.getId(), saved.getName()
+                        );
                 }
 
 
@@ -185,104 +185,102 @@ import com.ims.model.ProcurementDetail;
                 Item item,
                 List<TrialStakeholderDTO> stakeholders) {
 
-        trialStakeholderRepository.deleteAll(
-                trialStakeholderRepository.findByItemId(item.getId())
-        );
+                trialStakeholderRepository.deleteAll(
+                        trialStakeholderRepository.findByItemId(item.getId())
+                );
 
-        if (stakeholders == null) return;
+                if (stakeholders == null) return;
 
-        stakeholders.forEach(dto -> {
+                stakeholders.forEach(dto -> {
 
-                TrialStakeholder t = new TrialStakeholder();
+                        TrialStakeholder t = new TrialStakeholder();
 
-                t.setItem(item);
-                t.setStakeholderName(dto.getStakeholderName());
-                t.setSampleRequestDate(dto.getSampleRequestDate());
-                t.setSampleSubmissionDate(dto.getSampleSubmissionDate());
-                t.setFeedback(dto.getFeedback());
-                t.setCorrection(dto.getCorrection());
-                t.setFurtherAction(dto.getFurtherAction());
+                        t.setItem(item);
+                        t.setStakeholderName(dto.getStakeholderName());
+                        t.setSampleRequestDate(dto.getSampleRequestDate());
+                        t.setSampleSubmissionDate(dto.getSampleSubmissionDate());
+                        t.setFeedback(dto.getFeedback());
+                        t.setCorrection(dto.getCorrection());
+                        t.setFurtherAction(dto.getFurtherAction());
 
-                trialStakeholderRepository.save(t);
-        });
+                        trialStakeholderRepository.save(t);
+                });
         }
 
         private void saveTotPartners(Item item, List<ToTPartnerDTO> partners) {
 
-        totPartnerRepository.deleteAll(
-                totPartnerRepository.findByItemId(item.getId())
-        );
+                totPartnerRepository.deleteAll(
+                        totPartnerRepository.findByItemId(item.getId())
+                );
 
-        if (partners == null) return;
+                if (partners == null) return;
 
-        partners.forEach(dto -> {
+                partners.forEach(dto -> {
 
-                ToTPartner p = new ToTPartner();
+                        ToTPartner p = new ToTPartner();
 
-                p.setItem(item);
-                p.setPartnerName(dto.getPartnerName());
-                p.setTotCertificate(dto.getTotCertificate());
-                p.setSampleSubmittedForTac(dto.getSampleSubmittedForTac());
-                p.setLatotSignature(dto.getLatotSignature());
+                        p.setItem(item);
+                        p.setPartnerName(dto.getPartnerName());
+                        p.setTotCertificate(dto.getTotCertificate());
+                        p.setSampleSubmittedForTac(dto.getSampleSubmittedForTac());
+                        p.setLatotSignature(dto.getLatotSignature());
 
-                totPartnerRepository.save(p);
-        });
+                        totPartnerRepository.save(p);
+                });
         }
 
         private void saveProcurementDetails(
                 Item item,
                 List<ProcurementDetailDTO> details) {
 
-        procurementDetailRepository.deleteAll(
-                procurementDetailRepository.findByItemId(item.getId())
-        );
+                procurementDetailRepository.deleteAll(
+                        procurementDetailRepository.findByItemId(item.getId())
+                );
 
-        if (details == null) return;
+                if (details == null) return;
 
-        details.forEach(dto -> {
+                details.forEach(dto -> {
 
-                ProcurementDetail p = new ProcurementDetail();
+                        ProcurementDetail p = new ProcurementDetail();
 
-                p.setItem(item);
-                p.setOrganisationName(dto.getOrganisationName());
-                p.setItemsProcured(dto.getItemsProcured());
-                p.setOrderNumber(dto.getOrderNumber());
-                p.setOrderDate(dto.getOrderDate());
+                        p.setItem(item);
+                        p.setOrganisationName(dto.getOrganisationName());
+                        p.setItemsProcured(dto.getItemsProcured());
+                        p.setOrderNumber(dto.getOrderNumber());
+                        p.setOrderDate(dto.getOrderDate());
 
-                procurementDetailRepository.save(p);
-        });
+                        procurementDetailRepository.save(p);
+                });
         }
 
-        private void saveIprDetail(
-                Item item,
-                IPRDetailDTO dto
-        ) {
+        private void saveIprDetail(Item item, IPRDetailDTO dto) {
 
-        if (dto == null) return;
+                if (dto == null) {
+                        return;
+                }
 
-        iprDetailRepository.findByItemId(item.getId())
-                .ifPresent(iprDetailRepository::delete);
+                IPRDetail ipr = iprDetailRepository
+                        .findByItemId(item.getId())
+                        .orElse(new IPRDetail());
 
-        IPRDetail ipr = new IPRDetail();
+                ipr.setItem(item);
 
-        ipr.setItem(item);
+                ipr.setPatentFiled(dto.getPatentFiled());
+                ipr.setPatentGranted(dto.getPatentGranted());
+                ipr.setPatentNumber(dto.getPatentNumber());
+                ipr.setPatentGrantedNumber(dto.getPatentGrantedNumber());
 
-        ipr.setPatentFiled(dto.getPatentFiled());
-        ipr.setPatentGranted(dto.getPatentGranted());
-        ipr.setPatentNumber(dto.getPatentNumber());
-        ipr.setPatentGrantedNumber(dto.getPatentGrantedNumber());
+                ipr.setTrademarkFiled(dto.getTrademarkFiled());
+                ipr.setTrademarkGranted(dto.getTrademarkGranted());
+                ipr.setTrademarkNumber(dto.getTrademarkNumber());
+                ipr.setTrademarkGrantedNumber(dto.getTrademarkGrantedNumber());
 
-        ipr.setTrademarkFiled(dto.getTrademarkFiled());
-        ipr.setTrademarkGranted(dto.getTrademarkGranted());
-        ipr.setTrademarkNumber(dto.getTrademarkNumber());
-        ipr.setTrademarkGrantedNumber(dto.getTrademarkGrantedNumber());
+                ipr.setDesignFiled(dto.getDesignFiled());
+                ipr.setDesignGranted(dto.getDesignGranted());
+                ipr.setDesignNumber(dto.getDesignNumber());
+                ipr.setDesignGrantedNumber(dto.getDesignGrantedNumber());
 
-        ipr.setDesignFiled(dto.getDesignFiled());
-        ipr.setDesignGranted(dto.getDesignGranted());
-        ipr.setDesignNumber(dto.getDesignNumber());
-        ipr.setDesignGrantedNumber(dto.getDesignGrantedNumber());
-
-        iprDetailRepository.save(ipr);
+                iprDetailRepository.save(ipr);
         }
         /* ── DELETE ── */
         @Transactional
@@ -340,6 +338,7 @@ import com.ims.model.ProcurementDetail;
                         .totStatus(parseEnum(Item.ToTStatus.class, r.getTotStatus()))
                         .totDocumentNo(r.getTotDocumentNo())
                         .filledDate(r.getFilledDate())
+                        .totDocumentsFiled(r.getTotDocumentsFiled() != null ? r.getTotDocumentsFiled() : new java.util.ArrayList<>())
                         .trialsStatus(parseEnum(Item.TrialsStatus.class, r.getTrialsStatus()))
                         .sampleRequestDate(r.getSampleRequestDate())
                         .sampleSubmissionDate(r.getSampleSubmissionDate())
@@ -372,14 +371,25 @@ import com.ims.model.ProcurementDetail;
                 item.setTotStatus(parseEnum(Item.ToTStatus.class, r.getTotStatus()));
                 item.setTotDocumentNo(r.getTotDocumentNo());
                 item.setFilledDate(r.getFilledDate());
-                item.setTrialsStatus(parseEnum(Item.TrialsStatus.class, r.getTrialsStatus()));
+                item.getTotDocumentsFiled().clear();
+
+                if (r.getTotDocumentsFiled() != null) {
+                        item.getTotDocumentsFiled().addAll(
+                                r.getTotDocumentsFiled()
+                        );
+                }                item.setTrialsStatus(parseEnum(Item.TrialsStatus.class, r.getTrialsStatus()));
                 item.setSampleRequestDate(r.getSampleRequestDate());
                 item.setSampleSubmissionDate(r.getSampleSubmissionDate());
                 item.setIprStatus(parseEnum(Item.IPRStatus.class, r.getIprStatus()));
                 item.setPatentNumber(r.getPatentNumber());
                 item.setFilingDate(r.getFilingDate());
-                if (r.getDocumentation() != null) item.setDocumentation(r.getDocumentation());
-                item.setCrbfCount(r.getCrbfCount());
+                item.getDocumentation().clear();
+
+                if (r.getDocumentation() != null) {
+                        item.getDocumentation().addAll(
+                                r.getDocumentation()
+                        );
+                }                item.setCrbfCount(r.getCrbfCount());
                 item.setSsbCount(r.getSsbCount());
                 item.setWeight(r.getWeight());
                 item.setSize(r.getSize());
@@ -478,6 +488,7 @@ import com.ims.model.ProcurementDetail;
                         .totStatus(formatEnum(item.getTotStatus()))
                         .totDocumentNo(item.getTotDocumentNo())
                         .filledDate(item.getFilledDate())
+                        .totDocumentsFiled(item.getTotDocumentsFiled())
                         .trialsStatus(formatEnum(item.getTrialsStatus()))
                         .sampleRequestDate(item.getSampleRequestDate())
                         .sampleSubmissionDate(item.getSampleSubmissionDate())
@@ -508,62 +519,57 @@ import com.ims.model.ProcurementDetail;
                 if (value == null || value.isBlank()) return null;
                 // Try reverse-lookup from human-readable display strings first
                 String mapped = switch (value.trim()) {
-                case "Developed"          -> "DEVELOPED";
-                case "In Progress"        -> "IN_PROGRESS";
-                case "Under Development"  -> "UNDER_DEVELOPMENT";
-                case "Not Started"        -> "NOT_STARTED";
-                case "Filled (TnF)"       -> "FILLED_TNF";
-                case "Filled (TAC)"       -> "FILLED_TAC";
-                case "To Be Filled"       -> "TO_BE_FILLED";
-                case "Filed"              -> "FILLED_TNF";   // frontend "Filed" → FILLED_TNF
-                case "Not Applicable"     -> "NOT_APPLICABLE";
-                case "Patent Filed"       -> "PATENT_FILED";
-                case "Granted"            -> "GRANTED";
-                case "Trademark"          -> "TRADEMARK";
-                case "Under Review"       -> "UNDER_REVIEW";
-                case "Not Filed"          -> "NOT_FILED";
-                case "Pending"            -> "PENDING";
-                case "Completed"          -> "COMPLETED";
-                case "On Hold"            -> "ON_HOLD";
-                case "High"               -> "HIGH";
-                case "Medium"             -> "MEDIUM";
-                case "Low"                -> "LOW";
-                default -> value.toUpperCase()
-                        .replace(" ", "_")
-                        .replace("(", "")
-                        .replace(")", "")
-                        .replace("-", "_");
+                        case "Developed"          -> "DEVELOPED";
+                        case "In Progress"        -> "IN_PROGRESS";
+                        case "Under Development"  -> "UNDER_DEVELOPMENT";
+                        case "Not Started"        -> "NOT_STARTED";
+                        case "Filed"              -> "FILED";
+                        case "To Be Filed"        -> "TO_BE_FILED";
+                        case "Patent Filed"       -> "PATENT_FILED";
+                        case "Granted"            -> "GRANTED";
+                        case "Trademark"          -> "TRADEMARK";
+                        case "Under Review"       -> "UNDER_REVIEW";
+                        case "Not Filed"          -> "NOT_FILED";
+                        case "Pending"            -> "PENDING";
+                        case "Completed"          -> "COMPLETED";
+                        case "On Hold"            -> "ON_HOLD";
+                        case "High"               -> "HIGH";
+                        case "Medium"             -> "MEDIUM";
+                        case "Low"                -> "LOW";
+                        default -> value.toUpperCase()
+                                .replace(" ", "_")
+                                .replace("(", "")
+                                .replace(")", "")
+                                .replace("-", "_");
                 };
                 try {
-                return Enum.valueOf(clazz, mapped);
+                        return Enum.valueOf(clazz, mapped);
                 } catch (IllegalArgumentException e) {
-                return null;
+                        return null;
                 }
         }
 
         private String formatEnum(Enum<?> e) {
                 if (e == null) return null;
                 return switch (e.name()) {
-                case "DEVELOPED"        -> "Developed";
-                case "IN_PROGRESS"      -> "In Progress";
-                case "UNDER_DEVELOPMENT"-> "Under Development";
-                case "NOT_STARTED"      -> "Not Started";
-                case "FILLED_TNF"       -> "Filled (TnF)";
-                case "FILLED_TAC"       -> "Filled (TAC)";
-                case "TO_BE_FILLED"     -> "To Be Filled";
-                case "NOT_APPLICABLE"   -> "Not Applicable";
-                case "PATENT_FILED"     -> "Patent Filed";
-                case "GRANTED"          -> "Granted";
-                case "TRADEMARK"        -> "Trademark";
-                case "UNDER_REVIEW"     -> "Under Review";
-                case "NOT_FILED"        -> "Not Filed";
-                case "PENDING"          -> "Pending";
-                case "COMPLETED"        -> "Completed";
-                case "ON_HOLD"          -> "On Hold";
-                case "HIGH"             -> "High";
-                case "MEDIUM"           -> "Medium";
-                case "LOW"              -> "Low";
-                default -> e.name();
+                        case "DEVELOPED"        -> "Developed";
+                        case "IN_PROGRESS"      -> "In Progress";
+                        case "UNDER_DEVELOPMENT"-> "Under Development";
+                        case "NOT_STARTED"      -> "Not Started";
+                        case "FILED"            -> "Filed";
+                        case "TO_BE_FILED"      -> "To Be Filed";
+                        case "PATENT_FILED"     -> "Patent Filed";
+                        case "GRANTED"          -> "Granted";
+                        case "TRADEMARK"        -> "Trademark";
+                        case "UNDER_REVIEW"     -> "Under Review";
+                        case "NOT_FILED"        -> "Not Filed";
+                        case "PENDING"          -> "Pending";
+                        case "COMPLETED"        -> "Completed";
+                        case "ON_HOLD"          -> "On Hold";
+                        case "HIGH"             -> "High";
+                        case "MEDIUM"           -> "Medium";
+                        case "LOW"              -> "Low";
+                        default -> e.name();
                 };
         }
 
@@ -576,4 +582,4 @@ import com.ims.model.ProcurementDetail;
                 int dot = filename.lastIndexOf('.');
                 return dot >= 0 ? filename.substring(dot + 1).toLowerCase() : "jpg";
         }
-        }
+}

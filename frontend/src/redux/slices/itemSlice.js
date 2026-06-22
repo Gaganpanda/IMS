@@ -8,7 +8,7 @@ export const fetchItemsAsync = createAsyncThunk(
   async (params, { rejectWithValue }) => {
     try {
       const res = await itemApi.getAll(params);
-      return res.data.data; // Spring Page object
+      return res.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.error || "Failed to fetch items");
     }
@@ -33,14 +33,10 @@ export const createItemAsync = createAsyncThunk(
     try {
       const res = await itemApi.create(payload);
       toast.success("Item added successfully!");
-      return res.data.data; // unwrap ApiResponse<T> -> T
+      return res.data.data;
     } catch (err) {
       const response = err.response?.data;
-      // Log full response so the exact validation error is visible in console
       console.error("Create item error response:", response);
-
-      // ApiResponse.error() shape: { success:false, error: "...", message: "..." }
-      // Validation errors shape:   { success:false, message:"Validation failed", data: { field: "msg", ... } }
       if (response?.data && typeof response.data === "object") {
         const fieldErrors = Object.entries(response.data)
           .map(([field, msg]) => `${field}: ${msg}`)
@@ -49,7 +45,6 @@ export const createItemAsync = createAsyncThunk(
         toast.error(message);
         return rejectWithValue(message);
       }
-
       const message = response?.error || response?.message || "Failed to create item";
       toast.error(message);
       return rejectWithValue(message);
@@ -67,7 +62,6 @@ export const updateItemAsync = createAsyncThunk(
     } catch (err) {
       const response = err.response?.data;
       console.error("Update item error response:", response);
-
       if (response?.data && typeof response.data === "object") {
         const fieldErrors = Object.entries(response.data)
           .map(([field, msg]) => `${field}: ${msg}`)
@@ -76,10 +70,23 @@ export const updateItemAsync = createAsyncThunk(
         toast.error(message);
         return rejectWithValue(message);
       }
-
       const message = response?.error || response?.message || "Failed to update item";
       toast.error(message);
       return rejectWithValue(message);
+    }
+  }
+);
+
+export const uploadImageAsync = createAsyncThunk(
+  "items/uploadImage",
+  async ({ id, file }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await itemApi.uploadImage(id, formData);
+      return res.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || "Failed to upload image");
     }
   }
 );
@@ -149,8 +156,8 @@ const itemSlice = createSlice({
   extraReducers: (builder) => {
     /* fetchAll */
     builder
-      .addCase(fetchItemsAsync.pending,   (state)          => { state.listLoading = true; state.error = null; })
-      .addCase(fetchItemsAsync.fulfilled, (state, action)  => {
+      .addCase(fetchItemsAsync.pending,   (state)         => { state.listLoading = true; state.error = null; })
+      .addCase(fetchItemsAsync.fulfilled, (state, action) => {
         state.listLoading = false;
         state.list        = action.payload.content;
         state.pagination  = {
@@ -160,7 +167,7 @@ const itemSlice = createSlice({
           totalPages:    action.payload.totalPages,
         };
       })
-      .addCase(fetchItemsAsync.rejected,  (state, action)  => { state.listLoading = false; state.error = action.payload; });
+      .addCase(fetchItemsAsync.rejected,  (state, action) => { state.listLoading = false; state.error = action.payload; });
 
     /* fetchById */
     builder
@@ -188,6 +195,14 @@ const itemSlice = createSlice({
         if (state.selectedItem?.id === action.payload.id) state.selectedItem = action.payload;
       })
       .addCase(updateItemAsync.rejected,  (state, action) => { state.submitting = false; state.error = action.payload; });
+
+    /* uploadImage */
+    builder
+      .addCase(uploadImageAsync.fulfilled, (state, action) => {
+        if (state.selectedItem?.id === action.payload.id) state.selectedItem = action.payload;
+        const idx = state.list.findIndex((i) => i.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = { ...state.list[idx], imageUrl: action.payload.imageUrl };
+      });
 
     /* delete */
     builder
