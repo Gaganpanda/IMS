@@ -40,7 +40,15 @@ const Icons = {
   arrowRight:  (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>),
   close:       (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>),
   upload:      (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>),
+  chevronDown: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>),
 };
+
+function getInitials(name) {
+  if (!name || !name.trim()) return "?";
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 function Checkbox({ checked, onChange }) {
   return (
@@ -101,11 +109,9 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
-  // Pre-populate all fields from existing item
   useEffect(() => {
     if (!item) return;
 
-    // Resolve image to its full server URL for the preview
     const existingImage = item.imageUrl ? getImageUrl(item.imageUrl) : null;
     setImagePreview(existingImage);
 
@@ -121,9 +127,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
       filledDate:             toInputDate(item.filledDate),
     });
 
-    // Normalize legacy ToT status strings ("Filled (TnF)", "Filled (TAC)",
-    // "To Be Filled") onto the current 2-value model so old items still
-    // show the correct radio selected and reveal the checkbox section.
     const normalizedTotStatus = /^Filed|^Filled/i.test(item.totStatus || "")
       ? TOT_STATUS.FILED
       : item.totStatus
@@ -171,13 +174,13 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
 
     setStakeholders(
       item.trialStakeholders?.map((s) => ({
-        id:            s.id || uid(),
-        name:          s.stakeholderName || s.name || "",
-        sampleReqDate: s.sampleRequestDate    || "",
-        sampleSubDate: s.sampleSubmissionDate || "",
-        feedback:      s.feedback      || "",
-        corrections:   s.correction    || "",
-        furtherActions:s.furtherAction || "",
+        id:             s.id || uid(),
+        name:           s.stakeholderName || s.name || "",
+        sampleReqDate:  s.sampleRequestDate    || "",
+        sampleSubDate:  s.sampleSubmissionDate || "",
+        feedback:       s.feedback      || "",
+        corrections:    s.correction    || "",
+        furtherActions: s.furtherAction || "",
         open: false,
       })) || []
     );
@@ -198,7 +201,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
 
   const onSubmit = async (data) => {
     const payload = {
-      // Step 1 – Basic
       name:                   data.name,
       code:                   data.code,
       category:               data.category,
@@ -206,7 +208,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
       priority:               data.priority,
       expectedCompletionDate: data.expectedCompletionDate || null,
       developmentStatus:      data.developmentStatus,
-      // Step 2 – ToT
       totStatus,
       totDocumentNo: data.totDocumentNo || null,
       filledDate:    data.filledDate    || null,
@@ -219,7 +220,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         sampleSubmittedForTac: p.sampleTAC,
         latotSignature:        p.latoT,
       })),
-      // Step 3 – IPR
       iprDetail: {
         patentFiled:            iprData.patent.filed,
         patentGranted:          iprData.patent.granted,
@@ -234,7 +234,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         designNumber:           iprData.design.fileNo,
         designGrantedNumber:    iprData.design.grantedNo,
       },
-      // Step 4 – Stakeholders
       trialStakeholders: stakeholders.map((s) => ({
         stakeholderName:      s.name,
         sampleRequestDate:    s.sampleReqDate || null,
@@ -243,9 +242,7 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         correction:           s.corrections   || "",
         furtherAction:        s.furtherActions|| "",
       })),
-      // Step 5 – Docs
       documentation: [...checkedDocs],
-      // Step 6 – Procurement
       procurementDetails: procurements.map((p) => ({
         organisationName: p.firm,
         itemsProcured:    Number(p.count) || 0,
@@ -255,9 +252,8 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
     };
 
     try {
-        console.log("UPDATE PAYLOAD", payload);
+      console.log("UPDATE PAYLOAD", payload);
       await dispatch(updateItemAsync({ id: item.id, data: payload })).unwrap();
-      // Upload new image if user selected one
       if (imageFile) {
         await dispatch(uploadImageAsync({ id: item.id, file: imageFile }));
       }
@@ -338,7 +334,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         {/* ── STEP 1: Basic Information ── */}
         {step === 1 && (
           <div className="eif__s1-layout">
-            {/* Image */}
             <div className="eif__img-col">
               <div className={`eif__img-box${imagePreview ? " eif__img-box--filled" : ""}`}
                 onClick={() => fileInputRef.current?.click()}>
@@ -364,7 +359,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
               )}
             </div>
 
-            {/* Fields — identical structure to AddItemForm Step 1 */}
             <div className="eif__s1-fields">
               <div className="eif__row2">
                 <div className="form-group">
@@ -431,7 +425,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         {/* ── STEP 2: ToT Details ── */}
         {step === 2 && (
           <div className="eif__step-body">
-            {/* 1. ToT Status — always shown */}
             <div className="form-group">
               <label className="form-label">ToT Status</label>
               <div className="eif__radio-row">
@@ -446,34 +439,19 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
               </div>
             </div>
 
-            {/* 2. Document checkboxes + details — only if "Filed" status selected */}
             {totStatus === TOT_STATUS.FILED && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">ToT Document Filed</label>
-                  <div className="eif__cert-row">
-                    {Object.keys(TOT_DOCUMENTS).map((cert) => (
-                      <label key={cert} className="eif__cert-item"
-                        onClick={() => setTotCerts((p) => ({ ...p, [cert]: !p[cert] }))}>
-                        <Checkbox checked={totCerts[cert]} onChange={() => {}} />
-                        {TOT_DOCUMENTS[cert]}
-                      </label>
-                    ))}
-                  </div>
+              <div className="form-group">
+                <label className="form-label">ToT Document Filed</label>
+                <div className="eif__cert-row">
+                  {Object.keys(TOT_DOCUMENTS).map((cert) => (
+                    <label key={cert} className="eif__cert-item"
+                      onClick={() => setTotCerts((p) => ({ ...p, [cert]: !p[cert] }))}>
+                      <Checkbox checked={totCerts[cert]} onChange={() => {}} />
+                      {TOT_DOCUMENTS[cert]}
+                    </label>
+                  ))}
                 </div>
-
-                <div className="eif__row2">
-                  <div className="form-group">
-                    <label className="form-label">ToT Document No.</label>
-                    <input className="form-control" placeholder="TNF/DRDO/2026/00125"
-                      {...register("totDocumentNo")} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Filed Date</label>
-                    <input type="date" className="form-control" {...register("filledDate")} />
-                  </div>
-                </div>
-              </>
+              </div>
             )}
 
             <div>
@@ -549,7 +527,8 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
           <div className="eif__step-body">
             <div className="eif__tbl-head-row">
               <span className="eif__section-label">
-                {stakeholders.length} stakeholder{stakeholders.length !== 1 ? "s" : ""}
+                Trial stakeholders
+                <span className="eif__count-pill">{stakeholders.length}</span>
               </span>
               <button type="button" className="eif__add-link" onClick={() => setShowStakeholderModal(true)}>
                 {Icons.plus} Add Stakeholder
@@ -557,49 +536,80 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
             </div>
 
             {stakeholders.length === 0 ? (
-              <div className="eif__empty-card">No stakeholders added yet</div>
+              <div className="eif__empty-card">
+                <p>No stakeholders added yet</p>
+              </div>
             ) : stakeholders.map((s) => (
-              <div key={s.id} className="eif__stakeholder-card">
-                <div className="eif__stakeholder-header">
-                  <button type="button" className="eif__stakeholder-toggle" onClick={() => toggleSh(s.id)}>
-                    <span className="eif__stakeholder-arrow">{s.open ? "▼" : "▶"}</span>
-                    <span className="eif__stakeholder-title">{s.name || "Unnamed Stakeholder"}</span>
-                  </button>
-                  <button type="button" className="eif__del-btn"
-                    onClick={() => setStakeholders((x) => x.filter((it) => it.id !== s.id))}>
+              <div key={s.id} className={`eif__stakeholder-card${s.open ? " open" : ""}`}>
+
+                {/* Header / toggle row */}
+                <div className="eif__stakeholder-header" onClick={() => toggleSh(s.id)}>
+                  <div className="eif__stakeholder-avatar">{getInitials(s.name)}</div>
+
+                  <div className="eif__stakeholder-info">
+                    <div className="eif__stakeholder-name">{s.name || "Unnamed stakeholder"}</div>
+                    {(s.sampleReqDate || s.sampleSubDate) && (
+                      <div className="eif__stakeholder-meta">
+                        {s.sampleReqDate && `Req: ${s.sampleReqDate}`}
+                        {s.sampleReqDate && s.sampleSubDate && " · "}
+                        {s.sampleSubDate && `Sub: ${s.sampleSubDate}`}
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="eif__stakeholder-chevron">{Icons.chevronDown}</span>
+
+                  <button
+                    type="button"
+                    className="eif__del-btn"
+                    onClick={(e) => { e.stopPropagation(); setStakeholders((x) => x.filter((it) => it.id !== s.id)); }}
+                  >
                     {Icons.trash}
                   </button>
                 </div>
+
+                {/* Expanded body */}
                 {s.open && (
-                  <>
-                    <div className="eif__row2" style={{ marginTop: 14 }}>
+                  <div className="eif__stakeholder-body">
+                    <div className="eif__stakeholder-dates">
                       <div className="form-group">
-                        <label className="form-label">Request For Sample Trial Date</label>
+                        <label className="form-label">Request for sample trial date</label>
                         <input type="date" className="form-control" value={s.sampleReqDate}
                           onChange={(e) => updateSh(s.id, "sampleReqDate", e.target.value)} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Date Of Sample Submission</label>
+                        <label className="form-label">Date of sample submission</label>
                         <input type="date" className="form-control" value={s.sampleSubDate}
                           onChange={(e) => updateSh(s.id, "sampleSubDate", e.target.value)} />
                       </div>
                     </div>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Feedback</label>
-                      <textarea rows={3} className="form-control" value={s.feedback}
-                        onChange={(e) => updateSh(s.id, "feedback", e.target.value)} />
+
+                    <div className="eif__stakeholder-divider" />
+
+                    <div className="eif__stakeholder-fields">
+                      <div className="form-group">
+                        <label className="form-label">Feedback</label>
+                        <textarea rows={3} className="form-control"
+                          placeholder="Enter feedback from stakeholder…"
+                          value={s.feedback}
+                          onChange={(e) => updateSh(s.id, "feedback", e.target.value)} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Corrections</label>
+                        <textarea rows={3} className="form-control"
+                          placeholder="List any corrections required…"
+                          value={s.corrections}
+                          onChange={(e) => updateSh(s.id, "corrections", e.target.value)} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Further actions</label>
+                        <textarea rows={3} className="form-control"
+                          placeholder="Describe further actions…"
+                          value={s.furtherActions || ""}
+                          onChange={(e) => updateSh(s.id, "furtherActions", e.target.value)} />
+                      </div>
                     </div>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Corrections</label>
-                      <textarea rows={3} className="form-control" value={s.corrections}
-                        onChange={(e) => updateSh(s.id, "corrections", e.target.value)} />
-                    </div>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Further Actions</label>
-                      <textarea rows={3} className="form-control" value={s.furtherActions || ""}
-                        onChange={(e) => updateSh(s.id, "furtherActions", e.target.value)} />
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
             ))}

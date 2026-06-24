@@ -31,10 +31,10 @@ export default function Notifications() {
     <div className="notif-page">
       {/* Header */}
       <div className="notif-page__header">
-        <div>
+        {/* <div>
           <h1 className="page-title">Notifications</h1>
           <p className="page-subtitle">Stay updated with important alerts and activities.</p>
-        </div>
+        </div> */}
         <div className="notif-page__actions">
           {unreadCount > 0 && (
             <button

@@ -37,7 +37,7 @@
   width: 150px;
   height: 150px;
   border-radius: 12px;
-  background-color: white
+  background-color: white;
   border: 1px solid #e8edf5;
   display: flex;
   align-items: center;
@@ -107,6 +107,7 @@
 .idet__action-btn {
   display: flex;
   align-items: center;
+  /* background-color: linear-gradient(135deg, #2563eb, #3b82f6); */
   gap: 7px;
   height: 36px;
   padding: 0 16px;

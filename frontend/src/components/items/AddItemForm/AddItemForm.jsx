@@ -35,9 +35,17 @@ const Icons = {
   arrowRight:  (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>),
   close:       (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>),
   upload:      (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>),
+  chevronDown: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>),
 };
 
 const STEP_COLORS = { basic: "blue", tot: "orange", ipr: "purple", trials: "teal", docs: "teal", procurement: "green" };
+
+function getInitials(name) {
+  if (!name || !name.trim()) return "?";
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 function Checkbox({ checked, onChange }) {
   return (
@@ -109,7 +117,6 @@ export default function AddItemForm({ onCancel, onSuccess }) {
       priority: data.priority,
       expectedCompletionDate: data.expectedCompletionDate || null,
       developmentStatus: data.developmentStatus,
-      // ToT
       totStatus,
       totDocumentsFiled: totStatus === TOT_STATUS.FILED
         ? Object.keys(totCerts).filter((k) => totCerts[k])
@@ -120,7 +127,6 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         sampleSubmittedForTac: p.sampleTAC,
         latotSignature: p.latoT,
       })),
-      // IPR
       iprDetail: {
         patentFiled:            iprData.patent.filed,
         patentGranted:          iprData.patent.granted,
@@ -135,7 +141,6 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         designNumber:           iprData.design.fileNo,
         designGrantedNumber:    iprData.design.grantedNo,
       },
-      // Stakeholders
       trialStakeholders: stakeholders.map((s) => ({
         stakeholderName:      s.name,
         sampleRequestDate:    s.sampleReqDate || null,
@@ -144,9 +149,7 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         correction:           s.corrections,
         furtherAction:        s.furtherActions,
       })),
-      // Docs
       documentation: [...checkedDocs],
-      // Procurement
       procurementDetails: procurements.map((p) => ({
         organisationName: p.firm,
         itemsProcured:    Number(p.count),
@@ -157,7 +160,6 @@ export default function AddItemForm({ onCancel, onSuccess }) {
 
     try {
       const result = await dispatch(createItemAsync(payload)).unwrap();
-      // Upload image immediately after successful create
       if (imageFile && result?.id) {
         await dispatch(uploadImageAsync({ id: result.id, file: imageFile }));
       }
@@ -173,7 +175,11 @@ export default function AddItemForm({ onCancel, onSuccess }) {
     setImagePreview(null);
     setTotPartners([]); setStakeholders([]); setProcurements([]);
     setTotStatus("");
-    setIprData({ patent: { filed:false,granted:false,fileNo:"",grantedNo:"" }, trademark: { filed:false,granted:false,fileNo:"",grantedNo:"" }, design: { filed:false,granted:false,fileNo:"",grantedNo:"" } });
+    setIprData({
+      patent:    { filed: false, granted: false, fileNo: "", grantedNo: "" },
+      trademark: { filed: false, granted: false, fileNo: "", grantedNo: "" },
+      design:    { filed: false, granted: false, fileNo: "", grantedNo: "" },
+    });
   };
 
   const savePartner = () => {
@@ -184,7 +190,12 @@ export default function AddItemForm({ onCancel, onSuccess }) {
   };
   const saveStakeholder = () => {
     if (!stakeholderData.name.trim()) return;
-    setStakeholders((p) => [...p, { id: Date.now(), name: stakeholderData.name, open: true, sampleReqDate: stakeholderData.sampleReqDate, sampleSubDate: stakeholderData.sampleSubDate, feedback: "", corrections: "", furtherActions: "" }]);
+    setStakeholders((p) => [...p, {
+      id: Date.now(), name: stakeholderData.name, open: true,
+      sampleReqDate: stakeholderData.sampleReqDate,
+      sampleSubDate: stakeholderData.sampleSubDate,
+      feedback: "", corrections: "", furtherActions: "",
+    }]);
     setStakeholderData({ name: "", sampleReqDate: "", sampleSubDate: "" });
     setShowStakeholderModal(false);
   };
@@ -243,7 +254,6 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         {/* ── STEP 1: Basic Information ── */}
         {step === 1 && (
           <div className="aif__s1-layout">
-            {/* Image upload */}
             <div className="aif__img-col">
               <div className={`aif__img-box${imagePreview ? " aif__img-box--filled" : ""}`}
                 onClick={() => fileInputRef.current?.click()}>
@@ -269,7 +279,6 @@ export default function AddItemForm({ onCancel, onSuccess }) {
               )}
             </div>
 
-            {/* Fields */}
             <div className="aif__s1-fields">
               <div className="aif__row2">
                 <div className="form-group">
@@ -336,8 +345,6 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         {/* ── STEP 2: ToT Details ── */}
         {step === 2 && (
           <div className="aif__step-body">
-
-            {/* 1. ToT Status — always shown */}
             <div className="form-group">
               <label className="form-label">ToT Status</label>
               <div className="aif__radio-row">
@@ -352,26 +359,21 @@ export default function AddItemForm({ onCancel, onSuccess }) {
               </div>
             </div>
 
-            {/* 2. Document checkboxes + details — only if "Filed" status selected */}
             {totStatus === TOT_STATUS.FILED && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">ToT Document Filed</label>
-                  <div className="aif__cert-row">
-                    {Object.keys(TOT_DOCUMENTS).map((cert) => (
-                      <label key={cert} className="aif__cert-item"
-                        onClick={() => setTotCerts((p) => ({ ...p, [cert]: !p[cert] }))}>
-                        <Checkbox checked={totCerts[cert]} onChange={() => {}} />
-                        {TOT_DOCUMENTS[cert]}
-                      </label>
-                    ))}
-                  </div>
+              <div className="form-group">
+                <label className="form-label">ToT Document Filed</label>
+                <div className="aif__cert-row">
+                  {Object.keys(TOT_DOCUMENTS).map((cert) => (
+                    <label key={cert} className="aif__cert-item"
+                      onClick={() => setTotCerts((p) => ({ ...p, [cert]: !p[cert] }))}>
+                      <Checkbox checked={totCerts[cert]} onChange={() => {}} />
+                      {TOT_DOCUMENTS[cert]}
+                    </label>
+                  ))}
                 </div>
-
-              </>
+              </div>
             )}
 
-            {/* 3. ToT Partners — always shown */}
             <div>
               <div className="aif__tbl-head-row">
                 <span className="aif__section-label">ToT Partners</span>
@@ -452,7 +454,8 @@ export default function AddItemForm({ onCancel, onSuccess }) {
           <div className="aif__step-body">
             <div className="aif__tbl-head-row">
               <span className="aif__section-label">
-                {stakeholders.length} stakeholder{stakeholders.length !== 1 ? "s" : ""}
+                Trial stakeholders
+                <span className="aif__count-pill">{stakeholders.length}</span>
               </span>
               <button type="button" className="aif__add-link" onClick={() => setShowStakeholderModal(true)}>
                 {Icons.plus} Add Stakeholder
@@ -460,49 +463,80 @@ export default function AddItemForm({ onCancel, onSuccess }) {
             </div>
 
             {stakeholders.length === 0 ? (
-              <div className="aif__empty-card">No stakeholders added yet</div>
+              <div className="aif__empty-card">
+                <p>No stakeholders added yet</p>
+              </div>
             ) : stakeholders.map((s) => (
-              <div key={s.id} className="aif__stakeholder-card">
-                <div className="aif__stakeholder-header">
-                  <button type="button" className="aif__stakeholder-toggle" onClick={() => toggleSh(s.id)}>
-                    <span className="aif__stakeholder-arrow">{s.open ? "▼" : "▶"}</span>
-                    <span className="aif__stakeholder-title">{s.name || "Unnamed Stakeholder"}</span>
-                  </button>
-                  <button type="button" className="aif__del-btn"
-                    onClick={() => setStakeholders((x) => x.filter((it) => it.id !== s.id))}>
+              <div key={s.id} className={`aif__stakeholder-card${s.open ? " open" : ""}`}>
+
+                {/* Header / toggle row */}
+                <div className="aif__stakeholder-header" onClick={() => toggleSh(s.id)}>
+                  <div className="aif__stakeholder-avatar">{getInitials(s.name)}</div>
+
+                  <div className="aif__stakeholder-info">
+                    <div className="aif__stakeholder-name">{s.name || "Unnamed stakeholder"}</div>
+                    {(s.sampleReqDate || s.sampleSubDate) && (
+                      <div className="aif__stakeholder-meta">
+                        {s.sampleReqDate && `Req: ${s.sampleReqDate}`}
+                        {s.sampleReqDate && s.sampleSubDate && " · "}
+                        {s.sampleSubDate && `Sub: ${s.sampleSubDate}`}
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="aif__stakeholder-chevron">{Icons.chevronDown}</span>
+
+                  <button
+                    type="button"
+                    className="aif__del-btn"
+                    onClick={(e) => { e.stopPropagation(); setStakeholders((x) => x.filter((it) => it.id !== s.id)); }}
+                  >
                     {Icons.trash}
                   </button>
                 </div>
+
+                {/* Expanded body */}
                 {s.open && (
-                  <>
-                    <div className="aif__row2" style={{ marginTop: 14 }}>
+                  <div className="aif__stakeholder-body">
+                    <div className="aif__stakeholder-dates">
                       <div className="form-group">
-                        <label className="form-label">Request For Sample Trial Date</label>
+                        <label className="form-label">Request for sample trial date</label>
                         <input type="date" className="form-control" value={s.sampleReqDate}
                           onChange={(e) => updateSh(s.id, "sampleReqDate", e.target.value)} />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Date Of Sample Submission</label>
+                        <label className="form-label">Date of sample submission</label>
                         <input type="date" className="form-control" value={s.sampleSubDate}
                           onChange={(e) => updateSh(s.id, "sampleSubDate", e.target.value)} />
                       </div>
                     </div>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Feedback</label>
-                      <textarea rows={3} className="form-control" value={s.feedback}
-                        onChange={(e) => updateSh(s.id, "feedback", e.target.value)} />
+
+                    <div className="aif__stakeholder-divider" />
+
+                    <div className="aif__stakeholder-fields">
+                      <div className="form-group">
+                        <label className="form-label">Feedback</label>
+                        <textarea rows={3} className="form-control"
+                          placeholder="Enter feedback from stakeholder…"
+                          value={s.feedback}
+                          onChange={(e) => updateSh(s.id, "feedback", e.target.value)} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Corrections</label>
+                        <textarea rows={3} className="form-control"
+                          placeholder="List any corrections required…"
+                          value={s.corrections}
+                          onChange={(e) => updateSh(s.id, "corrections", e.target.value)} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Further actions</label>
+                        <textarea rows={3} className="form-control"
+                          placeholder="Describe further actions…"
+                          value={s.furtherActions || ""}
+                          onChange={(e) => updateSh(s.id, "furtherActions", e.target.value)} />
+                      </div>
                     </div>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Corrections</label>
-                      <textarea rows={3} className="form-control" value={s.corrections}
-                        onChange={(e) => updateSh(s.id, "corrections", e.target.value)} />
-                    </div>
-                    <div className="form-group" style={{ marginTop: 12 }}>
-                      <label className="form-label">Further Actions</label>
-                      <textarea rows={3} className="form-control" value={s.furtherActions || ""}
-                        onChange={(e) => updateSh(s.id, "furtherActions", e.target.value)} />
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
             ))}
