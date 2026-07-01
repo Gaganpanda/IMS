@@ -122,6 +122,7 @@ public class ItemDTO {
         private List<TrialStakeholderDTO> trialStakeholders;
 
         private String iprStatus;
+        private String iprStatusLabel;
         private String patentNumber;
         private LocalDate filingDate;
 
@@ -166,7 +167,10 @@ public class ItemDTO {
         private String developmentStatus;
         private String totStatus;
         private String iprStatus;
+        private String iprStatusLabel;
         private String trialsStatus;
+        @Builder.Default
+        private List<String> trialStakeholderNames = new ArrayList<>();
         private LocalDateTime updatedAt;
     }
 }

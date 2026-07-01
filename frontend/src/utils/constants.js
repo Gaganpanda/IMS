@@ -120,7 +120,9 @@ export const STATUS_BADGE_MAP = {
   "Under Review":      { bg: "#fff7ed", color: "#c2410c" },
   "Not Filed":         { bg: "#f1f5f9", color: "#475569" },
   // Trials
+  "Testing":           { bg: "#e0f2fe", color: "#0369a1" },
   "Pending":           { bg: "#f1f5f9", color: "#475569" },
+  "Testing":           { bg: "#e0f2fe", color: "#0369a1" },
   "Completed":         { bg: "#dcfce7", color: "#15803d" },
-  "On Hold":           { bg: "#f1f5f9", color: "#475569" },
+  "On Hold":           { bg: "#fef3c7", color: "#b45309" },
 };

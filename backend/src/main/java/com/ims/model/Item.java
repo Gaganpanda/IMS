@@ -112,6 +112,10 @@ public class Item {
     @Column(name = "filing_date")
     private LocalDate filingDate;
 
+    /* Human-readable composed label, e.g. "Patent, Trademark" — derived from IPRDetail */
+    @Column(name = "ipr_types_label", length = 200)
+    private String iprTypesLabel;
+
     /* ── Documentation ── */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "item_documentation",
@@ -253,7 +257,7 @@ public class Item {
     }
 
     public enum TrialsStatus {
-        PENDING, IN_PROGRESS, COMPLETED, ON_HOLD;
+        PENDING, IN_PROGRESS, TESTING, COMPLETED, ON_HOLD;
 
         @com.fasterxml.jackson.annotation.JsonCreator
         public static TrialsStatus fromString(String value) {
@@ -261,6 +265,7 @@ public class Item {
             return switch (value.trim()) {
                 case "Pending"     -> PENDING;
                 case "In Progress" -> IN_PROGRESS;
+                case "Testing"     -> TESTING;
                 case "Completed"   -> COMPLETED;
                 case "On Hold"     -> ON_HOLD;
                 default -> {

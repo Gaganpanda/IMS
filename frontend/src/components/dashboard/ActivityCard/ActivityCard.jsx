@@ -30,7 +30,7 @@ export default function ActivityCard({ onViewAll }) {
         {recentActivities.length === 0 ? (
           <p className="activity-card__empty">No recent activity.</p>
         ) : (
-          recentActivities.slice(0, 8).map((a, i) => (
+          recentActivities.map((a, i) => (
             <div key={i} className="activity-card__item">
               <span
                 className="activity-card__dot"

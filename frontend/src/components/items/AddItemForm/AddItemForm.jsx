@@ -148,6 +148,7 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         feedback:             s.feedback,
         correction:           s.corrections,
         furtherAction:        s.furtherActions,
+        status:               s.status || "Not Started",
       })),
       documentation: [...checkedDocs],
       procurementDetails: procurements.map((p) => ({
@@ -194,7 +195,7 @@ export default function AddItemForm({ onCancel, onSuccess }) {
       id: Date.now(), name: stakeholderData.name, open: true,
       sampleReqDate: stakeholderData.sampleReqDate,
       sampleSubDate: stakeholderData.sampleSubDate,
-      feedback: "", corrections: "", furtherActions: "",
+      feedback: "", corrections: "", furtherActions: "", status: "Not Started",
     }]);
     setStakeholderData({ name: "", sampleReqDate: "", sampleSubDate: "" });
     setShowStakeholderModal(false);
@@ -483,6 +484,19 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                       </div>
                     )}
                   </div>
+
+                  <select
+                    className="aif__stakeholder-status-select"
+                    value={s.status || "Not Started"}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => updateSh(s.id, "status", e.target.value)}
+                  >
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Testing">Testing</option>
+                    <option value="Completed">Completed</option>
+                    <option value="On Hold">On Hold</option>
+                  </select>
 
                   <span className="aif__stakeholder-chevron">{Icons.chevronDown}</span>
 

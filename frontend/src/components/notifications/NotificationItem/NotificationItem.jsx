@@ -10,6 +10,8 @@ const TYPE_CONFIG = {
   ipr_changed:      { bg: "#fee2e2", color: "#dc2626", label: "⛨" },
   document_upload:  { bg: "#dbeafe", color: "#2563eb", label: "↑" },
   procurement:      { bg: "#fef9c3", color: "#ca8a04", label: "🛒" },
+  trial_update:     { bg: "#e0f2fe", color: "#0369a1", label: "⚗" },
+  general:          { bg: "#f1f5f9", color: "#64748b", label: "•" },
   default:          { bg: "#f1f5f9", color: "#64748b", label: "•" },
 };
 

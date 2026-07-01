@@ -331,6 +331,24 @@ select.form-control {
   font-size: 11.5px; color: #94a3b8; margin-top: 2px;
 }
 
+/* Status select */
+.eif__stakeholder-status-select {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  outline: none;
+}
+.eif__stakeholder-status-select:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
 /* Chevron */
 .eif__stakeholder-chevron {
   flex-shrink: 0; color: #94a3b8;

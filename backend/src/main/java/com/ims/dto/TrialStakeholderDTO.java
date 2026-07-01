@@ -24,4 +24,6 @@ public class TrialStakeholderDTO {
     private String correction;
 
     private String furtherAction;
+
+    private String status;
 }

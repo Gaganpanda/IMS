@@ -107,7 +107,7 @@
 .idet__action-btn {
   display: flex;
   align-items: center;
-  /* background-color: linear-gradient(135deg, #2563eb, #3b82f6); */
+  background-color: linear-gradient(135deg, #2563eb, #3b82f6);
   gap: 7px;
   height: 36px;
   padding: 0 16px;

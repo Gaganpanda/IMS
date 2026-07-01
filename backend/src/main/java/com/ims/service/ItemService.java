@@ -61,7 +61,13 @@ public class ItemService {
                 Item.IPRStatus         ipr       = parseEnum(Item.IPRStatus.class,        iprStatus);
                 Item.TrialsStatus      trials    = parseEnum(Item.TrialsStatus.class,     trialsStatus);
 
+                // Data isolation: ADMIN sees every item, everyone else only sees their own.
+                User current = currentUser();
+                Long ownerId = (current != null && current.getRole() != User.Role.ADMIN)
+                        ? current.getId() : null;
+
                 Page<Item> itemPage = itemRepository.findAllWithFilters(
+                        ownerId,
                         nullIfBlank(search), nullIfBlank(category),
                         devStatus, tot, ipr, trials, pageable);
 
@@ -73,7 +79,18 @@ public class ItemService {
         @Cacheable(value = "item-detail", key = "#id")
         public ItemDTO.Response getItemById(Long id) {
                 Item item = findById(id);
+                assertAccess(item);
                 return toResponse(item);
+        }
+
+        /* Throws if the current non-admin user does not own this item */
+        private void assertAccess(Item item) {
+                User current = currentUser();
+                if (current == null || current.getRole() == User.Role.ADMIN) return;
+                if (item.getCreatedBy() == null || !item.getCreatedBy().getId().equals(current.getId())) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                "You do not have access to this item");
+                }
         }
 
         /* ── CREATE ── */
@@ -115,7 +132,8 @@ public class ItemService {
                         "Item added successfully",
                         saved.getName() + " has been added to the system.",
                         Notification.NotificationType.ITEM_ADDED,
-                        saved.getId(), saved.getName()
+                        saved.getId(), saved.getName(),
+                        saved.getCreatedBy() != null ? saved.getCreatedBy().getId() : null
                 );
 
                 log.info("Item created: {} ({})", saved.getName(), saved.getCode());
@@ -131,6 +149,7 @@ public class ItemService {
         })
         public ItemDTO.Response updateItem(Long id, ItemDTO.Request request) {
                 Item existing = findById(id);
+                assertAccess(existing);
 
                 // Check code uniqueness if code changed
                 if (!existing.getCode().equals(request.getCode())
@@ -141,6 +160,14 @@ public class ItemService {
 
                 String oldDevStatus = existing.getDevelopmentStatus() != null
                         ? formatEnum(existing.getDevelopmentStatus()) : "";
+                String oldTotStatus = existing.getTotStatus() != null
+                        ? formatEnum(existing.getTotStatus()) : "";
+                String oldIprStatus = existing.getIprStatus() != null
+                        ? formatEnum(existing.getIprStatus()) : "";
+                String oldTrialsStatus = existing.getTrialsStatus() != null
+                        ? formatEnum(existing.getTrialsStatus()) : "";
+                int oldDocCount = existing.getDocumentation() != null ? existing.getDocumentation().size() : 0;
+                int oldProcurementCount = procurementDetailRepository.findByItemId(id).size();
 
                 applyRequest(existing, request);
                 Item saved = itemRepository.save(existing);
@@ -164,18 +191,55 @@ public class ItemService {
                         request.getIprDetail()
                 );
 
-                // Notify if development status changed
+                Long ownerId = saved.getCreatedBy() != null ? saved.getCreatedBy().getId() : null;
+                List<String> changes = new java.util.ArrayList<>();
+
+                // Development status changed
                 if (request.getDevelopmentStatus() != null
                         && !request.getDevelopmentStatus().equals(oldDevStatus)) {
-                        notificationService.createNotification(
-                                "Development status changed",
-                                "Development status of " + saved.getName() +
-                                        " changed to " + formatEnum(saved.getDevelopmentStatus()),
-                                Notification.NotificationType.STATUS_CHANGED,
-                                saved.getId(), saved.getName()
-                        );
+                        changes.add("development status changed to " + formatEnum(saved.getDevelopmentStatus()));
                 }
 
+                // ToT (transfer of technology) status changed
+                String newTotStatus = saved.getTotStatus() != null ? formatEnum(saved.getTotStatus()) : "";
+                if (!newTotStatus.isEmpty() && !newTotStatus.equals(oldTotStatus)) {
+                        changes.add("ToT status changed to " + newTotStatus);
+                }
+
+                // IPR status changed
+                String newIprStatus = saved.getIprStatus() != null ? formatEnum(saved.getIprStatus()) : "";
+                if (!newIprStatus.isEmpty() && !newIprStatus.equals(oldIprStatus)) {
+                        changes.add("IPR status changed to " + newIprStatus);
+                }
+
+                // Trials status changed
+                String newTrialsStatus = saved.getTrialsStatus() != null ? formatEnum(saved.getTrialsStatus()) : "";
+                if (!newTrialsStatus.isEmpty() && !newTrialsStatus.equals(oldTrialsStatus)) {
+                        changes.add("trial status changed to " + newTrialsStatus);
+                }
+
+                // New documentation added
+                int newDocCount = saved.getDocumentation() != null ? saved.getDocumentation().size() : 0;
+                if (newDocCount > oldDocCount) {
+                        changes.add((newDocCount - oldDocCount) + " new document(s) added");
+                }
+
+                // New procurement entries added
+                int newProcurementCount = request.getProcurementDetails() != null
+                        ? request.getProcurementDetails().size() : 0;
+                if (newProcurementCount > oldProcurementCount) {
+                        changes.add("a new procurement entry was added");
+                }
+
+                // Fire a single combined notification summarizing everything that changed in this save
+                if (!changes.isEmpty()) {
+                        notificationService.createNotification(
+                                "Item updated",
+                                saved.getName() + ": " + String.join("; ", changes) + ".",
+                                Notification.NotificationType.STATUS_CHANGED,
+                                saved.getId(), saved.getName(), ownerId
+                        );
+                }
 
                 log.info("Item updated: {} ({})", saved.getName(), saved.getCode());
                 return toResponse(saved);
@@ -202,9 +266,41 @@ public class ItemService {
                         t.setFeedback(dto.getFeedback());
                         t.setCorrection(dto.getCorrection());
                         t.setFurtherAction(dto.getFurtherAction());
+                        t.setStatus(parseEnum(TrialStakeholder.Status.class, dto.getStatus()) != null
+                                ? parseEnum(TrialStakeholder.Status.class, dto.getStatus())
+                                : TrialStakeholder.Status.NOT_STARTED);
 
                         trialStakeholderRepository.save(t);
                 });
+
+                // Always re-derive the item's overall trials status from its stakeholders
+                // so the dashboard and item list always reflect individual stakeholder statuses
+                if (stakeholders != null && !stakeholders.isEmpty()) {
+                        item.setTrialsStatus(deriveTrialsStatus(stakeholders));
+                        itemRepository.save(item);
+                }
+        }
+
+        /* Aggregate a list of stakeholder-level statuses into one overall Item.TrialsStatus */
+        private Item.TrialsStatus deriveTrialsStatus(List<TrialStakeholderDTO> stakeholders) {
+                List<TrialStakeholder.Status> statuses = stakeholders.stream()
+                        .map(s -> {
+                                TrialStakeholder.Status st = parseEnum(TrialStakeholder.Status.class, s.getStatus());
+                                return st != null ? st : TrialStakeholder.Status.NOT_STARTED;
+                        })
+                        .toList();
+
+                if (statuses.stream().allMatch(s -> s == TrialStakeholder.Status.COMPLETED)) {
+                        return Item.TrialsStatus.COMPLETED;
+                }
+                if (statuses.stream().anyMatch(s -> s == TrialStakeholder.Status.ON_HOLD)) {
+                        return Item.TrialsStatus.ON_HOLD;
+                }
+                if (statuses.stream().anyMatch(s -> s == TrialStakeholder.Status.IN_PROGRESS
+                                || s == TrialStakeholder.Status.TESTING)) {
+                        return Item.TrialsStatus.IN_PROGRESS;
+                }
+                return Item.TrialsStatus.PENDING;
         }
 
         private void saveTotPartners(Item item, List<ToTPartnerDTO> partners) {
@@ -281,6 +377,44 @@ public class ItemService {
                 ipr.setDesignGrantedNumber(dto.getDesignGrantedNumber());
 
                 iprDetailRepository.save(ipr);
+
+                // Build a human-readable label of which IP types are filed/granted, e.g. "Patent, Trademark"
+                List<String> types = new java.util.ArrayList<>();
+                if (Boolean.TRUE.equals(dto.getPatentFiled()) || Boolean.TRUE.equals(dto.getPatentGranted())) {
+                        types.add("Patent");
+                }
+                if (Boolean.TRUE.equals(dto.getTrademarkFiled()) || Boolean.TRUE.equals(dto.getTrademarkGranted())) {
+                        types.add("Trademark");
+                }
+                if (Boolean.TRUE.equals(dto.getDesignFiled()) || Boolean.TRUE.equals(dto.getDesignGranted())) {
+                        types.add("Design");
+                }
+                item.setIprTypesLabel(types.isEmpty() ? null : String.join(", ", types));
+
+                // Auto-derive the item's overall IPR status from the detail flags,
+                // unless the caller already set an explicit status on the item itself.
+                if (item.getIprStatus() == null) {
+                        boolean anyGranted = Boolean.TRUE.equals(dto.getPatentGranted())
+                                        || Boolean.TRUE.equals(dto.getTrademarkGranted())
+                                        || Boolean.TRUE.equals(dto.getDesignGranted());
+                        boolean anyFiled = Boolean.TRUE.equals(dto.getPatentFiled())
+                                        || Boolean.TRUE.equals(dto.getTrademarkFiled())
+                                        || Boolean.TRUE.equals(dto.getDesignFiled());
+                        boolean trademarkOnly = Boolean.TRUE.equals(dto.getTrademarkFiled())
+                                        && !Boolean.TRUE.equals(dto.getPatentFiled())
+                                        && !Boolean.TRUE.equals(dto.getDesignFiled());
+
+                        if (anyGranted) {
+                                item.setIprStatus(Item.IPRStatus.GRANTED);
+                        } else if (trademarkOnly) {
+                                item.setIprStatus(Item.IPRStatus.TRADEMARK);
+                        } else if (anyFiled) {
+                                item.setIprStatus(Item.IPRStatus.PATENT_FILED);
+                        } else {
+                                item.setIprStatus(Item.IPRStatus.NOT_FILED);
+                        }
+                }
+                itemRepository.save(item);
         }
         /* ── DELETE ── */
         @Transactional
@@ -291,8 +425,17 @@ public class ItemService {
         })
         public void deleteItem(Long id) {
                 Item item = findById(id);
+                assertAccess(item);
+                Long ownerId = item.getCreatedBy() != null ? item.getCreatedBy().getId() : null;
+                String name = item.getName();
                 itemRepository.delete(item);
-                log.info("Item deleted: {} ({})", item.getName(), item.getCode());
+                notificationService.createNotification(
+                        "Item deleted",
+                        name + " has been removed from the system.",
+                        Notification.NotificationType.GENERAL,
+                        null, name, ownerId
+                );
+                log.info("Item deleted: {} ({})", name, item.getCode());
         }
 
         /* ── UPLOAD IMAGE ── */
@@ -300,6 +443,7 @@ public class ItemService {
         @CacheEvict(value = "item-detail", key = "#id")
         public ItemDTO.Response uploadImage(Long id, MultipartFile file) throws IOException {
                 Item item = findById(id);
+                assertAccess(item);
 
                 String ext      = getExtension(file.getOriginalFilename());
                 String filename = UUID.randomUUID() + "." + ext;
@@ -309,7 +453,15 @@ public class ItemService {
                         StandardCopyOption.REPLACE_EXISTING);
 
                 item.setImageUrl("/uploads/" + filename);
-                return toResponse(itemRepository.save(item));
+                Item saved = itemRepository.save(item);
+                notificationService.createNotification(
+                        "Image uploaded",
+                        "A new image has been uploaded for " + saved.getName(),
+                        Notification.NotificationType.DOCUMENT_UPLOAD,
+                        saved.getId(), saved.getName(),
+                        saved.getCreatedBy() != null ? saved.getCreatedBy().getId() : null
+                );
+                return toResponse(saved);
         }
 
         /* ── Helpers ── */
@@ -377,7 +529,11 @@ public class ItemService {
                         item.getTotDocumentsFiled().addAll(
                                 r.getTotDocumentsFiled()
                         );
-                }                item.setTrialsStatus(parseEnum(Item.TrialsStatus.class, r.getTrialsStatus()));
+                }
+                // Only overwrite trialsStatus if the caller explicitly provided one
+                if (r.getTrialsStatus() != null && !r.getTrialsStatus().isBlank()) {
+                        item.setTrialsStatus(parseEnum(Item.TrialsStatus.class, r.getTrialsStatus()));
+                }
                 item.setSampleRequestDate(r.getSampleRequestDate());
                 item.setSampleSubmissionDate(r.getSampleSubmissionDate());
                 item.setIprStatus(parseEnum(Item.IPRStatus.class, r.getIprStatus()));
@@ -401,6 +557,12 @@ public class ItemService {
         }
 
         private ItemDTO.Summary toSummary(Item item) {
+                List<String> stakeholderNames = trialStakeholderRepository.findByItemId(item.getId())
+                        .stream()
+                        .map(TrialStakeholder::getStakeholderName)
+                        .filter(n -> n != null && !n.isBlank())
+                        .toList();
+
                 return ItemDTO.Summary.builder()
                         .id(item.getId())
                         .name(item.getName())
@@ -412,7 +574,10 @@ public class ItemService {
                         .developmentStatus(formatEnum(item.getDevelopmentStatus()))
                         .totStatus(formatEnum(item.getTotStatus()))
                         .iprStatus(formatEnum(item.getIprStatus()))
+                        .iprStatusLabel(item.getIprTypesLabel() != null
+                                ? item.getIprTypesLabel() : formatEnum(item.getIprStatus()))
                         .trialsStatus(formatEnum(item.getTrialsStatus()))
+                        .trialStakeholderNames(stakeholderNames)
                         .updatedAt(item.getUpdatedAt())
                         .build();
         }
@@ -471,6 +636,7 @@ public class ItemService {
                                         .feedback(t.getFeedback())
                                         .correction(t.getCorrection())
                                         .furtherAction(t.getFurtherAction())
+                                        .status(formatEnum(t.getStatus()))
                                         .build())
                                 .toList();
                 return ItemDTO.Response.builder()
@@ -494,6 +660,8 @@ public class ItemService {
                         .sampleSubmissionDate(item.getSampleSubmissionDate())
                         .trialStakeholders(trialStakeholders)
                         .iprStatus(formatEnum(item.getIprStatus()))
+                        .iprStatusLabel(item.getIprTypesLabel() != null
+                                ? item.getIprTypesLabel() : formatEnum(item.getIprStatus()))
                         .patentNumber(item.getPatentNumber())
                         .filingDate(item.getFilingDate())
                         .documentation(item.getDocumentation())
@@ -564,6 +732,7 @@ public class ItemService {
                         case "UNDER_REVIEW"     -> "Under Review";
                         case "NOT_FILED"        -> "Not Filed";
                         case "PENDING"          -> "Pending";
+                        case "TESTING"          -> "Testing";
                         case "COMPLETED"        -> "Completed";
                         case "ON_HOLD"          -> "On Hold";
                         case "HIGH"             -> "High";

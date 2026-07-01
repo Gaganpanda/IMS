@@ -246,6 +246,7 @@ function TrialsTab({ item }) {
             <thead>
               <tr>
                 <th>Stakeholder Name</th>
+                <th>Status</th>
                 <th>Sample Request Date</th>
                 <th>Sample Submission Date</th>
                 <th>Feedback</th>
@@ -257,6 +258,7 @@ function TrialsTab({ item }) {
               {item.trialStakeholders.map((s) => (
                 <tr key={s.id}>
                   <td style={{ fontWeight: 600 }}>{s.stakeholderName}</td>
+                  <td><StatusBadge status={s.status || "Not Started"} /></td>
                   <td>{formatDate(s.sampleRequestDate)}</td>
                   <td>{formatDate(s.sampleSubmissionDate)}</td>
                   <td>{s.feedback    || "—"}</td>

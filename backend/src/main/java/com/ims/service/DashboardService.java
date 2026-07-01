@@ -3,8 +3,10 @@ package com.ims.service;
 import com.ims.model.DashboardStats;
 import com.ims.model.Item;
 import com.ims.model.Notification;
+import com.ims.model.TrialStakeholder;
 import com.ims.repository.ItemRepository;
 import com.ims.repository.NotificationRepository;
+import com.ims.repository.TrialStakeholderRepository;
 import com.ims.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,28 +25,57 @@ import java.util.*;
 @Slf4j
 public class DashboardService {
 
-    private final ItemRepository         itemRepository;
-    private final NotificationRepository notificationRepository;
-    private final UserRepository         userRepository;
+    private final ItemRepository              itemRepository;
+    private final NotificationRepository      notificationRepository;
+    private final UserRepository              userRepository;
+    private final TrialStakeholderRepository  trialStakeholderRepository;
 
-    /* ── Full dashboard stats — cached 120 s ── */
-    @Cacheable(value = "dashboard", key = "'stats'")
+    /* Returns null for ADMIN (sees everything), or the user's own id otherwise */
+    private Long currentOwnerId() {
+        try {
+            String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+            return userRepository.findByUsername(username)
+                    .filter(u -> u.getRole() != com.ims.model.User.Role.ADMIN)
+                    .map(com.ims.model.User::getId)
+                    .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Long currentUserId() {
+        try {
+            String username = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication().getName();
+            return userRepository.findByUsername(username)
+                    .map(com.ims.model.User::getId)
+                    .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /* ── Full dashboard stats — cached per-user for 120 s ── */
+    @Cacheable(value = "dashboard", key = "'stats-' + T(org.springframework.security.core.context.SecurityContextHolder).context.authentication.name")
     @Transactional(readOnly = true)
     public DashboardStats getDashboardStats() {
         log.info("Building dashboard stats (cache miss)");
 
-        long total             = itemRepository.count();
-        long developed         = itemRepository.countByDevelopmentStatus(Item.DevelopmentStatus.DEVELOPED);
-        long inProgress        = itemRepository.countByDevelopmentStatus(Item.DevelopmentStatus.IN_PROGRESS);
-        long underDevelopment  = itemRepository.countByDevelopmentStatus(Item.DevelopmentStatus.UNDER_DEVELOPMENT);
-        long notStarted        = itemRepository.countByDevelopmentStatus(Item.DevelopmentStatus.NOT_STARTED);
+        Long ownerId = currentOwnerId();
 
-        long trials = itemRepository.countByTrialsStatus(Item.TrialsStatus.IN_PROGRESS);
+        long total             = itemRepository.countByOwner(ownerId);
+        long developed         = itemRepository.countByOwnerAndDevelopmentStatus(ownerId, Item.DevelopmentStatus.DEVELOPED);
+        long inProgress        = itemRepository.countByOwnerAndDevelopmentStatus(ownerId, Item.DevelopmentStatus.IN_PROGRESS);
+        long underDevelopment  = itemRepository.countByOwnerAndDevelopmentStatus(ownerId, Item.DevelopmentStatus.UNDER_DEVELOPMENT);
+        long notStarted        = itemRepository.countByOwnerAndDevelopmentStatus(ownerId, Item.DevelopmentStatus.NOT_STARTED);
 
-        long iprFiled = itemRepository.countByIprStatusIn(
+        long trials = itemRepository.countByOwnerAndTrialsStatus(ownerId, Item.TrialsStatus.IN_PROGRESS);
+
+        long iprFiled = itemRepository.countByOwnerAndIprStatusIn(ownerId,
                 List.of(Item.IPRStatus.PATENT_FILED, Item.IPRStatus.GRANTED, Item.IPRStatus.TRADEMARK));
 
-        long totFilled = itemRepository.countByTotStatusIn(
+        long totFilled = itemRepository.countByOwnerAndTotStatusIn(ownerId,
                 List.of(Item.ToTStatus.FILED));
 
         /* Percentages */
@@ -57,7 +88,7 @@ public class DashboardService {
         double totFilledPct        = percent(totFilled,        total);
 
         /* Trials overview */
-        List<DashboardStats.TrialsOverviewItem> trialsOverview = buildTrialsOverview();
+        List<DashboardStats.TrialsOverviewItem> trialsOverview = buildTrialsOverview(ownerId);
 
         /* Monthly progress */
         List<DashboardStats.MonthlyProgressItem> monthly = buildMonthlyProgress(
@@ -67,10 +98,10 @@ public class DashboardService {
         DashboardStats.DocumentationStatsItem docStats = buildDocumentationStats(total);
 
         /* Upcoming due dates */
-        List<DashboardStats.UpcomingDueDateItem> upcomingDues = buildUpcomingDueDates();
+        List<DashboardStats.UpcomingDueDateItem> upcomingDues = buildUpcomingDueDates(ownerId);
 
-        /* Recent activities from notifications */
-        List<DashboardStats.RecentActivityItem> recentActivities = buildRecentActivities();
+        /* Recent activities from notifications — scoped to the current user's own feed */
+        List<DashboardStats.RecentActivityItem> recentActivities = buildRecentActivities(currentUserId());
 
         return DashboardStats.builder()
                 .total(total)
@@ -98,10 +129,10 @@ public class DashboardService {
     }
 
     /* ── Upcoming due dates (next 90 days) ── */
-    @Cacheable(value = "dashboard", key = "'upcoming'")
+    @Cacheable(value = "dashboard", key = "'upcoming-' + T(org.springframework.security.core.context.SecurityContextHolder).context.authentication.name")
     @Transactional(readOnly = true)
     public List<DashboardStats.UpcomingDueDateItem> getUpcomingDueDates() {
-        return buildUpcomingDueDates();
+        return buildUpcomingDueDates(currentOwnerId());
     }
 
     /* ── Monthly progress for a given year ── */
@@ -119,27 +150,35 @@ public class DashboardService {
 
     /* ── Private builders ── */
 
-    private List<DashboardStats.TrialsOverviewItem> buildTrialsOverview() {
-        List<Object[]> rows = itemRepository.countGroupByTrialsStatus();
-        List<DashboardStats.TrialsOverviewItem> result = new ArrayList<>();
+    private List<DashboardStats.TrialsOverviewItem> buildTrialsOverview(Long ownerId) {
+        // Count individual stakeholder records by their own status (not item-level trialsStatus)
+        List<Object[]> rows = trialStakeholderRepository.countGroupByStatusForOwner(ownerId);
 
         Map<String, String> labelMap = Map.of(
-                "PENDING",     "Not Started",
+                "NOT_STARTED", "Not Started",
                 "IN_PROGRESS", "In Progress",
+                "TESTING",     "Testing",
                 "COMPLETED",   "Completed",
                 "ON_HOLD",     "On Hold"
         );
 
-        for (Object[] row : rows) {
-            Item.TrialsStatus status = (Item.TrialsStatus) row[0];
-            if (status == null) continue;   // skip items with no trials status
-            long count = ((Number) row[1]).longValue();
-            result.add(DashboardStats.TrialsOverviewItem.builder()
-                    .status(labelMap.getOrDefault(status.name(), status.name()))
-                    .count(count)
-                    .build());
+        // Ensure all statuses appear even if count is 0
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (String key : List.of("NOT_STARTED", "IN_PROGRESS", "TESTING", "COMPLETED", "ON_HOLD")) {
+            counts.put(key, 0L);
         }
-        return result;
+        for (Object[] row : rows) {
+            if (row[0] == null) continue;
+            TrialStakeholder.Status status = (TrialStakeholder.Status) row[0];
+            counts.put(status.name(), ((Number) row[1]).longValue());
+        }
+
+        return counts.entrySet().stream()
+                .map(e -> DashboardStats.TrialsOverviewItem.builder()
+                        .status(labelMap.getOrDefault(e.getKey(), e.getKey()))
+                        .count(e.getValue())
+                        .build())
+                .toList();
     }
 
     private List<DashboardStats.MonthlyProgressItem> buildMonthlyProgress(int year) {
@@ -179,12 +218,12 @@ public class DashboardService {
                 .build();
     }
 
-    private List<DashboardStats.UpcomingDueDateItem> buildUpcomingDueDates() {
+    private List<DashboardStats.UpcomingDueDateItem> buildUpcomingDueDates(Long ownerId) {
         LocalDate today  = LocalDate.now();
         LocalDate future = today.plusDays(90);
 
-        return itemRepository.findUpcomingDueDates(today, future).stream()
-                .limit(5)
+        return itemRepository.findUpcomingDueDatesForOwner(ownerId, today, future).stream()
+                .limit(10)
                 .map(item -> {
                     long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(
                             today, item.getExpectedCompletionDate());
@@ -199,9 +238,13 @@ public class DashboardService {
                 .toList();
     }
 
-    private List<DashboardStats.RecentActivityItem> buildRecentActivities() {
-        // Pull from notification table — latest 10
-        return notificationRepository.findAll().stream()
+    private List<DashboardStats.RecentActivityItem> buildRecentActivities(Long userId) {
+        // Pull from the current user's own notification feed — latest 10
+        List<Notification> source = userId != null
+                ? notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                : notificationRepository.findAll();
+
+        return source.stream()
                 .filter(n -> n.getCreatedAt() != null)
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .limit(10)
@@ -212,6 +255,8 @@ public class DashboardService {
                         case DOCUMENT_FILLED -> "#f59e0b";
                         case IPR_CHANGED     -> "#ef4444";
                         case DOCUMENT_UPLOAD -> "#8b5cf6";
+                        case TRIAL_UPDATE    -> "#0ea5e9";
+                        case PROCUREMENT     -> "#ca8a04";
                         default              -> "#94a3b8";
                     };
                     return DashboardStats.RecentActivityItem.builder()

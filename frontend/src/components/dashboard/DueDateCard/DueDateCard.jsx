@@ -28,7 +28,7 @@ export default function DueDateCard({ onViewAll }) {
         {upcomingDueDates.length === 0 ? (
           <p className="due-date-card__empty">No upcoming due dates.</p>
         ) : (
-          upcomingDueDates.slice(0, 5).map((item) => {
+          upcomingDueDates.slice(0, 10).map((item) => {
             const days = daysUntil(item.dueDate);
             return (
               <div key={item.id} className="due-date-card__item">

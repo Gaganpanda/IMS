@@ -181,6 +181,7 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         feedback:       s.feedback      || "",
         corrections:    s.correction    || "",
         furtherActions: s.furtherAction || "",
+        status:         s.status || "Not Started",
         open: false,
       })) || []
     );
@@ -241,6 +242,7 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         feedback:             s.feedback      || "",
         correction:           s.corrections   || "",
         furtherAction:        s.furtherActions|| "",
+        status:               s.status || "Not Started",
       })),
       documentation: [...checkedDocs],
       procurementDetails: procurements.map((p) => ({
@@ -556,6 +558,19 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
                       </div>
                     )}
                   </div>
+
+                  <select
+                    className="eif__stakeholder-status-select"
+                    value={s.status || "Not Started"}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => updateSh(s.id, "status", e.target.value)}
+                  >
+                    <option value="Not Started">Not Started</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Testing">Testing</option>
+                    <option value="Completed">Completed</option>
+                    <option value="On Hold">On Hold</option>
+                  </select>
 
                   <span className="eif__stakeholder-chevron">{Icons.chevronDown}</span>
 

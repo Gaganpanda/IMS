@@ -82,15 +82,31 @@ public class NotificationService {
             Notification.NotificationType type,
             Long itemId,
             String itemName) {
+        createNotification(title, message, type, itemId, itemName, null);
+    }
 
-        // Broadcast to all admin users
-        List<User> admins = userRepository.findAll().stream()
+    /* ── Internal: create + push, also notifying a specific owner (e.g. item creator) ── */
+    @Transactional
+    public void createNotification(
+            String title,
+            String message,
+            Notification.NotificationType type,
+            Long itemId,
+            String itemName,
+            Long ownerUserId) {
+
+        // Recipients: every admin, plus the item's owner (deduplicated)
+        List<User> recipients = new java.util.ArrayList<>(userRepository.findAll().stream()
                 .filter(u -> u.getRole() == User.Role.ADMIN)
-                .toList();
+                .toList());
 
-        for (User admin : admins) {
+        if (ownerUserId != null && recipients.stream().noneMatch(u -> u.getId().equals(ownerUserId))) {
+            userRepository.findById(ownerUserId).ifPresent(recipients::add);
+        }
+
+        for (User recipient : recipients) {
             Notification notif = Notification.builder()
-                    .user(admin)
+                    .user(recipient)
                     .title(title)
                     .message(message)
                     .type(type)
@@ -104,12 +120,12 @@ public class NotificationService {
             // Push real-time via WebSocket to specific user
             try {
                 messagingTemplate.convertAndSendToUser(
-                    admin.getUsername(),
+                    recipient.getUsername(),
                     "/queue/notifications",
                     toResponse(saved)
                 );
             } catch (Exception e) {
-                log.warn("WebSocket push failed for user '{}': {}", admin.getUsername(), e.getMessage());
+                log.warn("WebSocket push failed for user '{}': {}", recipient.getUsername(), e.getMessage());
             }
         }
     }

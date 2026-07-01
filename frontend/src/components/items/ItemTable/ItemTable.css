@@ -172,3 +172,18 @@
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+.item-table__stakeholders {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.item-table__no-trial {
+  color: #cbd5e1;
+  font-size: 13px;
+}

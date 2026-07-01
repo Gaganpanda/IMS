@@ -8,7 +8,7 @@ import "./StatusBadge.css";
  *  - status : string  (e.g. "Developed", "Patent Filed")
  *  - size   : "sm" | "md"  (default "md")
  */
-export default function StatusBadge({ status, size = "md" }) {
+export default function StatusBadge({ status, label, size = "md" }) {
   if (!status) return null;
 
   const style = STATUS_BADGE_MAP[status] || { bg: "#f1f5f9", color: "#475569" };
@@ -18,7 +18,7 @@ export default function StatusBadge({ status, size = "md" }) {
       className={`status-badge status-badge--${size}`}
       style={{ backgroundColor: style.bg, color: style.color }}
     >
-      {status}
+      {label || status}
     </span>
   );
 }

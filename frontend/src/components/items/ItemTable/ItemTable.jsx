@@ -11,7 +11,7 @@
       { key: "developmentStatus", label: "Development Status" },
       { key: "totStatus",         label: "ToT Status" },
       { key: "iprStatus",         label: "IPR Status" },
-      { key: "trialsStatus",      label: "Trials Status" },
+      { key: "trialsStatus",      label: "Trial" },
       { key: "updatedAt",         label: "Updated On" },
     ];
 
@@ -102,10 +102,20 @@
                     <StatusBadge status={item.totStatus} size="sm" />
                   </td>
                   <td className="item-table__td">
-                    <StatusBadge status={item.iprStatus} size="sm" />
+                    <StatusBadge status={item.iprStatus} label={item.iprStatusLabel} size="sm" />
                   </td>
                   <td className="item-table__td">
-                    <StatusBadge status={item.trialsStatus} size="sm" />
+                    {item.trialStakeholderNames?.length > 0 ? (
+                      <div
+                        className="item-table__stakeholders"
+                        title={item.trialStakeholderNames.join(", ")}
+                      >
+                        {item.trialStakeholderNames.slice(0, 2).join(", ")}
+                        {item.trialStakeholderNames.length > 2 && " …"}
+                      </div>
+                    ) : (
+                      <span className="item-table__no-trial">—</span>
+                    )}
                   </td>
 
                   {/* Updated on */}
