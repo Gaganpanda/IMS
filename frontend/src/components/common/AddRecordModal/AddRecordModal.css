@@ -1,0 +1,115 @@
+.arm__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.arm__modal {
+  width: 500px;
+  max-width: 95%;
+  max-height: 90vh;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0,0,0,.15);
+}
+
+.arm__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 14px 14px 0 0;
+  flex-shrink: 0;
+}
+
+.arm__header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.arm__close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.arm__body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.arm__section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin: 18px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-surface-alt);
+}
+.arm__section-label--first { margin-top: 0; padding-top: 0; border-top: none; }
+
+.arm__group {
+  margin-bottom: 15px;
+}
+
+.arm__group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.arm__group input,
+.arm__group select,
+.arm__group textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.arm__group textarea {
+  min-height: 90px;
+}
+
+.arm__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 14px 14px;
+  flex-shrink: 0;
+}
+
+.arm__cancel {
+  background: var(--color-border);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.arm__save {
+  background: var(--color-primary);
+  color: var(--color-text-on-accent);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}

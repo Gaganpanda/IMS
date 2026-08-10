@@ -1,0 +1,75 @@
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ── Stat cards ── */
+  .dashboard__stats {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+  }
+
+  @media (max-width: 1400px) { .dashboard__stats { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 900px)  { .dashboard__stats { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ── Section titles ── */
+  .dashboard__section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 4px 0 -4px;
+  }
+
+  /* ── Middle row ── */
+  .dashboard__mid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr 1.15fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 1100px) { .dashboard__mid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 768px)  { .dashboard__mid { grid-template-columns: 1fr; } }
+
+  /* ── Bottom row ── */
+  .dashboard__bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 1100px) { .dashboard__bottom { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 768px)  { .dashboard__bottom { grid-template-columns: 1fr; } }
+
+
+  .stats-card--blue .stats-card__icon {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+  }
+  .stats-card--green .stats-card__icon {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+  }
+  .stats-card--orange .stats-card__icon {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+  }
+  .stats-card--purple .stats-card__icon {
+    background: var(--color-purple-bg);
+    color: var(--color-accent);
+  }
+  .stats-card--red .stats-card__icon {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+  }
+  .stats-card--teal .stats-card__icon {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+  }
+  .stats-card__icon svg {
+    width: 20px;
+    height: 20px;
+  }

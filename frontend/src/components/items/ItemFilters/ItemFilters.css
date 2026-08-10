@@ -1,0 +1,92 @@
+.item-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item-filters__search {
+  flex: 1 1 260px;
+  max-width: 320px;
+  min-width: 200px;
+}
+
+.item-filters__search .searchbar__input {
+  height: 34px;
+  border-radius: 8px;
+}
+
+.item-filters__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.item-filters__select {
+  height: 34px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0 28px 0 10px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  transition: border-color 0.15s;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.item-filters__select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.item-filters__reset {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.item-filters__reset:hover {
+  background: var(--color-primary-light);
+}
+
+.item-filters__filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  color: var(--color-text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: default;
+  font-family: inherit;
+  margin-left: auto;
+}
+
+.item-filters__filter-btn svg {
+  width: 13px;
+  height: 13px;
+}

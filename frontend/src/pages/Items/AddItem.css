@@ -1,0 +1,33 @@
+        .add-item-page {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        /* ── Breadcrumb ── */
+        .add-item-page__breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+        }
+
+        .add-item-page__crumb-link {
+          color: var(--color-text-secondary);
+          cursor: pointer;
+          font-weight: 500;
+          transition: color 0.15s;
+        }
+
+        .add-item-page__crumb-link:hover { color: var(--color-primary); }
+
+        .add-item-page__crumb-arrow {
+          width: 14px;
+          height: 14px;
+          color: var(--color-border);
+        }
+
+        .add-item-page__crumb-current {
+          color: var(--color-text-primary);
+          font-weight: 600;
+        }

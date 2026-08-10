@@ -1,0 +1,11 @@
+target/
+uploads/*
+!uploads/.gitkeep
+*.log
+.idea/
+.vscode/
+*.iml
+.git/
+.gitignore
+Dockerfile
+.dockerignore

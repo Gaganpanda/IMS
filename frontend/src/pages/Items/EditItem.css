@@ -1,0 +1,21 @@
+.edit-item-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.edit-item-page__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.edit-item-page__crumb-link {
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.edit-item-page__crumb-link:hover { color: var(--color-primary); }
+.edit-item-page__crumb-cur { color: var(--color-text-primary); font-weight: 600; }

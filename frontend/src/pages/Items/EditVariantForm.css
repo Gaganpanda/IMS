@@ -1,0 +1,44 @@
+.evf {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 40px;
+}
+
+.evf__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.evf__breadcrumb svg { width: 13px; height: 13px; color: var(--color-border-strong, #cbd5e1); }
+
+.evf__crumb-link {
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+.evf__crumb-link:hover { color: var(--color-primary); }
+.evf__crumb-cur { color: var(--color-text-primary); font-weight: 600; }
+
+/* ── Match the Edit Item page's look exactly: same tab-bar behaviour
+   (fixed height, horizontal scroll instead of wrap) and a green "Save"
+   button (editing = success color), instead of the Add-flow's blue. ── */
+.evf .aif__tabs {
+  height: 52px;
+  padding: 0 16px;
+  gap: 2px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.evf .aif__tabs::-webkit-scrollbar { display: none; }
+.evf .aif__tab { padding: 0 14px; border-radius: 0; }
+
+.evf .aif__nav-btn--save {
+  background: var(--color-success);
+  box-shadow: 0 3px 10px rgba(22, 163, 74, 0.25);
+}
+.evf .aif__nav-btn--save:hover { background: var(--color-success); filter: brightness(0.92); }
+

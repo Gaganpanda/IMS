@@ -1,0 +1,67 @@
+.error-boundary {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--gradient-bg);
+}
+
+.error-boundary__card {
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 40px 32px 32px;
+}
+
+.error-boundary__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.error-boundary__icon svg {
+  width: 30px;
+  height: 30px;
+}
+
+.error-boundary__card h1 {
+  font-size: 19px;
+  margin-bottom: 10px;
+}
+
+.error-boundary__card p {
+  color: var(--color-text-secondary);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.error-boundary__details {
+  text-align: left;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--color-danger);
+  overflow-x: auto;
+  margin-bottom: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-boundary__card .btn {
+  width: 100%;
+  justify-content: center;
+}

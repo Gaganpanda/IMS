@@ -1,0 +1,41 @@
+.notif-bell {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  transition: all 0.18s;
+}
+
+.notif-bell:hover,
+.notif-bell--active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.notif-bell__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.notif-bell__badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  background: var(--color-danger);
+  color: var(--color-text-on-accent);
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1.5px 4px;
+  border-radius: 99px;
+  min-width: 16px;
+  text-align: center;
+  border: 1.5px solid var(--color-surface);
+  line-height: 1.2;
+}

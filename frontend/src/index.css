@@ -1,0 +1,450 @@
+/* ══════════════════════════════════════════════════════════════
+   IMS — Enterprise Design System
+   Clean, light, professional theme (Google Cloud Console / AWS
+   console inspired) built on CSS variables so every component
+   (which already consumes these tokens) re-skins automatically.
+   ══════════════════════════════════════════════════════════════ */
+
+@import "./assets/styles/animations.css";
+
+:root {
+  /* ── Brand ── */
+  --color-primary:       #5b3df0;   /* vivid indigo-violet */
+  --color-primary-dark:  #4527d1;
+  --color-primary-light: rgba(91, 61, 240, 0.09);
+  --color-accent:        #7c5cfc;   /* lighter violet, used sparingly */
+  --color-accent-2:      #0f9d8c;   /* teal, secondary accent */
+
+  /* ── Neutral (crisp, light surfaces) ── */
+  --color-bg:            #f6f5fb;
+  --color-bg-elevated:   #ffffff;
+  --color-surface:       #ffffff;
+  --color-surface-alt:   #f2f1fa;
+  --color-border:        #e5e2f5;
+  --color-border-light:  #eeedf9;
+  --color-border-strong: #c9c3ec;
+
+  /* ── "Glass" (kept flat/solid for a crisp enterprise look) ── */
+  --glass-bg:      #ffffff;
+  --glass-bg-soft: rgba(255, 255, 255, 0.96);
+  --glass-border:  #e5e2f5;
+  --glass-blur:    0px;
+
+  /* ── Text ── */
+  --color-text-primary:   #1e1b2e;
+  --color-text-secondary: #5f5a76;
+  --color-text-muted:     #948fae;
+  --color-text-on-accent: #ffffff;
+
+  /* ── Status ── */
+  --color-success:      #1e8e3e;
+  --color-success-bg:   rgba(30, 142, 62, 0.09);
+  --color-warning:      #b45309;
+  --color-warning-bg:   rgba(217, 119, 6, 0.1);
+  --color-danger:       #d93025;
+  --color-danger-bg:    rgba(217, 48, 37, 0.08);
+  --color-info:         #5b3df0;
+  --color-info-bg:      rgba(91, 61, 240, 0.08);
+  --color-purple:       #5b3df0;
+  --color-purple-bg:    rgba(91, 61, 240, 0.09);
+  --color-teal:         #0f9d8c;
+  --color-teal-bg:      rgba(15, 157, 140, 0.09);
+  --color-gold:         #ca8a04;
+  --color-gold-bg:      rgba(202, 138, 4, 0.1);
+
+  /* ── IPR category accents (used consistently across Add/Edit Item + Variant forms) ── */
+  --color-ipr-1:     #6366f1; --color-ipr-1-bg: #eef2ff;
+  --color-ipr-2:     #8b5cf6; --color-ipr-2-bg: #f5f3ff;
+  --color-ipr-3:     #0d9488; --color-ipr-3-bg: #f0fdfa;
+  --color-ipr-4:     #d97706; --color-ipr-4-bg: #fffbeb;
+
+  /* ── Gradients ── */
+  --gradient-brand:  linear-gradient(135deg, #6d4cf0 0%, #4527d1 100%);
+  --gradient-accent: linear-gradient(135deg, #7c5cfc 0%, #5b3df0 100%);
+  --gradient-bg:     radial-gradient(circle at 12% -10%, rgba(91, 61, 240, 0.045), transparent 42%),
+                      radial-gradient(circle at 100% 0%, rgba(124, 92, 252, 0.035), transparent 38%),
+                      #f6f5fb;
+
+  /* ── Sidebar ── */
+  --sidebar-bg:    #ffffff;
+  --sidebar-width: 248px;
+  --sidebar-width-collapsed: 84px;
+
+  /* ── Navbar ── */
+  --navbar-height: 64px;
+
+  /* ── Shadows (soft Material-style elevation) ── */
+  --shadow-sm: 0 1px 2px rgba(30, 27, 46, 0.06), 0 1px 3px rgba(30, 27, 46, 0.08);
+  --shadow-md: 0 2px 6px rgba(30, 27, 46, 0.07), 0 8px 20px rgba(30, 27, 46, 0.08);
+  --shadow-lg: 0 8px 16px rgba(30, 27, 46, 0.08), 0 16px 40px rgba(30, 27, 46, 0.12);
+  --glow-primary: 0 1px 2px rgba(91, 61, 240, 0.25), 0 6px 16px rgba(91, 61, 240, 0.22);
+  --glow-accent:  0 1px 2px rgba(124, 92, 252, 0.22), 0 6px 16px rgba(124, 92, 252, 0.18);
+
+  /* ── Radius ── */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  /* ── Transitions ── */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Fonts ── */
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-body:    "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  /* ── Overlay tint (page loader / modal backdrops) — theme-aware so dark
+     mode doesn't get a jarring white wash across icons/controls ── */
+  --overlay-bg: rgba(255, 255, 255, 0.75);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DARK THEME — not an inversion of the light palette; surfaces,
+   borders, shadows and status colors are tuned so contrast and
+   "material" hierarchy still read correctly on dark backgrounds.
+   ══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  /* ── Brand (slightly softened — the previous values were too saturated/
+     bright against the dark background and caused eye strain) ── */
+  --color-primary:       #7c73e6;
+  --color-primary-dark:  #9089ef;
+  --color-primary-light: rgba(124, 115, 230, 0.14);
+  --color-accent:        #9d87e8;
+  --color-accent-2:      #2bb8a8;
+
+  /* ── Neutral (deep, slightly desaturated surfaces — less "neon", easier
+     to read for long sessions) ── */
+  --color-bg:            #14121f;
+  --color-bg-elevated:   #1c1930;
+  --color-surface:       #1c1930;
+  --color-surface-alt:   #24213a;
+  --color-border:        #2f2b47;
+  --color-border-light:  #262239;
+  --color-border-strong: #3e3960;
+
+  /* ── "Glass" ── */
+  --glass-bg:      #1c1930;
+  --glass-bg-soft: rgba(28, 25, 48, 0.97);
+  --glass-border:  #2f2b47;
+  --glass-blur:    0px;
+
+  /* ── Text (brightened muted tone for legibility) ── */
+  --color-text-primary:   #edeaf9;
+  --color-text-secondary: #b3aecb;
+  --color-text-muted:     #948fb0;
+  --color-text-on-accent: #ffffff;
+
+  /* ── Status (kept legible but slightly less saturated) ── */
+  --color-success:      #4ade80;
+  --color-success-bg:   rgba(74, 222, 128, 0.12);
+  --color-warning:      #f2b53d;
+  --color-warning-bg:   rgba(242, 181, 61, 0.12);
+  --color-danger:       #f2807a;
+  --color-danger-bg:    rgba(242, 128, 122, 0.12);
+  --color-info:         #7c73e6;
+  --color-info-bg:      rgba(124, 115, 230, 0.14);
+  --color-purple:       #9d87e8;
+  --color-purple-bg:    rgba(157, 135, 232, 0.14);
+  --color-teal:         #2bb8a8;
+  --color-teal-bg:      rgba(43, 184, 168, 0.12);
+  --color-gold:         #d9a516;
+  --color-gold-bg:      rgba(217, 165, 22, 0.12);
+
+  /* ── IPR category accents ── */
+  --color-ipr-1:     #8890e8; --color-ipr-1-bg: rgba(136, 144, 232, 0.14);
+  --color-ipr-2:     #9d87e8; --color-ipr-2-bg: rgba(157, 135, 232, 0.14);
+  --color-ipr-3:     #2bb8a8; --color-ipr-3-bg: rgba(43, 184, 168, 0.12);
+  --color-ipr-4:     #f2b53d; --color-ipr-4-bg: rgba(242, 181, 61, 0.12);
+
+  /* ── Gradients (much softer glow — the previous radial blobs were the
+     main source of the "blurry"/washed-out look) ── */
+  --gradient-brand:  linear-gradient(135deg, #7c73e6 0%, #5d4fd6 100%);
+  --gradient-accent: linear-gradient(135deg, #9d87e8 0%, #7c73e6 100%);
+  --gradient-bg:     radial-gradient(circle at 12% -10%, rgba(124, 115, 230, 0.05), transparent 40%),
+                      radial-gradient(circle at 100% 0%, rgba(157, 135, 232, 0.035), transparent 36%),
+                      #14121f;
+
+  /* ── Sidebar ── */
+  --sidebar-bg: #18152a;
+
+  /* ── Shadows (lighter — heavy black shadows on a dark bg were reading as
+     a hazy blur around every card) ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.22), 0 8px 18px rgba(0, 0, 0, 0.26);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.28), 0 16px 32px rgba(0, 0, 0, 0.32);
+  --glow-primary: 0 1px 2px rgba(124, 115, 230, 0.22), 0 6px 14px rgba(124, 115, 230, 0.18);
+  --glow-accent:  0 1px 2px rgba(157, 135, 232, 0.2),  0 6px 14px rgba(157, 135, 232, 0.16);
+
+  /* ── Overlay tint — dark, not white, so icons/controls under a loading
+     overlay stay legible instead of washing out against a bright white haze ── */
+  --overlay-bg: rgba(20, 18, 31, 0.72);
+}
+
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--gradient-bg);
+  background-attachment: fixed;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Typography ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--color-text-primary);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(139, 124, 246, 0.28); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139, 124, 246, 0.48); }
+
+/* ── Focus visible (keyboard navigation) ── */
+:focus-visible {
+  outline: 2.5px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ── Text selection ── */
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+img { max-width: 100%; display: block; }
+
+/* ── Utility classes ── */
+.card {
+  background: var(--glass-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.card--interactive {
+  cursor: pointer;
+}
+
+.card--interactive:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-strong);
+  transform: translateY(-2px);
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.03em;
+}
+
+.page-subtitle {
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+  margin-top: 3px;
+  font-weight: 400;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn--primary {
+  background: var(--gradient-brand);
+  color: var(--color-text-on-accent);
+  box-shadow: 0 1px 2px rgba(91, 61, 240, 0.3);
+}
+
+.btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: var(--glow-primary);
+  transform: translateY(-1px);
+}
+
+.btn--secondary {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border: 1.5px solid var(--color-border);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--color-surface-alt);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.btn--danger {
+  background: var(--color-danger);
+  color: #ffffff;
+}
+
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 4px 14px rgba(217, 48, 37, 0.28);
+  transform: translateY(-1px);
+}
+
+.btn--sm {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Form controls ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.form-label .required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+
+.form-control {
+  width: 100%;
+  height: 38px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 12px;
+  font-size: 13.5px;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  outline: none;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.form-control:hover {
+  border-color: var(--color-border-strong);
+}
+
+.form-control:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  background: var(--color-surface);
+}
+
+.form-control::placeholder {
+  color: var(--color-text-muted);
+}
+
+.form-control--error {
+  border-color: var(--color-danger);
+}
+
+.form-control--error:focus {
+  box-shadow: 0 0 0 3px rgba(217, 48, 37, 0.14);
+}
+
+textarea.form-control {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 80px;
+}
+
+select.form-control {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6472' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+  padding-right: 32px;
+  cursor: pointer;
+}
+
+.form-error {
+  font-size: 12px;
+  color: var(--color-danger);
+  font-weight: 500;
+}
+
+/* ── Divider ── */
+.divider {
+  height: 1px;
+  background: var(--color-border-light);
+  margin: 16px 0;
+}
+
+/* ── Responsive base ── */
+@media (max-width: 480px) {
+  html { font-size: 15px; }
+  .page-title { font-size: 19px; }
+}
