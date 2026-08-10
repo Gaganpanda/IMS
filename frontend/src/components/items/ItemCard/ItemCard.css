@@ -21,7 +21,7 @@
   position: relative;
   height: 210px;
   /* background: linear-gradient(160deg, var(--color-surface-alt), var(--color-primary-light)); */
-  /* background-color:white; */
+  background-color:white;
   display: flex;
   align-items: center;
   justify-content: center;

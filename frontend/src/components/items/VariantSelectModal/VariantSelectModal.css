@@ -218,6 +218,103 @@
 .vsm__radio-option strong { font-size: 12.5px; color: var(--color-text-primary); }
 .vsm__radio-option small { font-size: 11.5px; color: var(--color-text-muted); }
 
+/* ── Field blocks (name input, select) inside add/create forms ── */
+.vsm__field-block { display: flex; flex-direction: column; gap: 6px; }
+.vsm__field-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+.vsm__required { color: var(--color-danger, #e5484d); }
+.vsm__field-block .form-control { height: 38px; font-size: 13px; }
+
+/* ── Option cards: bigger, icon-led choice cards for "Start with" ── */
+.vsm__option-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 560px) { .vsm__option-grid { grid-template-columns: 1fr; } }
+
+.vsm__option-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 12px;
+  cursor: pointer;
+  background: var(--color-surface);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.vsm__option-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+.vsm__option-card--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+.vsm__option-card input[type="radio"] {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+.vsm__option-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.vsm__option-card--active .vsm__option-icon { background: var(--color-primary); color: var(--color-text-on-accent, #fff); }
+.vsm__option-icon svg { width: 17px; height: 17px; }
+.vsm__option-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 20px;
+}
+.vsm__option-body strong { font-size: 13px; color: var(--color-text-primary); }
+.vsm__option-body small { font-size: 11.5px; line-height: 1.5; color: var(--color-text-muted); }
+
+.vsm__option-recommended {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+
+.vsm__form-note {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: 9px;
+}
+
 /* ── List ── */
 .vsm__list {
   padding: 16px 24px 22px;

@@ -26,9 +26,6 @@ public class ItemVariantDTO {
 
     private String name;
 
-    /* Variant code, e.g. "ECWSB-2.5L" */
-    private String code;
-
     private String category;
 
     private String description;
@@ -100,7 +97,6 @@ public class ItemVariantDTO {
     @Builder
     public static class ConvertRequest {
         private String name;
-        private String code;
     }
 
     /**
@@ -114,7 +110,6 @@ public class ItemVariantDTO {
     @Builder
     public static class CreateRequest {
         private String name;
-        private String code;
 
         /** "blank" (default) or "copy" */
         private String mode;

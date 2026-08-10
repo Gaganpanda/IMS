@@ -22,10 +22,6 @@ public class ItemVariant {
     @Column(nullable = false, length = 200)
     private String name;
 
-    /* Variant code, e.g. "ECWSB-2.5L" */
-    @Column(length = 100)
-    private String code;
-
     @Column(length = 100)
     private String category;
 

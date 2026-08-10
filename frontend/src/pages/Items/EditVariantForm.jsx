@@ -88,7 +88,6 @@ export default function EditVariantForm() {
 
   // Step 1 – Basic Info + Key Information
   const [name, setName] = useState("");
-  const [code, setCode] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [inventor, setInventor] = useState("");
@@ -162,7 +161,6 @@ export default function EditVariantForm() {
       if (cancelled || !v) { setLoading(false); return; }
 
       setName(v.name || "");
-      setCode(v.code || "");
       setCategory(v.category || "");
       setDescription(v.description || "");
       setInventor(v.inventor || "");
@@ -317,7 +315,6 @@ export default function EditVariantForm() {
 
     const payload = {
       name: name.trim(),
-      code: code.trim() || null,
       category: category || null,
       description: description || "",
       inventor: inventor || null,
@@ -464,15 +461,9 @@ export default function EditVariantForm() {
               </div>
 
               <div className="aif__s1-fields">
-            <div className="aif__row2">
-              <div className="form-group">
-                <label className="form-label">Variant Name <span className="required">*</span></label>
-                <input className="form-control" placeholder="e.g. 5 Layer" value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Variant Code</label>
-                <input className="form-control" placeholder="e.g. ECWSB-5L" value={code} onChange={(e) => setCode(e.target.value)} />
-              </div>
+            <div className="form-group">
+              <label className="form-label">Variant Name <span className="required">*</span></label>
+              <input className="form-control" placeholder="e.g. 5 Layer" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
 
             <div className="aif__row2">

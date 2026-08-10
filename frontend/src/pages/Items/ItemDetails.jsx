@@ -141,7 +141,6 @@ function BasicTab({ item, highlightVariantId, onManageVariants }) {
                   {v.developmentStatus && <StatusBadge status={v.developmentStatus} size="sm" />}
                 </div>
                 <div className="idet__variant-card-name">{v.name}</div>
-                {v.code && <div className="idet__variant-card-code">{v.code}</div>}
                 <p className="idet__variant-card-desc">{v.description || "No description added."}</p>
                 <div className="idet__variant-card-foot">
                   <span>View details</span>
@@ -607,8 +606,7 @@ export default function ItemDetails() {
         {activeVariant && (
           <div className="idet__variant-banner">
             <span>
-              Viewing variant <strong>{activeVariant.name}</strong>
-              {activeVariant.code && <> ({activeVariant.code})</>} — this variant has its own
+              Viewing variant <strong>{activeVariant.name}</strong> — this variant has its own
               independent Basic Info, ToT, IPR, Trial Stakeholders, Documentation and Procurement data.
             </span>
             <button type="button" onClick={() => navigate(`/items/${id}`)}>

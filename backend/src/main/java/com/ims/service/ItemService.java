@@ -727,7 +727,6 @@ public class ItemService {
                 ItemVariant v = new ItemVariant();
                 v.setItem(item);
                 v.setName(req.getName().trim());
-                v.setCode(req.getCode() != null ? req.getCode().trim() : null);
 
                 // Copy every scalar field from the item onto the new Variant 1
                 v.setCategory(item.getCategory());
@@ -817,7 +816,6 @@ public class ItemService {
                 ItemVariant v = new ItemVariant();
                 v.setItem(item);
                 v.setName(req.getName().trim());
-                v.setCode(req.getCode() != null ? req.getCode().trim() : null);
                 ItemVariant saved = itemVariantRepository.save(v);
 
                 if ("copy".equalsIgnoreCase(req.getMode())) {
@@ -835,7 +833,7 @@ public class ItemService {
                                 deepCopyVariantData(source, saved);
                         }
                 }
-                // "blank" mode (the default): saved stays empty apart from name/code —
+                // "blank" mode (the default): saved stays empty apart from its name —
                 // the user fills in every tab from scratch, completely independent of
                 // every other variant.
 
@@ -1092,8 +1090,6 @@ public class ItemService {
 
                 if (dto.getName() != null && !dto.getName().isBlank())
                         v.setName(dto.getName().trim());
-                if (dto.getCode() != null)
-                        v.setCode(dto.getCode().trim());
 
                 applyVariantScalarFields(v, dto);
                 ItemVariant saved = itemVariantRepository.save(v);
@@ -1338,7 +1334,6 @@ public class ItemService {
                 return ItemVariantDTO.builder()
                                 .id(v.getId())
                                 .name(v.getName())
-                                .code(v.getCode())
                                 .category(v.getCategory() != null ? v.getCategory() : item.getCategory())
                                 .description(v.getDescription())
                                 .inventor(v.getInventor() != null ? v.getInventor() : item.getInventor())
