@@ -1,6 +1,7 @@
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { formatDate, daysUntil } from "../../../utils/formatDate";
+import Icon from "../../common/Icon/Icon";
 import "./DueDateCard.css";
 
 function urgencyClass(days) {
@@ -32,7 +33,10 @@ export default function DueDateCard({ onViewAll }) {
   return (
     <div className="due-date-card card">
       <div className="due-date-card__header">
-        <h3 className="due-date-card__title">Upcoming Due Dates</h3>
+        <h3 className="due-date-card__title">
+          <span className="panel-icon"><Icon name="calendar" size={13} strokeWidth={2.2} /></span>
+          Upcoming Due Dates
+        </h3>
         {onViewAll && (
           <button className="due-date-card__view-all" onClick={onViewAll}>
             View All

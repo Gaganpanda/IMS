@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
 import { timeAgo } from "../../../utils/formatDate";
+import Icon from "../../common/Icon/Icon";
 import "./ActivityCard.css";
 
 const DOT_COLORS = {
@@ -18,7 +19,10 @@ export default function ActivityCard({ onViewAll }) {
   return (
     <div className="activity-card card">
       <div className="activity-card__header">
-        <h3 className="activity-card__title">Recent Activities</h3>
+        <h3 className="activity-card__title">
+          <span className="panel-icon"><Icon name="activity" size={13} strokeWidth={2.2} /></span>
+          Recent Activities
+        </h3>
         {onViewAll && (
           <button className="activity-card__view-all" onClick={onViewAll}>
             View All
