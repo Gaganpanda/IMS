@@ -1,27 +1,32 @@
 package com.ims.service;
 
-import com.ims.model.DashboardStats;
-import com.ims.model.Item;
-import com.ims.model.Notification;
-import com.ims.model.TrialStakeholder;
-import com.ims.model.ToTPartner;
-import com.ims.repository.IPRDetailRepository;
-import com.ims.repository.ItemRepository;
-import com.ims.repository.NotificationRepository;
-import com.ims.repository.ToTPartnerRepository;
-import com.ims.repository.TrialFeedbackRepository;
-import com.ims.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.format.TextStyle;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.Month;
-import java.time.format.TextStyle;
-import java.util.*;
+import com.ims.model.DashboardStats;
+import com.ims.model.Item;
+import com.ims.model.Notification;
+import com.ims.repository.IPRDetailRepository;
+import com.ims.repository.ItemRepository;
+import com.ims.repository.NotificationRepository;
+import com.ims.repository.ToTPartnerRepository;
+import com.ims.repository.TrialFeedbackRepository;
+import com.ims.repository.TrialStakeholderRepository;
+import com.ims.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +37,7 @@ public class DashboardService {
     private final NotificationRepository      notificationRepository;
     private final UserRepository              userRepository;
     private final TrialFeedbackRepository     trialFeedbackRepository;
+    private final TrialStakeholderRepository  trialStakeholderRepository;
     private final IPRDetailRepository         iprDetailRepository;
     private final ToTPartnerRepository        totPartnerRepository;
 
@@ -170,8 +176,12 @@ public class DashboardService {
     /* ── Private builders ── */
 
     private List<DashboardStats.TrialsOverviewItem> buildTrialsOverview(Long ownerId) {
-        // Count individual feedback rounds by their own status (not item-level trialsStatus)
-        List<Object[]> rows = trialFeedbackRepository.countGroupByStatusForOwner(ownerId);
+        // Count stakeholders by their own trial_status. This is set the moment a
+        // stakeholder is added (default NOT_STARTED) and does not depend on a
+        // feedback round existing — using trial_feedbacks.status here previously
+        // meant a stakeholder with no feedback round yet contributed nothing to
+        // this chart, which made the overview look empty/wrong.
+        List<Object[]> rows = trialStakeholderRepository.countGroupByTrialStatusForOwner(ownerId);
 
         Map<String, String> labelMap = Map.of(
                 "NOT_STARTED", "Not Started",
@@ -188,8 +198,8 @@ public class DashboardService {
         }
         for (Object[] row : rows) {
             if (row[0] == null) continue;
-            TrialStakeholder.Status status = (TrialStakeholder.Status) row[0];
-            counts.put(status.name(), ((Number) row[1]).longValue());
+            String status = row[0].toString();
+            counts.put(status, ((Number) row[1]).longValue());
         }
 
         return counts.entrySet().stream()

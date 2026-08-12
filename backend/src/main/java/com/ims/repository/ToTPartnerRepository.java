@@ -1,12 +1,13 @@
 package com.ims.repository;
 
-import com.ims.model.ToTPartner;
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
-import java.util.List;
+import com.ims.model.ToTPartner;
 
 public interface ToTPartnerRepository
         extends JpaRepository<ToTPartner, Long> {
