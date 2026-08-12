@@ -67,7 +67,7 @@
   width: 150px;
   height: 150px;
   border-radius: 12px;
-  background-color: var(--color-text-on-accent);
+  background-color: #ffffff;
   border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
@@ -75,7 +75,19 @@
   overflow: hidden;
   flex-shrink: 0;
 }
-.idet__hero-img img { width: 100%; height: 100%; object-fit: contain; }
+.idet__hero-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background-color: #ffffff;
+}
+
+[data-theme="dark"] .idet__hero-img {
+  background-color: #1c1930;
+}
+[data-theme="dark"] .idet__hero-img img {
+  background-color: #1c1930;
+}
 
 .idet__hero-info { flex: 1; min-width: 0; }
 
@@ -88,6 +100,9 @@
 }
 
 .idet__hero-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: 20px;
   font-weight: 800;
   color: var(--color-text-primary);
@@ -134,10 +149,15 @@
   flex-shrink: 0;
 }
 
+/* Gradient/colour come from the shared .btn--primary class already applied
+ * alongside this one in JSX — this rule previously tried to redeclare the
+ * gradient itself via the invalid `background-color: linear-gradient(...)`
+ * (gradients only work on `background`/`background-image`), which browsers
+ * silently ignore. Left as layout-only now so it can't fight .btn--primary's
+ * actual background. */
 .idet__action-btn {
   display: flex;
   align-items: center;
-  background-color: linear-gradient(135deg, var(--color-primary), var(--color-primary));
   gap: 7px;
   height: 36px;
   padding: 0 16px;
@@ -349,6 +369,8 @@
 
 /* ── Empty ── */
 .idet__empty { font-size: 13px; color: var(--color-text-muted); text-align: center; padding: 20px 0; margin: 0; }
+.idet__overdue-icon { color: var(--color-danger); font-size: 13px; }
+.idet__tot-expired-icon { margin-left: 6px; }
 
 /* ── Certs ── */
 .idet__cert-row { display: flex; gap: 10px; flex-wrap: wrap; }

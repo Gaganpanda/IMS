@@ -23,4 +23,21 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.user.id = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.feedbackId = :feedbackId AND n.type = :type AND n.read = false")
+    void deleteByFeedbackIdAndTypeAndReadFalse(
+            @Param("feedbackId") Long feedbackId,
+            @Param("type") Notification.NotificationType type);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.itemId = :itemId AND n.sampleNo = :sampleNo AND n.type = :type AND n.read = false")
+    void deleteByItemIdAndSampleNoAndTypeAndReadFalse(
+            @Param("itemId") Long itemId,
+            @Param("sampleNo") String sampleNo,
+            @Param("type") Notification.NotificationType type);
+
+    /** Any existing (read or unread) overdue notification for this feedback —
+     *  used to avoid firing duplicate reminders. */
+    boolean existsByFeedbackIdAndType(Long feedbackId, Notification.NotificationType type);
 }

@@ -6,6 +6,7 @@ import com.ims.dto.ItemDocumentDTO;
 import com.ims.dto.ItemVariantDTO;
 import com.ims.dto.ProcurementDetailDTO;
 import com.ims.dto.ToTPartnerDTO;
+import com.ims.dto.TrialFeedbackDTO;
 import com.ims.dto.TrialStakeholderDTO;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.model.Item;
@@ -13,6 +14,7 @@ import com.ims.model.ItemDocument;
 import com.ims.model.ItemVariant;
 import com.ims.model.Notification;
 import com.ims.model.ToTPartner;
+import com.ims.model.TrialFeedback;
 import com.ims.model.TrialStakeholder;
 import com.ims.model.ProcurementDetail;
 import com.ims.model.IPRDetail;
@@ -32,6 +34,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +48,7 @@ public class ItemService {
         private final NotificationService notificationService;
         private final ToTPartnerRepository totPartnerRepository;
         private final TrialStakeholderRepository trialStakeholderRepository;
+        private final TrialFeedbackRepository trialFeedbackRepository;
         private final ProcurementDetailRepository procurementDetailRepository;
         private final IPRDetailRepository iprDetailRepository;
         private final ItemVariantRepository itemVariantRepository;
@@ -249,51 +253,170 @@ public class ItemService {
                         Item item,
                         List<TrialStakeholderDTO> stakeholders) {
 
-                trialStakeholderRepository.deleteAll(
-                                trialStakeholderRepository.findByItemId(item.getId()));
+                List<TrialStakeholder> previous = trialStakeholderRepository.findByItemId(item.getId());
+                java.util.Map<String, LocalDate> previouslyReceivedBySample = previousReceivedBySample(previous);
+                trialStakeholderRepository.deleteAll(previous);
 
                 if (stakeholders == null)
                         return;
 
                 stakeholders.forEach(dto -> {
-
-                        TrialStakeholder t = new TrialStakeholder();
-
+                        TrialStakeholder t = buildStakeholder(dto);
                         t.setItem(item);
-                        t.setStakeholderName(dto.getStakeholderName());
-                        t.setContactPersonName(dto.getContactPersonName());
-                        t.setStakeholderAddress(dto.getStakeholderAddress());
-                        t.setStakeholderPhone(dto.getStakeholderPhone());
-                        t.setSampleNo(dto.getSampleNo());
-                        t.setSampleRequestDate(dto.getSampleRequestDate());
-                        t.setSampleSubmissionDate(dto.getSampleSubmissionDate());
-                        t.setFeedback(dto.getFeedback());
-                        t.setCorrection(dto.getCorrection());
-                        t.setFurtherAction(dto.getFurtherAction());
-                        t.setStatus(parseEnum(TrialStakeholder.Status.class, dto.getStatus()) != null
-                                        ? parseEnum(TrialStakeholder.Status.class, dto.getStatus())
-                                        : TrialStakeholder.Status.NOT_STARTED);
-
                         trialStakeholderRepository.save(t);
                 });
 
+                notifyNewlyReceivedFeedback(item, stakeholders, previouslyReceivedBySample, null);
+
                 // Always re-derive the item's overall trials status from its stakeholders
                 // so the dashboard and item list always reflect individual stakeholder statuses
-                if (stakeholders != null && !stakeholders.isEmpty()) {
+                if (!stakeholders.isEmpty()) {
                         item.setTrialsStatus(deriveTrialsStatus(stakeholders));
                         itemRepository.save(item);
                 }
         }
 
+        /** Snapshot of sampleNo → feedbackReceivedDate before a stakeholder list
+         *  is wiped and rebuilt, so we can tell "feedback just came in on this
+         *  save" apart from "feedback has been sitting here for a while" and
+         *  avoid re-notifying every time the form is re-saved. */
+        private java.util.Map<String, LocalDate> previousReceivedBySample(List<TrialStakeholder> previous) {
+                java.util.Map<String, LocalDate> map = new java.util.HashMap<>();
+                previous.forEach(s -> trialFeedbackRepository.findByTrialStakeholderId(s.getId()).forEach(f -> {
+                        if (f.getSampleNo() != null && !f.getSampleNo().isBlank()) {
+                                map.put(f.getSampleNo(), f.getFeedbackReceivedDate());
+                        }
+                }));
+                return map;
+        }
+
+        /** Resolves any overdue reminder for samples that now have feedback, and
+         *  fires a "Feedback received" notification the first time a sample's
+         *  feedbackReceivedDate transitions from unset to set. */
+        private void notifyNewlyReceivedFeedback(
+                        Item item,
+                        List<TrialStakeholderDTO> stakeholders,
+                        java.util.Map<String, LocalDate> previouslyReceivedBySample,
+                        Long variantId) {
+                if (stakeholders == null) return;
+                Long ownerId = item.getCreatedBy() != null ? item.getCreatedBy().getId() : null;
+
+                stakeholders.forEach(s -> {
+                        List<TrialFeedbackDTO> feedbacks = s.getFeedbacks();
+                        if (feedbacks == null) return;
+                        feedbacks.forEach(f -> {
+                                String sampleNo = f.getSampleNo();
+                                if (sampleNo == null || sampleNo.isBlank() || f.getFeedbackReceivedDate() == null) return;
+
+                                notificationService.resolveFeedbackOverdueNotifications(item.getId(), sampleNo);
+
+                                boolean isNewlyReceived = !previouslyReceivedBySample.containsKey(sampleNo)
+                                                || previouslyReceivedBySample.get(sampleNo) == null;
+                                if (isNewlyReceived) {
+                                        notificationService.createNotification(
+                                                        "Feedback received",
+                                                        item.getName() + ": Feedback received from "
+                                                                        + (s.getStakeholderName() != null ? s.getStakeholderName() : "stakeholder")
+                                                                        + " for Sample " + sampleNo + ".",
+                                                        Notification.NotificationType.FEEDBACK_RECEIVED,
+                                                        item.getId(), item.getName(), ownerId,
+                                                        variantId, s.getId(), f.getId(), sampleNo);
+                                }
+                        });
+                });
+        }
+
+        /* Builds a (not-yet-parented) TrialStakeholder from its DTO, including
+         * every one of its feedback/trial rounds. Shared by the item-level and
+         * variant-level save paths. */
+        private TrialStakeholder buildStakeholder(TrialStakeholderDTO dto) {
+                TrialStakeholder t = new TrialStakeholder();
+                t.setStakeholderName(dto.getStakeholderName());
+                t.setContactPersonName(dto.getContactPersonName());
+                t.setStakeholderAddress(dto.getStakeholderAddress());
+                t.setStakeholderPhone(dto.getStakeholderPhone());
+                TrialStakeholder.Status trialStatus = parseEnum(TrialStakeholder.Status.class, dto.getTrialStatus());
+                t.setTrialStatus(trialStatus != null ? trialStatus : TrialStakeholder.Status.NOT_STARTED);
+
+                List<TrialFeedbackDTO> feedbackDtos = dto.getFeedbacks();
+                if (feedbackDtos != null) {
+                        feedbackDtos.forEach(fdto -> {
+                                TrialFeedback f = new TrialFeedback();
+                                f.setTrialStakeholder(t);
+                                f.setSampleNo(fdto.getSampleNo());
+                                f.setRequestTrialDate(fdto.getRequestTrialDate());
+                                f.setSampleSubmissionDate(fdto.getSampleSubmissionDate());
+                                f.setFeedbackReceivedDate(fdto.getFeedbackReceivedDate());
+                                f.setFeedback(fdto.getFeedback());
+                                f.setCorrection(fdto.getCorrection());
+                                f.setFurtherAction(fdto.getFurtherAction());
+                                TrialStakeholder.Status st = parseEnum(TrialStakeholder.Status.class, fdto.getStatus());
+                                f.setStatus(st != null ? st : TrialStakeholder.Status.NOT_STARTED);
+                                // Feedback already received (or never submitted) can't be overdue;
+                                // otherwise re-derive immediately so the warning icon is correct
+                                // the instant a sample is saved as submitted, without waiting for
+                                // the next scheduled reminder run.
+                                f.setFeedbackOverdue(isOverdue(f.getSampleSubmissionDate(), f.getFeedbackReceivedDate()));
+                                t.getFeedbacks().add(f);
+                        });
+                }
+                return t;
+        }
+
+        /** A feedback round is overdue once a sample has been submitted, 7+ days
+         *  have passed, and no feedback has been received yet. */
+        private boolean isOverdue(LocalDate sampleSubmissionDate, LocalDate feedbackReceivedDate) {
+                if (sampleSubmissionDate == null || feedbackReceivedDate != null)
+                        return false;
+                return java.time.temporal.ChronoUnit.DAYS.between(sampleSubmissionDate, LocalDate.now()) >= 7;
+        }
+
+        /* Deep-copies a stakeholder entity (and every one of its feedback rounds)
+         * onto a brand-new, independent set of rows parented under `targetVariant`
+         * — used when converting an item to variants, or duplicating an existing
+         * variant. The overdue flag is re-derived fresh rather than copied, since
+         * it's a point-in-time computed fact, not authored data. */
+        private TrialStakeholder deepCopyStakeholderEntity(TrialStakeholder source, ItemVariant targetVariant) {
+                TrialStakeholder t = new TrialStakeholder();
+                t.setItemVariant(targetVariant);
+                t.setStakeholderName(source.getStakeholderName());
+                t.setContactPersonName(source.getContactPersonName());
+                t.setStakeholderAddress(source.getStakeholderAddress());
+                t.setStakeholderPhone(source.getStakeholderPhone());
+                t.setTrialStatus(source.getTrialStatus() != null ? source.getTrialStatus() : TrialStakeholder.Status.NOT_STARTED);
+                if (source.getFeedbacks() != null) {
+                        source.getFeedbacks().forEach(fs -> {
+                                TrialFeedback f = new TrialFeedback();
+                                f.setTrialStakeholder(t);
+                                f.setSampleNo(fs.getSampleNo());
+                                f.setRequestTrialDate(fs.getRequestTrialDate());
+                                f.setSampleSubmissionDate(fs.getSampleSubmissionDate());
+                                f.setFeedbackReceivedDate(fs.getFeedbackReceivedDate());
+                                f.setFeedback(fs.getFeedback());
+                                f.setCorrection(fs.getCorrection());
+                                f.setFurtherAction(fs.getFurtherAction());
+                                f.setStatus(fs.getStatus());
+                                f.setFeedbackOverdue(isOverdue(f.getSampleSubmissionDate(), f.getFeedbackReceivedDate()));
+                                t.getFeedbacks().add(f);
+                        });
+                }
+                return t;
+        }
+
         /*
-         * Aggregate a list of stakeholder-level statuses into one overall
-         * Item.TrialsStatus
+         * Aggregate a list of stakeholders' latest feedback-round statuses into
+         * one overall Item.TrialsStatus. A stakeholder's "current" status is
+         * whichever feedback round was added most recently (the last one in the
+         * list); a stakeholder with no feedback rounds yet counts as Not Started.
          */
         private Item.TrialsStatus deriveTrialsStatus(List<TrialStakeholderDTO> stakeholders) {
                 List<TrialStakeholder.Status> statuses = stakeholders.stream()
                                 .map(s -> {
+                                        List<TrialFeedbackDTO> fb = s.getFeedbacks();
+                                        if (fb == null || fb.isEmpty())
+                                                return TrialStakeholder.Status.NOT_STARTED;
                                         TrialStakeholder.Status st = parseEnum(TrialStakeholder.Status.class,
-                                                        s.getStatus());
+                                                        fb.get(fb.size() - 1).getStatus());
                                         return st != null ? st : TrialStakeholder.Status.NOT_STARTED;
                                 })
                                 .toList();
@@ -353,7 +476,9 @@ public class ItemService {
                 v.setDescription(dto.getDescription());
                 if (dto.getInventor() != null) v.setInventor(dto.getInventor());
                 if (dto.getProductDevCompletionDate() != null) v.setProductDevCompletionDate(dto.getProductDevCompletionDate());
-                v.setImageUrl(dto.getImageUrl());
+                // imageUrl is intentionally not copied here — it's a single
+                // item-level asset now (see uploadImage/uploadVariantImage),
+                // not a per-variant field.
 
                 v.setDevelopmentStatus(Item.DevelopmentStatus.fromString(dto.getDevelopmentStatus()));
                 v.setTotStatus(Item.ToTStatus.fromString(dto.getTotStatus()));
@@ -397,26 +522,18 @@ public class ItemService {
         }
 
         private void saveVariantTrialStakeholders(ItemVariant variant, List<TrialStakeholderDTO> stakeholders) {
-                trialStakeholderRepository.deleteAll(
-                                trialStakeholderRepository.findByItemVariantId(variant.getId()));
+                List<TrialStakeholder> previous = trialStakeholderRepository.findByItemVariantId(variant.getId());
+                java.util.Map<String, LocalDate> previouslyReceivedBySample = previousReceivedBySample(previous);
+                trialStakeholderRepository.deleteAll(previous);
                 if (stakeholders == null) return;
                 stakeholders.forEach(dto -> {
-                        TrialStakeholder t = new TrialStakeholder();
+                        TrialStakeholder t = buildStakeholder(dto);
                         t.setItemVariant(variant);
-                        t.setStakeholderName(dto.getStakeholderName());
-                        t.setContactPersonName(dto.getContactPersonName());
-                        t.setStakeholderAddress(dto.getStakeholderAddress());
-                        t.setStakeholderPhone(dto.getStakeholderPhone());
-                        t.setSampleNo(dto.getSampleNo());
-                        t.setSampleRequestDate(dto.getSampleRequestDate());
-                        t.setSampleSubmissionDate(dto.getSampleSubmissionDate());
-                        t.setFeedback(dto.getFeedback());
-                        t.setCorrection(dto.getCorrection());
-                        t.setFurtherAction(dto.getFurtherAction());
-                        TrialStakeholder.Status st = parseEnum(TrialStakeholder.Status.class, dto.getStatus());
-                        t.setStatus(st != null ? st : TrialStakeholder.Status.NOT_STARTED);
                         trialStakeholderRepository.save(t);
                 });
+                if (variant.getItem() != null) {
+                        notifyNewlyReceivedFeedback(variant.getItem(), stakeholders, previouslyReceivedBySample, variant.getId());
+                }
                 if (!stakeholders.isEmpty()) {
                         variant.setTrialsStatus(deriveTrialsStatus(stakeholders));
                         itemVariantRepository.save(variant);
@@ -733,7 +850,7 @@ public class ItemService {
                 v.setDescription(item.getDescription());
                 v.setInventor(item.getInventor());
                 v.setProductDevCompletionDate(item.getProductDevCompletionDate());
-                v.setImageUrl(item.getImageUrl());
+                // imageUrl is a single item-level asset now — not copied per-variant.
                 v.setDevelopmentStatus(item.getDevelopmentStatus());
                 v.setDevelopmentDate(item.getDevelopmentDate());
                 v.setRemarks(item.getRemarks());
@@ -816,6 +933,8 @@ public class ItemService {
                 ItemVariant v = new ItemVariant();
                 v.setItem(item);
                 v.setName(req.getName().trim());
+                // Image is a single item-level asset shared by every variant —
+                // there's nothing to seed here per-variant anymore.
                 ItemVariant saved = itemVariantRepository.save(v);
 
                 if ("copy".equalsIgnoreCase(req.getMode())) {
@@ -848,7 +967,7 @@ public class ItemService {
                 target.setDescription(source.getDescription());
                 target.setInventor(source.getInventor());
                 target.setProductDevCompletionDate(source.getProductDevCompletionDate());
-                target.setImageUrl(source.getImageUrl());
+                // Image is a single item-level asset — not copied per-variant.
                 target.setDevelopmentStatus(source.getDevelopmentStatus());
                 target.setDevelopmentDate(source.getDevelopmentDate());
                 target.setRemarks(source.getRemarks());
@@ -875,22 +994,8 @@ public class ItemService {
                 target.setWarranty(source.getWarranty());
                 itemVariantRepository.save(target);
 
-                trialStakeholderRepository.findByItemVariantId(source.getId()).forEach(s -> {
-                        TrialStakeholder t = new TrialStakeholder();
-                        t.setItemVariant(target);
-                        t.setStakeholderName(s.getStakeholderName());
-                        t.setContactPersonName(s.getContactPersonName());
-                        t.setStakeholderAddress(s.getStakeholderAddress());
-                        t.setStakeholderPhone(s.getStakeholderPhone());
-                        t.setSampleNo(s.getSampleNo());
-                        t.setSampleRequestDate(s.getSampleRequestDate());
-                        t.setSampleSubmissionDate(s.getSampleSubmissionDate());
-                        t.setFeedback(s.getFeedback());
-                        t.setCorrection(s.getCorrection());
-                        t.setFurtherAction(s.getFurtherAction());
-                        t.setStatus(s.getStatus());
-                        trialStakeholderRepository.save(t);
-                });
+                trialStakeholderRepository.findByItemVariantId(source.getId())
+                                .forEach(s -> trialStakeholderRepository.save(deepCopyStakeholderEntity(s, target)));
 
                 totPartnerRepository.findByItemVariantId(source.getId()).forEach(s -> {
                         ToTPartner p = new ToTPartner();
@@ -964,7 +1069,7 @@ public class ItemService {
                 target.setDescription(source.getDescription());
                 target.setInventor(source.getInventor());
                 target.setProductDevCompletionDate(source.getProductDevCompletionDate());
-                target.setImageUrl(source.getImageUrl());
+                // Image is a single item-level asset — not copied per-variant.
                 target.setDevelopmentStatus(source.getDevelopmentStatus());
                 target.setDevelopmentDate(source.getDevelopmentDate());
                 target.setRemarks(source.getRemarks());
@@ -991,22 +1096,8 @@ public class ItemService {
                 target.setWarranty(source.getWarranty());
                 itemVariantRepository.save(target);
 
-                trialStakeholderRepository.findByItemId(source.getId()).forEach(s -> {
-                        TrialStakeholder t = new TrialStakeholder();
-                        t.setItemVariant(target);
-                        t.setStakeholderName(s.getStakeholderName());
-                        t.setContactPersonName(s.getContactPersonName());
-                        t.setStakeholderAddress(s.getStakeholderAddress());
-                        t.setStakeholderPhone(s.getStakeholderPhone());
-                        t.setSampleNo(s.getSampleNo());
-                        t.setSampleRequestDate(s.getSampleRequestDate());
-                        t.setSampleSubmissionDate(s.getSampleSubmissionDate());
-                        t.setFeedback(s.getFeedback());
-                        t.setCorrection(s.getCorrection());
-                        t.setFurtherAction(s.getFurtherAction());
-                        t.setStatus(s.getStatus());
-                        trialStakeholderRepository.save(t);
-                });
+                trialStakeholderRepository.findByItemId(source.getId())
+                                .forEach(s -> trialStakeholderRepository.save(deepCopyStakeholderEntity(s, target)));
 
                 totPartnerRepository.findByItemId(source.getId()).forEach(s -> {
                         ToTPartner p = new ToTPartner();
@@ -1103,15 +1194,20 @@ public class ItemService {
         }
 
         /* ── UPLOAD VARIANT IMAGE ──
-         * Mirrors uploadImage(id, file) above but stores the file against the
-         * variant's own imageUrl, so each variant can carry its own picture
-         * independently of the parent item's — matching the base-item edit flow. */
+         * Image is a single item-level asset shared by the item and every one
+         * of its variants — there is no independent per-variant picture.
+         * Kept as an endpoint for backward compatibility (older clients may
+         * still call it from a variant's edit screen), but it now updates the
+         * item's own image, the same as uploadImage(id, file) above, so the
+         * result is never stale/variant-only data that toResponse() ignores. */
         @Transactional
         @CacheEvict(value = "item-detail", key = "#id")
         public ItemDTO.Response uploadVariantImage(Long id, Long variantId, MultipartFile file) throws IOException {
                 Item item = findById(id);
                 assertAccess(item);
-                ItemVariant v = findVariantOrThrow(item, variantId);
+                // Validated so a bad variantId still 404s the way callers expect,
+                // even though the upload itself now targets the item.
+                findVariantOrThrow(item, variantId);
 
                 String ext = getExtension(file.getOriginalFilename());
                 String filename = UUID.randomUUID() + "." + ext;
@@ -1120,8 +1216,8 @@ public class ItemService {
                 Files.copy(file.getInputStream(), uploadPath.resolve(filename),
                                 StandardCopyOption.REPLACE_EXISTING);
 
-                v.setImageUrl("/uploads/" + filename);
-                itemVariantRepository.save(v);
+                item.setImageUrl("/uploads/" + filename);
+                itemRepository.save(item);
 
                 return toResponse(findById(id));
         }
@@ -1284,20 +1380,7 @@ public class ItemService {
 
                 List<TrialStakeholderDTO> trialStakeholders = trialStakeholderRepository.findByItemVariantId(v.getId())
                                 .stream()
-                                .map(t -> TrialStakeholderDTO.builder()
-                                                .id(t.getId())
-                                                .stakeholderName(t.getStakeholderName())
-                                                .contactPersonName(t.getContactPersonName())
-                                                .stakeholderAddress(t.getStakeholderAddress())
-                                                .stakeholderPhone(t.getStakeholderPhone())
-                                                .sampleNo(t.getSampleNo())
-                                                .sampleRequestDate(t.getSampleRequestDate())
-                                                .sampleSubmissionDate(t.getSampleSubmissionDate())
-                                                .feedback(t.getFeedback())
-                                                .correction(t.getCorrection())
-                                                .furtherAction(t.getFurtherAction())
-                                                .status(formatTrialStakeholderStatus(t.getStatus()))
-                                                .build())
+                                .map(this::toStakeholderDTO)
                                 .toList();
 
                 List<ProcurementDetailDTO> procurementDetails = procurementDetailRepository.findByItemVariantId(v.getId())
@@ -1339,7 +1422,7 @@ public class ItemService {
                                 .inventor(v.getInventor() != null ? v.getInventor() : item.getInventor())
                                 .productDevCompletionDate(v.getProductDevCompletionDate() != null
                                                 ? v.getProductDevCompletionDate() : item.getProductDevCompletionDate())
-                                .imageUrl(v.getImageUrl() != null ? v.getImageUrl() : item.getImageUrl())
+                                .imageUrl(item.getImageUrl())
                                 .developmentStatus(formatEnum(
                                                 v.getDevelopmentStatus() != null ? v.getDevelopmentStatus() : item.getDevelopmentStatus()))
                                 .developmentDate(v.getDevelopmentDate() != null
@@ -1351,6 +1434,8 @@ public class ItemService {
                                 .filledDate(v.getFilledDate())
                                 .totDocumentsFiled(v.getTotDocumentsFiled() == null ? new ArrayList<>() : new ArrayList<>(v.getTotDocumentsFiled()))
                                 .totPartners(totPartners)
+                                .hasOverdueTot(hasOverdueTot(totPartners))
+                                .totOverdueMessage(totOverdueMessage(totPartners))
                                 .trialsStatus(formatEnum(v.getTrialsStatus() != null ? v.getTrialsStatus() : item.getTrialsStatus()))
                                 .sampleRequestDate(v.getSampleRequestDate())
                                 .sampleSubmissionDate(v.getSampleSubmissionDate())
@@ -1370,6 +1455,7 @@ public class ItemService {
                                 .unitCost(v.getUnitCost() != null ? v.getUnitCost() : item.getUnitCost())
                                 .vendor(v.getVendor() != null ? v.getVendor() : item.getVendor())
                                 .warranty(v.getWarranty() != null ? v.getWarranty() : item.getWarranty())
+                                .hasOverdueFeedback(trialStakeholders.stream().anyMatch(TrialStakeholderDTO::isHasOverdueFeedback))
                                 .build();
         }
 
@@ -1435,8 +1521,58 @@ public class ItemService {
                                 .trialStakeholderNames(stakeholderNames)
                                 .variants(variants)
                                 .hasVariants(!variants.isEmpty())
+                                .hasOverdueFeedback(itemHasOverdueFeedback(item.getId()))
+                                .hasOverdueTot(itemHasOverdueTot(item.getId()))
                                 .updatedAt(item.getUpdatedAt())
                                 .build();
+        }
+
+        /** True if any trial-feedback round anywhere on this item (its own
+         *  stakeholders, or any variant's) is currently overdue — drives the ⚠
+         *  warning icon on the item card/table. */
+        private boolean itemHasOverdueFeedback(Long itemId) {
+                boolean onItem = trialStakeholderRepository.findByItemId(itemId).stream()
+                                .anyMatch(s -> trialFeedbackRepository.findByTrialStakeholderId(s.getId())
+                                                .stream().anyMatch(TrialFeedback::isFeedbackOverdue));
+                if (onItem) return true;
+                return itemVariantRepository.findByItemId(itemId).stream()
+                                .anyMatch(v -> trialStakeholderRepository.findByItemVariantId(v.getId()).stream()
+                                                .anyMatch(s -> trialFeedbackRepository.findByTrialStakeholderId(s.getId())
+                                                                .stream().anyMatch(TrialFeedback::isFeedbackOverdue)));
+        }
+
+        /** True once a ToT partner's validity date has passed with no renewal
+         *  recorded — drives the ⚠ warning icon for expired ToT validity. */
+        private boolean hasOverdueTot(List<ToTPartnerDTO> totPartners) {
+                if (totPartners == null) return false;
+                LocalDate today = LocalDate.now();
+                return totPartners.stream()
+                                .anyMatch(p -> p.getTotValidityDate() != null && p.getTotValidityDate().isBefore(today));
+        }
+
+        /** Human-readable reason shown on hover for the ToT-overdue warning icon. */
+        private String totOverdueMessage(List<ToTPartnerDTO> totPartners) {
+                if (totPartners == null) return null;
+                LocalDate today = LocalDate.now();
+                return totPartners.stream()
+                                .filter(p -> p.getTotValidityDate() != null && p.getTotValidityDate().isBefore(today))
+                                .map(p -> "ToT validity with "
+                                                + (p.getTotFirm() != null && !p.getTotFirm().isBlank() ? p.getTotFirm() : "partner")
+                                                + " expired on " + p.getTotValidityDate() + " — renewal pending.")
+                                .findFirst().orElse(null);
+        }
+
+        /** True when the item's own ToT partners, or any variant's, have an
+         *  expired validity date — used for the item-card/table icon, which
+         *  (unlike the detail view) doesn't have the full totPartners list handy. */
+        private boolean itemHasOverdueTot(Long itemId) {
+                LocalDate today = LocalDate.now();
+                boolean onItem = totPartnerRepository.findByItemId(itemId).stream()
+                                .anyMatch(p -> p.getTotValidityDate() != null && p.getTotValidityDate().isBefore(today));
+                if (onItem) return true;
+                return itemVariantRepository.findByItemId(itemId).stream()
+                                .anyMatch(v -> totPartnerRepository.findByItemVariantId(v.getId()).stream()
+                                                .anyMatch(p -> p.getTotValidityDate() != null && p.getTotValidityDate().isBefore(today)));
         }
 
         private ItemDTO.Response toResponse(Item item) {
@@ -1502,20 +1638,7 @@ public class ItemService {
 
                 List<TrialStakeholderDTO> trialStakeholders = trialStakeholderRepository.findByItemId(item.getId())
                                 .stream()
-                                .map(t -> TrialStakeholderDTO.builder()
-                                                .id(t.getId())
-                                                .stakeholderName(t.getStakeholderName())
-                                                .contactPersonName(t.getContactPersonName())
-                                                .stakeholderAddress(t.getStakeholderAddress())
-                                                .stakeholderPhone(t.getStakeholderPhone())
-                                                .sampleNo(t.getSampleNo())
-                                                .sampleRequestDate(t.getSampleRequestDate())
-                                                .sampleSubmissionDate(t.getSampleSubmissionDate())
-                                                .feedback(t.getFeedback())
-                                                .correction(t.getCorrection())
-                                                .furtherAction(t.getFurtherAction())
-                                                .status(formatTrialStakeholderStatus(t.getStatus()))
-                                                .build())
+                                .map(this::toStakeholderDTO)
                                 .toList();
 
                 List<ItemVariantDTO> variants = itemVariantRepository.findByItemId(item.getId())
@@ -1572,6 +1695,9 @@ public class ItemService {
                                 .uploadedDocuments(uploadedDocuments)
                                 .variants(variants)
                                 .hasVariants(!variants.isEmpty())
+                                .hasOverdueFeedback(itemHasOverdueFeedback(item.getId()))
+                                .hasOverdueTot(itemHasOverdueTot(item.getId()))
+                                .totOverdueMessage(totOverdueMessage(totPartners))
                                 .crbfCount(item.getCrbfCount())
                                 .ssbCount(item.getSsbCount())
                                 .weight(item.getWeight())
@@ -1620,6 +1746,40 @@ public class ItemService {
                 } catch (IllegalArgumentException e) {
                         return null;
                 }
+        }
+
+        private TrialStakeholderDTO toStakeholderDTO(TrialStakeholder t) {
+                List<TrialFeedbackDTO> feedbacks = trialFeedbackRepository.findByTrialStakeholderId(t.getId())
+                                .stream()
+                                .sorted(java.util.Comparator.comparing(TrialFeedback::getId))
+                                .map(this::toFeedbackDTO)
+                                .toList();
+                boolean hasOverdue = feedbacks.stream().anyMatch(TrialFeedbackDTO::isFeedbackOverdue);
+                return TrialStakeholderDTO.builder()
+                                .id(t.getId())
+                                .stakeholderName(t.getStakeholderName())
+                                .contactPersonName(t.getContactPersonName())
+                                .stakeholderAddress(t.getStakeholderAddress())
+                                .stakeholderPhone(t.getStakeholderPhone())
+                                .trialStatus(formatTrialStakeholderStatus(t.getTrialStatus()))
+                                .feedbacks(feedbacks)
+                                .hasOverdueFeedback(hasOverdue)
+                                .build();
+        }
+
+        private TrialFeedbackDTO toFeedbackDTO(TrialFeedback f) {
+                return TrialFeedbackDTO.builder()
+                                .id(f.getId())
+                                .sampleNo(f.getSampleNo())
+                                .requestTrialDate(f.getRequestTrialDate())
+                                .sampleSubmissionDate(f.getSampleSubmissionDate())
+                                .feedbackReceivedDate(f.getFeedbackReceivedDate())
+                                .feedback(f.getFeedback())
+                                .correction(f.getCorrection())
+                                .furtherAction(f.getFurtherAction())
+                                .status(formatTrialStakeholderStatus(f.getStatus()))
+                                .feedbackOverdue(f.isFeedbackOverdue())
+                                .build();
         }
 
         private String formatTrialStakeholderStatus(Enum<?> e) {

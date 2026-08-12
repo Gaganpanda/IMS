@@ -54,6 +54,9 @@
 }
 
 .due-date-card__item:hover { background: var(--color-surface-alt); border-color: var(--color-border-light); }
+.due-date-card__item--clickable { cursor: pointer; }
+.due-date-card__item--clickable:focus-visible { outline: 2px solid var(--color-primary, #4f46e5); outline-offset: 2px; }
+.due-date-card__item--clickable:active { transform: scale(0.995); }
 
 .due-date-card__icon {
   width: 34px;

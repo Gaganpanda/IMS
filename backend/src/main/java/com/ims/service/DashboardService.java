@@ -9,7 +9,7 @@ import com.ims.repository.IPRDetailRepository;
 import com.ims.repository.ItemRepository;
 import com.ims.repository.NotificationRepository;
 import com.ims.repository.ToTPartnerRepository;
-import com.ims.repository.TrialStakeholderRepository;
+import com.ims.repository.TrialFeedbackRepository;
 import com.ims.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ public class DashboardService {
     private final ItemRepository              itemRepository;
     private final NotificationRepository      notificationRepository;
     private final UserRepository              userRepository;
-    private final TrialStakeholderRepository  trialStakeholderRepository;
+    private final TrialFeedbackRepository     trialFeedbackRepository;
     private final IPRDetailRepository         iprDetailRepository;
     private final ToTPartnerRepository        totPartnerRepository;
 
@@ -170,8 +170,8 @@ public class DashboardService {
     /* ── Private builders ── */
 
     private List<DashboardStats.TrialsOverviewItem> buildTrialsOverview(Long ownerId) {
-        // Count individual stakeholder records by their own status (not item-level trialsStatus)
-        List<Object[]> rows = trialStakeholderRepository.countGroupByStatusForOwner(ownerId);
+        // Count individual feedback rounds by their own status (not item-level trialsStatus)
+        List<Object[]> rows = trialFeedbackRepository.countGroupByStatusForOwner(ownerId);
 
         Map<String, String> labelMap = Map.of(
                 "NOT_STARTED", "Not Started",

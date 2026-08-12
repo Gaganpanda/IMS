@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   closeNotificationPopup,
   markAllAsReadAsync,
@@ -18,6 +18,9 @@ const TYPE_CONFIG = {
   ipr_changed:      { bg: "var(--color-danger-bg)",  color: "var(--color-danger)",  icon: "shield" },
   document_upload:  { bg: "var(--color-info-bg)",    color: "var(--color-info)",    icon: "upload" },
   procurement:      { bg: "var(--color-warning-bg)", color: "var(--color-warning)", icon: "cart" },
+  trial_update:     { bg: "var(--color-teal-bg)",    color: "var(--color-teal)",    icon: "flask" },
+  feedback_overdue: { bg: "var(--color-danger-bg)",  color: "var(--color-danger)",  icon: "alertTriangle" },
+  feedback_received:{ bg: "var(--color-success-bg)", color: "var(--color-success)", icon: "checkCircle" },
   default:          { bg: "var(--color-surface-alt)",color: "var(--color-text-muted)", icon: "bell" },
 };
 
@@ -35,6 +38,7 @@ function NotificationIcon({ type }) {
 
 export default function NotificationPopup() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const panelRef = useRef(null);
   const [tab, setTab] = useState("all");
   const showPopup = useSelector((s) => s.notifications?.showPopup ?? false);
@@ -57,6 +61,19 @@ export default function NotificationPopup() {
   }, [showPopup, dispatch]);
 
   if (!showPopup) return null;
+
+  const handleItemClick = (n) => {
+    if (!n.read) dispatch(markAsReadAsync(n.id));
+    if (!n.itemId) return;
+    const params = new URLSearchParams();
+    if (n.variantId) params.set("variant", n.variantId);
+    if (n.type === "feedback_overdue" || n.type === "feedback_received" || n.type === "trial_update") {
+      params.set("tab", "trials");
+    }
+    const qs = params.toString();
+    dispatch(closeNotificationPopup());
+    navigate(`/items/${n.itemId}${qs ? `?${qs}` : ""}`);
+  };
 
   return (
     <div className="notif-popup__overlay">
@@ -115,7 +132,7 @@ export default function NotificationPopup() {
               <div
                 key={n.id}
                 className={`notif-popup__item${!n.read ? " notif-popup__item--unread" : ""}`}
-                onClick={() => !n.read && dispatch(markAsReadAsync(n.id))}
+                onClick={() => handleItemClick(n)}
               >
                 <NotificationIcon type={n.type} />
                 <div className="notif-popup__item-body">

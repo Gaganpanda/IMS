@@ -347,7 +347,9 @@ export default function VariantSelectModal({ item, open, onClose, onSelectVarian
               </div>
             ) : (
               variants.map((v, i) => {
-                const thumb = v.imageUrl ? getImageUrl(v.imageUrl) : image;
+                // Image is a single item-level asset shared by every variant —
+                // never per-variant — so each row uses the item's own image.
+                const thumb = image;
                 return (
                   <div key={v.id || i} className="vsm__row" onClick={() => onSelectVariant(v)}>
                     <div className="vsm__row-thumb">

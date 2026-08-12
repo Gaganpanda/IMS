@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  getVariantDetailAsync, updateVariantAsync, fetchItemByIdAsync, uploadVariantImageAsync,
+  getVariantDetailAsync, updateVariantAsync, fetchItemByIdAsync, uploadImageAsync,
 } from "../../redux/slices/itemSlice";
 import AddRecordModal from "../../components/common/AddRecordModal/AddRecordModal";
+import TrialStakeholders, { stakeholdersFromApi, stakeholdersToApi } from "../../components/items/TrialStakeholders/TrialStakeholders";
 import Loader from "../../components/common/Loader/Loader";
 import {
   CATEGORIES, DEVELOPMENT_STATUS, TOT_STATUS, TOT_DOCUMENTS, DOCUMENTATION_ITEMS,
@@ -131,8 +132,6 @@ export default function EditVariantForm() {
   const [sampleRequestDate, setSampleRequestDate] = useState("");
   const [sampleSubmissionDate, setSampleSubmissionDate] = useState("");
   const [stakeholders, setStakeholders] = useState([]);
-  const [showStakeholderModal, setShowStakeholderModal] = useState(false);
-  const [stakeholderData, setStakeholderData] = useState({ name: "", contactPerson: "", address: "", phone: "", sampleNo: "", sampleReqDate: "", sampleSubDate: "" });
 
   // Step 5 – Docs
   const [checkedDocs, setCheckedDocs] = useState(new Set());
@@ -154,8 +153,9 @@ export default function EditVariantForm() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      if (!selectedItem || String(selectedItem.id) !== String(itemId)) {
-        await dispatch(fetchItemByIdAsync(itemId));
+      let parentItem = selectedItem;
+      if (!parentItem || String(parentItem.id) !== String(itemId)) {
+        parentItem = await dispatch(fetchItemByIdAsync(itemId)).unwrap().catch(() => null);
       }
       const v = await dispatch(getVariantDetailAsync({ id: itemId, variantId })).unwrap().catch(() => null);
       if (cancelled || !v) { setLoading(false); return; }
@@ -174,7 +174,9 @@ export default function EditVariantForm() {
       setUnitCost(v.unitCost ?? "");
       setVendor(v.vendor || "");
       setWarranty(v.warranty || "");
-      setImagePreview(v.imageUrl ? getImageUrl(v.imageUrl) : null);
+      // Image is a single, item-level asset shared by the item and every
+      // variant — never per-variant — so preload from the item, not `v`.
+      setImagePreview(parentItem?.imageUrl ? getImageUrl(parentItem.imageUrl) : null);
 
       setTotStatus(v.totStatus || "");
       setTotDocumentNo(v.totDocumentNo || "");
@@ -192,13 +194,7 @@ export default function EditVariantForm() {
 
       setSampleRequestDate(v.sampleRequestDate || "");
       setSampleSubmissionDate(v.sampleSubmissionDate || "");
-      setStakeholders((v.trialStakeholders || []).map((s) => ({
-        id: uid(), open: false,
-        name: s.stakeholderName || "", contactPerson: s.contactPersonName || "", address: s.stakeholderAddress || "", phone: s.stakeholderPhone || "",
-        sampleNo: s.sampleNo || "", sampleReqDate: s.sampleRequestDate || "", sampleSubDate: s.sampleSubmissionDate || "",
-        feedback: s.feedback || "", corrections: s.correction || "", furtherActions: s.furtherAction || "",
-        status: s.status || "Not Started",
-      })));
+      setStakeholders(stakeholdersFromApi(v.trialStakeholders));
 
       const docs = v.documentation || [];
       setCheckedDocs(new Set(docs));
@@ -234,9 +230,6 @@ export default function EditVariantForm() {
     if (f === "filed" && p[sec].filed) { updated.granted = false; updated.grantNo = ""; updated.grantDate = ""; }
     return { ...p, [sec]: updated };
   });
-  const toggleSh = (id) => setStakeholders((p) => p.map((s) => ({ ...s, open: s.id === id ? !s.open : false })));
-  const updateSh = (id, f, v) => setStakeholders((p) => p.map((s) => s.id === id ? { ...s, [f]: v } : s));
-
   const openAddPartner = () => {
     setEditingPartnerId(null);
     setPartnerData({ totFirm: "", latotSigningDate: "", sampleSubmissionForTechAbsorptionDate: "", totCertificateDate: "", totValidityDate: "" });
@@ -261,20 +254,6 @@ export default function EditVariantForm() {
     }
     setShowPartnerModal(false);
     setEditingPartnerId(null);
-  };
-
-  const saveStakeholder = () => {
-    if (!stakeholderData.name.trim()) return;
-    setStakeholders((p) => [...p, {
-      id: uid(), open: true, name: stakeholderData.name.trim(),
-      contactPerson: stakeholderData.contactPerson || "",
-      address: stakeholderData.address || "", phone: stakeholderData.phone || "",
-      sampleNo: stakeholderData.sampleNo || "", sampleReqDate: stakeholderData.sampleReqDate,
-      sampleSubDate: stakeholderData.sampleSubDate, feedback: "", corrections: "", furtherActions: "",
-      status: "Not Started",
-    }]);
-    setStakeholderData({ name: "", contactPerson: "", address: "", phone: "", sampleNo: "", sampleReqDate: "", sampleSubDate: "" });
-    setShowStakeholderModal(false);
   };
 
   const openAddFirm = () => {
@@ -364,12 +343,7 @@ export default function EditVariantForm() {
 
       sampleRequestDate: sampleRequestDate || null,
       sampleSubmissionDate: sampleSubmissionDate || null,
-      trialStakeholders: stakeholders.map((s) => ({
-        stakeholderName: s.name, contactPersonName: s.contactPerson || "", stakeholderAddress: s.address || "", stakeholderPhone: s.phone || "",
-        sampleNo: s.sampleNo || "", sampleRequestDate: s.sampleReqDate || null, sampleSubmissionDate: s.sampleSubDate || null,
-        feedback: s.feedback || "", correction: s.corrections || "", furtherAction: s.furtherActions || "",
-        status: s.status || "Not Started",
-      })),
+      trialStakeholders: stakeholdersToApi(stakeholders),
 
       documentation: [...checkedDocs],
 
@@ -385,7 +359,10 @@ export default function EditVariantForm() {
     try {
       await dispatch(updateVariantAsync({ id: itemId, variantId, ...payload })).unwrap();
       if (imageFile) {
-        await dispatch(uploadVariantImageAsync({ id: itemId, variantId, file: imageFile }));
+        // Image is a single item-level asset — uploading it from a variant's
+        // edit form updates the item's own image so it's shared across the
+        // item and every variant, not just this one.
+        await dispatch(uploadImageAsync({ id: itemId, file: imageFile }));
       }
       navigate(`/items/${itemId}?variant=${variantId}`);
     } catch (_) { /* toast already shown by thunk */ }
@@ -630,98 +607,10 @@ export default function EditVariantForm() {
         {/* ── STEP 4: Trial Stakeholders ── */}
         {step === 4 && (
           <div className="aif__step-body">
-            <div className="aif__tbl-head-row">
-              <span className="aif__section-label">Trial stakeholders<span className="aif__count-pill">{stakeholders.length}</span></span>
-              <button type="button" className="aif__add-link" onClick={() => setShowStakeholderModal(true)}>{Icons.plus} Add Stakeholder</button>
-            </div>
-
-            {stakeholders.length === 0 ? (
-              <div className="aif__empty-card"><p>No stakeholders added yet</p></div>
-            ) : stakeholders.map((s) => (
-              <div key={s.id} className={`aif__stakeholder-card${s.open ? " open" : ""}`}>
-                <div className="aif__stakeholder-header" onClick={() => toggleSh(s.id)}>
-                  <div className="aif__stakeholder-info">
-                    <div className="aif__stakeholder-name">{s.name || "Unnamed stakeholder"}</div>
-                    {(s.contactPerson || s.phone || s.sampleNo) && (
-                      <div className="aif__stakeholder-meta">
-                        {s.contactPerson && `Contact: ${s.contactPerson}`}{s.contactPerson && s.phone && " · "}{s.phone && `Ph: ${s.phone}`}{(s.contactPerson || s.phone) && s.sampleNo && " · "}{s.sampleNo && `Sample No: ${s.sampleNo}`}
-                      </div>
-                    )}
-                  </div>
-                  <select className="aif__stakeholder-status-select" value={s.status || "Not Started"}
-                    onClick={(e) => e.stopPropagation()} onChange={(e) => updateSh(s.id, "status", e.target.value)}>
-                    <option value="Not Started">Not Started</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Testing">Testing</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Pending">Pending</option>
-                  </select>
-                  <span className="aif__stakeholder-chevron">{Icons.chevronDown}</span>
-                  <button type="button" className="aif__del-btn"
-                    onClick={(e) => { e.stopPropagation(); setStakeholders((x) => x.filter((it) => it.id !== s.id)); }}>
-                    {Icons.trash}
-                  </button>
-                </div>
-                {s.open && (
-                  <div className="aif__stakeholder-body">
-                    <span className="aif__section-label">Stakeholder Details</span>
-                    <div className="aif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Trial Stakeholder Name</label>
-                        <input className="form-control" value={s.name || ""} placeholder="Firm / organisation name" onChange={(e) => updateSh(s.id, "name", e.target.value)} />
-                      </div>
-                    </div>
-                    <span className="aif__section-label">Contact Person</span>
-                    <div className="aif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Contact Person Name</label>
-                        <input className="form-control" value={s.contactPerson || ""} placeholder="Name of the individual contact" onChange={(e) => updateSh(s.id, "contactPerson", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Address</label>
-                        <input className="form-control" value={s.address || ""} placeholder="Contact person address" onChange={(e) => updateSh(s.id, "address", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Phone Number</label>
-                        <input className="form-control" value={s.phone || ""} placeholder="Contact person phone number" onChange={(e) => updateSh(s.id, "phone", e.target.value)} />
-                      </div>
-                    </div>
-                    <span className="aif__section-label">Trial Sample Details</span>
-                    <div className="aif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Sample No</label>
-                        <input className="form-control" value={s.sampleNo || ""} onChange={(e) => updateSh(s.id, "sampleNo", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Request for sample trial date</label>
-                        <input type="date" className="form-control" value={s.sampleReqDate || ""} onChange={(e) => updateSh(s.id, "sampleReqDate", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Date of sample submission</label>
-                        <input type="date" className="form-control" value={s.sampleSubDate || ""} onChange={(e) => updateSh(s.id, "sampleSubDate", e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="aif__stakeholder-divider" />
-                    <div className="aif__stakeholder-fields">
-                      <div className="form-group">
-                        <label className="form-label">Feedback</label>
-                        <textarea rows={3} className="form-control" value={s.feedback || ""} onChange={(e) => updateSh(s.id, "feedback", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Corrections</label>
-                        <textarea rows={3} className="form-control" value={s.corrections || ""} onChange={(e) => updateSh(s.id, "corrections", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Further actions</label>
-                        <textarea rows={3} className="form-control" value={s.furtherActions || ""} onChange={(e) => updateSh(s.id, "furtherActions", e.target.value)} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+            <TrialStakeholders value={stakeholders} onChange={setStakeholders} />
           </div>
         )}
+
 
         {/* ── STEP 5: Documentation Status ── */}
         {step === 5 && (
@@ -809,20 +698,6 @@ export default function EditVariantForm() {
         values={partnerData}
         onChange={(n, v) => setPartnerData((p) => ({ ...p, [n]: v }))}
         onClose={() => { setShowPartnerModal(false); setEditingPartnerId(null); }} onSave={savePartner} />
-
-      <AddRecordModal open={showStakeholderModal} title="Add Stakeholder"
-        fields={[
-          { name: "name",          label: "Trial Stakeholder Name", section: "Stakeholder Details" },
-          { name: "contactPerson", label: "Contact Person Name", section: "Contact Person" },
-          { name: "address",       label: "Address", section: "Contact Person" },
-          { name: "phone",         label: "Phone Number", section: "Contact Person" },
-          { name: "sampleNo",      label: "Sample No", section: "Trial Sample Details" },
-          { name: "sampleReqDate", label: "Request Trial Date",     type: "date", section: "Trial Sample Details" },
-          { name: "sampleSubDate", label: "Sample Submission Date", type: "date", section: "Trial Sample Details" },
-        ]}
-        values={stakeholderData}
-        onChange={(n, v) => setStakeholderData((p) => ({ ...p, [n]: v }))}
-        onClose={() => setShowStakeholderModal(false)} onSave={saveStakeholder} />
 
       <AddRecordModal open={showFirmModal} title={editingFirmId ? "Edit Procurement Entry" : "Add Procurement Entry"}
         fields={[

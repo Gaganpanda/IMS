@@ -11,6 +11,8 @@ import DropdownMenu from "../../components/common/DropdownMenu/DropdownMenu";
 import Loader from "../../components/common/Loader/Loader";
 import { formatDate } from "../../utils/formatDate";
 import { getImageUrl } from "../../utils/imageUrl";
+import { buildDocDownloadName } from "../../utils/helpers";
+import AlertIcon from "../../components/common/AlertIcon/AlertIcon";
 import "./ItemDetails.css";
 
 /* ── Icons ── */
@@ -216,15 +218,26 @@ function TotTab({ item }) {
                 </tr>
               </thead>
               <tbody>
-                {item.totPartners.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.totFirm}</td>
-                    <td>{formatDate(p.latotSigningDate)}</td>
-                    <td>{formatDate(p.sampleSubmissionForTechAbsorptionDate)}</td>
-                    <td>{p.totCertificateDate ? formatDate(p.totCertificateDate) : "—"}</td>
-                    <td>{formatDate(p.totValidityDate)}</td>
-                  </tr>
-                ))}
+                {item.totPartners.map((p) => {
+                  const isExpired = p.totValidityDate && new Date(p.totValidityDate) < new Date(new Date().toDateString());
+                  return (
+                    <tr key={p.id}>
+                      <td>{p.totFirm}</td>
+                      <td>{formatDate(p.latotSigningDate)}</td>
+                      <td>{formatDate(p.sampleSubmissionForTechAbsorptionDate)}</td>
+                      <td>{p.totCertificateDate ? formatDate(p.totCertificateDate) : "—"}</td>
+                      <td>
+                        {formatDate(p.totValidityDate)}
+                        {isExpired && (
+                          <AlertIcon
+                            className="idet__tot-expired-icon"
+                            message={`ToT validity with ${p.totFirm || "this partner"} expired on ${formatDate(p.totValidityDate)} — renewal pending.`}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -282,15 +295,18 @@ function IprTab({ item }) {
     },
   ];
 
-  const hasAny = rows.some((r) => r.filed || r.granted || r.filingNo || r.grantNo || r.inventor);
+  // Only show a Patent/Trademark/Design/Copyright block once it actually has
+  // something recorded — either "Filed" or "Granted" is checked. An IPR type
+  // nobody has touched yet just clutters the detail page.
+  const filledRows = rows.filter((r) => r.filed || r.granted);
 
   return (
     <Section title="IPR Details" icon="shield" color="purple">
-      {!hasAny ? (
+      {!filledRows.length ? (
         <p className="idet__empty">No IPR details recorded.</p>
       ) : (
         <div className="idet__ipr-sections">
-          {rows.map((r) => (
+          {filledRows.map((r) => (
             <div key={r.label} className="idet__ipr-block">
               <div className="idet__ipr-block-title">{r.label}</div>
 
@@ -337,9 +353,19 @@ function IprTab({ item }) {
 
 /* ── TRIALS TAB ── */
 function TrialsTab({ item }) {
+  const stakeholders = item.trialStakeholders || [];
+  // Flatten to one row per feedback round so every independent trial/feedback
+  // entry is visible, with the stakeholder's own columns only shown once
+  // (rowSpan) at the top of its group.
+  const rows = [];
+  stakeholders.forEach((s) => {
+    const feedbacks = s.feedbacks && s.feedbacks.length ? s.feedbacks : [null];
+    feedbacks.forEach((f, idx) => rows.push({ s, f, idx, isFirst: idx === 0, span: feedbacks.length }));
+  });
+
   return (
     <Section title="Trial Stakeholders" icon="flask" color="teal">
-      {!item.trialStakeholders?.length ? (
+      {!stakeholders.length ? (
         <p className="idet__empty">No stakeholders added.</p>
       ) : (
         <div className="idet__tbl-wrap">
@@ -347,39 +373,69 @@ function TrialsTab({ item }) {
             <thead>
               <tr>
                 <th>Trial Stakeholder</th>
+                <th>Trial Status</th>
                 <th>Contact Person</th>
+                <th>Round</th>
                 <th>Sample No</th>
                 <th>Status</th>
-                <th>Sample Request Date</th>
+                <th>Request Trial Date</th>
                 <th>Sample Submission Date</th>
+                <th>Feedback Received Date</th>
                 <th>Feedback</th>
                 <th>Correction</th>
                 <th>Further Action</th>
               </tr>
             </thead>
             <tbody>
-              {item.trialStakeholders.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{s.stakeholderName || "—"}</div>
-                  </td>
-                  <td>
-                    <div>{s.contactPersonName || "—"}</div>
-                    {(s.stakeholderAddress || s.stakeholderPhone) && (
-                      <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 2 }}>
-                        {s.stakeholderAddress || ""}
-                        {s.stakeholderAddress && s.stakeholderPhone ? " · " : ""}
-                        {s.stakeholderPhone || ""}
+              {rows.map(({ s, f, idx, isFirst, span }) => (
+                <tr key={`${s.id}-${idx}`}>
+                  {isFirst && (
+                    <td rowSpan={span}>
+                      <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                        {s.stakeholderName || "—"}
+                        {s.hasOverdueFeedback && (
+                          <AlertIcon message="This stakeholder has a feedback round overdue — sample submitted but no feedback received." />
+                        )}
                       </div>
-                    )}
-                  </td>
-                  <td>{s.sampleNo           || "—"}</td>
-                  <td><StatusBadge status={s.status || "Not Started"} /></td>
-                  <td>{formatDate(s.sampleRequestDate)}</td>
-                  <td>{formatDate(s.sampleSubmissionDate)}</td>
-                  <td>{s.feedback    || "—"}</td>
-                  <td>{s.correction  || "—"}</td>
-                  <td>{s.furtherAction || "—"}</td>
+                    </td>
+                  )}
+                  {isFirst && (
+                    <td rowSpan={span}>
+                      <StatusBadge status={s.trialStatus || "Not Started"} />
+                    </td>
+                  )}
+                  {isFirst && (
+                    <td rowSpan={span}>
+                      <div>{s.contactPersonName || "—"}</div>
+                      {(s.stakeholderAddress || s.stakeholderPhone) && (
+                        <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 2 }}>
+                          {s.stakeholderAddress || ""}
+                          {s.stakeholderAddress && s.stakeholderPhone ? " · " : ""}
+                          {s.stakeholderPhone || ""}
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  {f === null ? (
+                    <td colSpan={9} style={{ color: "var(--color-text-muted)" }}>No feedback rounds yet.</td>
+                  ) : (
+                    <>
+                      <td>
+                        Feedback {idx + 1}
+                        {f.feedbackOverdue && (
+                          <AlertIcon message="Sample was submitted 7+ days ago but no feedback has been received yet." />
+                        )}
+                      </td>
+                      <td>{f.sampleNo || "—"}</td>
+                      <td><StatusBadge status={f.status || "Not Started"} /></td>
+                      <td>{formatDate(f.requestTrialDate)}</td>
+                      <td>{formatDate(f.sampleSubmissionDate)}</td>
+                      <td>{formatDate(f.feedbackReceivedDate)}</td>
+                      <td>{f.feedback    || "—"}</td>
+                      <td>{f.correction  || "—"}</td>
+                    </>
+                  )}
+                  {f !== null && <td>{f.furtherAction || "—"}</td>}
                 </tr>
               ))}
             </tbody>
@@ -442,7 +498,8 @@ function DocsTab({ item }) {
                     >
                       <a
                         href={getImageUrl(attached.fileUrl)}
-                        target="_blank" rel="noreferrer" download
+                        target="_blank" rel="noreferrer"
+                        download={buildDocDownloadName(doc, item.name, attached.originalFileName || attached.fileUrl)}
                         className="ddm__item"
                       >
                         {Icons.download} Download
@@ -540,7 +597,7 @@ export default function ItemDetails() {
   const [searchParams] = useSearchParams();
   const highlightVariantId = searchParams.get("variant");
   const { selectedItem, detailLoading, deleting } = useSelector((s) => s.items);
-  const [tab, setTab]               = useState("basic");
+  const [tab, setTab]               = useState(() => searchParams.get("tab") || "basic");
   const [showDelete, setShowDelete] = useState(false);
   const [showVariantModal, setShowVariantModal] = useState(false);
   // Track image load failure so we can swap in the placeholder via React state
@@ -553,12 +610,28 @@ export default function ItemDetails() {
     setImgError(false);
   }, [id, dispatch]);
 
+  // An item lives in one of two valid states: no variants (the item itself
+  // carries all product data) or one-or-more variants (each fully
+  // independent). There is no useful "base variant" state where an item
+  // HAS variants but is still being viewed via its own stale Basic Info —
+  // that page is dead data once variants exist. So the moment an item with
+  // variants is opened without one selected, jump straight to its first
+  // variant instead of showing that unused base view.
+  useEffect(() => {
+    if (selectedItem && selectedItem.variants?.length > 0 && !highlightVariantId) {
+      navigate(`/items/${id}?variant=${selectedItem.variants[0].id}`, { replace: true });
+    }
+  }, [selectedItem, id, highlightVariantId, navigate]);
+
   const handleDelete = async () => {
     await dispatch(deleteItemAsync(id)).unwrap();
     navigate("/items");
   };
 
-  if (detailLoading || !selectedItem) return <Loader variant="page" text="Loading item..." />;
+  const pendingVariantRedirect = selectedItem?.variants?.length > 0 && !highlightVariantId;
+  if (detailLoading || !selectedItem || pendingVariantRedirect) {
+    return <Loader variant="page" text="Loading item..." />;
+  }
   const item  = selectedItem;
 
   // When a variant is selected via ?variant=<id>, its own independent data
@@ -585,8 +658,10 @@ export default function ItemDetails() {
 
   const Panel = TAB_PANELS[tab] || BasicTab;
 
-  // Resolve image URL using fixed getImageUrl (now uses API base URL directly)
-  const imgSrc = effectiveItem.imageUrl ? getImageUrl(effectiveItem.imageUrl) : null;
+  // Image is a single, item-level asset shared across the item and every
+  // variant — always read it from `item`, never from `effectiveItem`
+  // (which may carry a variant's own now-unused imageUrl field).
+  const imgSrc = item.imageUrl ? getImageUrl(item.imageUrl) : null;
   const showImg = imgSrc && !imgError;
 
   return (
@@ -603,14 +678,14 @@ export default function ItemDetails() {
 
       {/* Hero card */}
       <div className="idet__hero card">
-        {activeVariant && (
+        {activeVariant && item.variants?.length > 1 && (
           <div className="idet__variant-banner">
             <span>
               Viewing variant <strong>{activeVariant.name}</strong> — this variant has its own
               independent Basic Info, ToT, IPR, Trial Stakeholders, Documentation and Procurement data.
             </span>
-            <button type="button" onClick={() => navigate(`/items/${id}`)}>
-              Back to base item
+            <button type="button" onClick={() => setShowVariantModal(true)}>
+              Switch Variant
             </button>
           </div>
         )}
@@ -638,6 +713,12 @@ export default function ItemDetails() {
             <div className="idet__hero-title-row">
               <h1 className="idet__hero-name">
                 {item.name}{activeVariant && <span className="idet__hero-variant-tag"> · {activeVariant.name}</span>}
+                {effectiveItem.hasOverdueFeedback && (
+                  <AlertIcon message="A trial sample was submitted but feedback hasn't been received in time." />
+                )}
+                {effectiveItem.hasOverdueTot && (
+                  <AlertIcon message={effectiveItem.totOverdueMessage || "ToT validity has expired and renewal is pending."} />
+                )}
               </h1>
               <StatusBadge status={effectiveItem.developmentStatus} />
             </div>

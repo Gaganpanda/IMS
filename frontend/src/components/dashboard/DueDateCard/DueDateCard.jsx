@@ -1,4 +1,5 @@
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { formatDate, daysUntil } from "../../../utils/formatDate";
 import "./DueDateCard.css";
 
@@ -22,6 +23,11 @@ const TYPE_ICON = { dev: "🛠️", tot: "📄" };
 
 export default function DueDateCard({ onViewAll }) {
   const { upcomingDueDates } = useSelector((s) => s.dashboard);
+  const navigate = useNavigate();
+
+  const openItem = (item) => {
+    if (item?.id != null) navigate(`/items/${item.id}`);
+  };
 
   return (
     <div className="due-date-card card">
@@ -41,7 +47,14 @@ export default function DueDateCard({ onViewAll }) {
           upcomingDueDates.slice(0, 10).map((item) => {
             const days = daysUntil(item.dueDate);
             return (
-              <div key={`${item.type || "dev"}-${item.id}-${item.dueDate}`} className="due-date-card__item">
+              <div
+                key={`${item.type || "dev"}-${item.id}-${item.dueDate}`}
+                className="due-date-card__item due-date-card__item--clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => openItem(item)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openItem(item); } }}
+              >
                 <div className={`due-date-card__icon due-date-card__icon--${item.type || "dev"}`}>
                   {TYPE_ICON[item.type] || "📋"}
                 </div>

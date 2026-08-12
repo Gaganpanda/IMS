@@ -1,46 +1,250 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
-import { createItemAsync, uploadImageAsync, uploadDocumentAsync } from "../../../redux/slices/itemSlice";
-import AddRecordModal from "../../common/AddRecordModal/AddRecordModal";
 import {
-  CATEGORIES, DEVELOPMENT_STATUS, TOT_STATUS, TOT_DOCUMENTS,
+  createItemAsync,
+  uploadImageAsync,
+  uploadDocumentAsync,
+} from "../../../redux/slices/itemSlice";
+import AddRecordModal from "../../common/AddRecordModal/AddRecordModal";
+import TrialStakeholders, {
+  stakeholdersToApi,
+} from "../TrialStakeholders/TrialStakeholders";
+import {
+  CATEGORIES,
+  DEVELOPMENT_STATUS,
+  TOT_STATUS,
+  TOT_DOCUMENTS,
   DOCUMENTATION_ITEMS,
 } from "../../../utils/constants";
 import "./AddItemForm.css";
 
 const STEPS = [
-  { id: 1, label: "Basic Information",    icon: "basic"       },
-  { id: 2, label: "ToT Details",          icon: "tot"         },
-  { id: 3, label: "IPR Details",          icon: "ipr"         },
-  { id: 4, label: "Trial Stakeholders",   icon: "trials"      },
-  { id: 5, label: "Documentation Status", icon: "docs"        },
-  { id: 6, label: "Procurement Status",   icon: "procurement" },
+  { id: 1, label: "Basic Information", icon: "basic" },
+  { id: 2, label: "ToT Details", icon: "tot" },
+  { id: 3, label: "IPR Details", icon: "ipr" },
+  { id: 4, label: "Trial Stakeholders", icon: "trials" },
+  { id: 5, label: "Documentation Status", icon: "docs" },
+  { id: 6, label: "Procurement Status", icon: "procurement" },
 ];
 
 const STEP_COLORS = {
-  basic: "blue", tot: "orange", ipr: "purple",
-  trials: "teal", docs: "teal", procurement: "green",
+  basic: "blue",
+  tot: "orange",
+  ipr: "purple",
+  trials: "teal",
+  docs: "teal",
+  procurement: "green",
 };
 
 const Icons = {
-  basic:       (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>),
-  tot:         (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>),
-  ipr:         (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>),
-  trials:      (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3h6"/><path d="M10 3v5l-4 7a4 4 0 0 0 3.5 6h5a4 4 0 0 0 3.5-6l-4-7V3"/></svg>),
-  docs:        (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/></svg>),
-  procurement: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>),
-  check:       (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>),
-  plus:        (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>),
-  trash:       (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>),
-  edit:        (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>),
-  file:        (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>),
-  arrowLeft:   (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>),
-  arrowRight:  (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>),
-  close:       (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>),
-  upload:      (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>),
-  uploadArrow: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12"/><polyline points="7 8 12 3 17 8"/><path d="M5 21h14"/></svg>),
-  chevronDown: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>),
+  basic: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="12" y2="17" />
+    </svg>
+  ),
+  tot: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
+  ipr: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
+  trials: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <path d="M9 3h6" />
+      <path d="M10 3v5l-4 7a4 4 0 0 0 3.5 6h5a4 4 0 0 0 3.5-6l-4-7V3" />
+    </svg>
+  ),
+  docs: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+    </svg>
+  ),
+  procurement: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <circle cx="9" cy="21" r="1" />
+      <circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    </svg>
+  ),
+  check: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
+  plus: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  ),
+  trash: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4h6v2" />
+    </svg>
+  ),
+  edit: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  ),
+  file: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  ),
+  arrowLeft: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  ),
+  arrowRight: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  ),
+  close: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
+  upload: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  ),
+  uploadArrow: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <path d="M12 3v12" />
+      <polyline points="7 8 12 3 17 8" />
+      <path d="M5 21h14" />
+    </svg>
+  ),
+  chevronDown: (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  ),
 };
 
 function getInitials(name) {
@@ -52,10 +256,17 @@ function getInitials(name) {
 
 function Checkbox({ checked, onChange }) {
   return (
-    <div className={`aif__check${checked ? " aif__check--on" : ""}`} onClick={onChange}>
+    <div
+      className={`aif__check${checked ? " aif__check--on" : ""}`}
+      onClick={onChange}>
       {checked && (
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2"
-          strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round">
           <polyline points="1.5 6 4.5 9 10.5 3" />
         </svg>
       )}
@@ -68,12 +279,17 @@ const uid = () => ++nid;
 
 const YES_NO_OPTIONS = [
   { value: "false", label: "No" },
-  { value: "true",  label: "Yes" },
+  { value: "true", label: "Yes" },
 ];
 
 const emptyIprType = () => ({
-  filed: false, granted: false, inventor: "",
-  filingNo: "", filingDate: "", grantNo: "", grantDate: "",
+  filed: false,
+  granted: false,
+  inventor: "",
+  filingNo: "",
+  filingDate: "",
+  grantNo: "",
+  grantDate: "",
 });
 
 export default function AddItemForm({ onCancel, onSuccess }) {
@@ -86,31 +302,34 @@ export default function AddItemForm({ onCancel, onSuccess }) {
   const [imagePreview, setImagePreview] = useState(null);
 
   // Step 2 – ToT
-  const [totStatus, setTotStatus]     = useState("");
-  const [totCerts, setTotCerts]       = useState(
-    Object.keys(TOT_DOCUMENTS).reduce((acc, k) => ({ ...acc, [k]: false }), {})
+  const [totStatus, setTotStatus] = useState("");
+  const [totCerts, setTotCerts] = useState(
+    Object.keys(TOT_DOCUMENTS).reduce((acc, k) => ({ ...acc, [k]: false }), {}),
   );
   const [totPartners, setTotPartners] = useState([]);
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [partnerData, setPartnerData] = useState({
-    totFirm: "", latotSigningDate: "", sampleSubmissionForTechAbsorptionDate: "",
-    totCertificateDate: "", totValidityDate: "",
+    totFirm: "",
+    latotSigningDate: "",
+    sampleSubmissionForTechAbsorptionDate: "",
+    totCertificateDate: "",
+    totValidityDate: "",
   });
   const [editingPartnerId, setEditingPartnerId] = useState(null);
 
   // Step 3 – IPR
   const [iprData, setIprData] = useState({
-    patent: emptyIprType(), trademark: emptyIprType(),
-    design: emptyIprType(), copyright: emptyIprType(),
+    patent: emptyIprType(),
+    trademark: emptyIprType(),
+    design: emptyIprType(),
+    copyright: emptyIprType(),
   });
 
   // Step 4 – Stakeholders
   const [stakeholders, setStakeholders] = useState([]);
-  const [showStakeholderModal, setShowStakeholderModal] = useState(false);
-  const [stakeholderData, setStakeholderData] = useState({ name: "", contactPerson: "", address: "", phone: "", sampleNo: "", sampleReqDate: "", sampleSubDate: "" });
 
   // Step 5 – Docs
-  const [checkedDocs, setCheckedDocs]         = useState(new Set());
+  const [checkedDocs, setCheckedDocs] = useState(new Set());
   const [customDocuments, setCustomDocuments] = useState([]);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [newDocumentName, setNewDocumentName] = useState("");
@@ -123,93 +342,96 @@ export default function AddItemForm({ onCancel, onSuccess }) {
   const [showFirmModal, setShowFirmModal] = useState(false);
   const [editingFirmId, setEditingFirmId] = useState(null);
   const [firmData, setFirmData] = useState({
-    agency: "", totFirmNo: "", noOfItemProcured: "", productionValue: "", orderNo: "", date: "",
+    agency: "",
+    totFirmNo: "",
+    noOfItemProcured: "",
+    productionValue: "",
+    orderNo: "",
+    date: "",
   });
 
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
 
-  const iprHasErrors = () => ["patent", "trademark", "design", "copyright"].some((key) =>
-    (iprData[key].filed && !iprData[key].filingNo) ||
-    (iprData[key].granted && !iprData[key].grantNo)
-  );
+  const iprHasErrors = () =>
+    ["patent", "trademark", "design", "copyright"].some(
+      (key) =>
+        (iprData[key].filed && !iprData[key].filingNo) ||
+        (iprData[key].granted && !iprData[key].grantNo),
+    );
   const goNext = () => {
     if (step === 3 && iprHasErrors()) return;
-    setDone((p) => new Set([...p, step])); setStep((s) => Math.min(s + 1, STEPS.length));
+    setDone((p) => new Set([...p, step]));
+    setStep((s) => Math.min(s + 1, STEPS.length));
   };
   const goPrev = () => setStep((s) => Math.max(s - 1, 1));
 
   const onSubmit = async (data) => {
     const payload = {
-      name:                     data.name,
-      category:                 data.category,
-      description:              data.description,
-      inventor:                 data.inventor || null,
+      name: data.name,
+      category: data.category,
+      description: data.description,
+      inventor: data.inventor || null,
       productDevCompletionDate: data.productDevCompletionDate || null,
-      developmentStatus:        data.developmentStatus,
+      developmentStatus: data.developmentStatus,
       totStatus,
       totDocumentNo: data.totDocumentNo || null,
-      filledDate:    data.filledDate    || null,
-      totDocumentsFiled: totStatus === TOT_STATUS.FILED
-        ? Object.keys(totCerts).filter((k) => totCerts[k])
-        : [],
+      filledDate: data.filledDate || null,
+      totDocumentsFiled:
+        totStatus === TOT_STATUS.FILED
+          ? Object.keys(totCerts).filter((k) => totCerts[k])
+          : [],
       totPartners: totPartners.map((p) => ({
         totFirm: p.totFirm,
         latotSigningDate: p.latotSigningDate || null,
-        sampleSubmissionForTechAbsorptionDate: p.sampleSubmissionForTechAbsorptionDate || null,
+        sampleSubmissionForTechAbsorptionDate:
+          p.sampleSubmissionForTechAbsorptionDate || null,
         totCertificateDate: p.totCertificateDate || null,
         totValidityDate: p.totValidityDate || null,
       })),
       iprDetail: {
-        patentFiled:        iprData.patent.filed,
-        patentGranted:      iprData.patent.granted,
-        patentInventor:     iprData.patent.inventor,
-        patentFilingNo:     iprData.patent.filingNo,
-        patentFilingDate:   iprData.patent.filingDate || null,
-        patentGrantNo:      iprData.patent.grantNo,
-        patentGrantDate:    iprData.patent.grantDate || null,
-        trademarkFiled:     iprData.trademark.filed,
-        trademarkGranted:   iprData.trademark.granted,
-        trademarkInventor:  iprData.trademark.inventor,
-        trademarkFilingNo:  iprData.trademark.filingNo,
+        patentFiled: iprData.patent.filed,
+        patentGranted: iprData.patent.granted,
+        patentInventor: iprData.patent.inventor,
+        patentFilingNo: iprData.patent.filingNo,
+        patentFilingDate: iprData.patent.filingDate || null,
+        patentGrantNo: iprData.patent.grantNo,
+        patentGrantDate: iprData.patent.grantDate || null,
+        trademarkFiled: iprData.trademark.filed,
+        trademarkGranted: iprData.trademark.granted,
+        trademarkInventor: iprData.trademark.inventor,
+        trademarkFilingNo: iprData.trademark.filingNo,
         trademarkFilingDate: iprData.trademark.filingDate || null,
-        trademarkGrantNo:   iprData.trademark.grantNo,
+        trademarkGrantNo: iprData.trademark.grantNo,
         trademarkGrantDate: iprData.trademark.grantDate || null,
-        designFiled:        iprData.design.filed,
-        designGranted:      iprData.design.granted,
-        designInventor:     iprData.design.inventor,
-        designFilingNo:     iprData.design.filingNo,
-        designFilingDate:   iprData.design.filingDate || null,
-        designGrantNo:      iprData.design.grantNo,
-        designGrantDate:    iprData.design.grantDate || null,
-        copyrightFiled:      iprData.copyright.filed,
-        copyrightGranted:    iprData.copyright.granted,
-        copyrightInventor:   iprData.copyright.inventor,
-        copyrightFilingNo:   iprData.copyright.filingNo,
+        designFiled: iprData.design.filed,
+        designGranted: iprData.design.granted,
+        designInventor: iprData.design.inventor,
+        designFilingNo: iprData.design.filingNo,
+        designFilingDate: iprData.design.filingDate || null,
+        designGrantNo: iprData.design.grantNo,
+        designGrantDate: iprData.design.grantDate || null,
+        copyrightFiled: iprData.copyright.filed,
+        copyrightGranted: iprData.copyright.granted,
+        copyrightInventor: iprData.copyright.inventor,
+        copyrightFilingNo: iprData.copyright.filingNo,
         copyrightFilingDate: iprData.copyright.filingDate || null,
-        copyrightGrantNo:    iprData.copyright.grantNo,
-        copyrightGrantDate:  iprData.copyright.grantDate || null,
+        copyrightGrantNo: iprData.copyright.grantNo,
+        copyrightGrantDate: iprData.copyright.grantDate || null,
       },
-      trialStakeholders: stakeholders.map((s) => ({
-        stakeholderName:      s.name,
-        contactPersonName:    s.contactPerson || "",
-        stakeholderAddress:   s.address || "",
-        stakeholderPhone:     s.phone   || "",
-        sampleNo:             s.sampleNo || "",
-        sampleRequestDate:    s.sampleReqDate || null,
-        sampleSubmissionDate: s.sampleSubDate || null,
-        feedback:             s.feedback      || "",
-        correction:           s.corrections   || "",
-        furtherAction:        s.furtherActions|| "",
-        status:               s.status || "Not Started",
-      })),
+      trialStakeholders: stakeholdersToApi(stakeholders),
       documentation: [...checkedDocs],
       procurementDetails: procurements.map((p) => ({
         procurementAgency: p.agency,
-        totFirmNo:         p.totFirmNo || "",
-        noOfItemProcured:  p.noOfItemProcured === "" ? null : Number(p.noOfItemProcured) || 0,
-        productionValue:   p.productionValue || "",
-        orderNumber:       p.orderNo,
-        orderDate:         p.date || null,
+        totFirmNo: p.totFirmNo || "",
+        noOfItemProcured:
+          p.noOfItemProcured === "" ? null : Number(p.noOfItemProcured) || 0,
+        productionValue: p.productionValue || "",
+        orderNumber: p.orderNo,
+        orderDate: p.date || null,
       })),
     };
 
@@ -220,27 +442,40 @@ export default function AddItemForm({ onCancel, onSuccess }) {
       }
       if (created?.id && pendingFiles.length) {
         for (const f of pendingFiles) {
-          await dispatch(uploadDocumentAsync({ id: created.id, name: f.name, file: f.file }));
+          await dispatch(
+            uploadDocumentAsync({ id: created.id, name: f.name, file: f.file }),
+          );
         }
       }
       onSuccess?.();
     } catch (_) {}
   };
 
-  const toggleDoc  = (d)      => setCheckedDocs((p) => { const n = new Set(p); n.has(d) ? n.delete(d) : n.add(d); return n; });
-  const toggleIpr = (sec, f) => setIprData((p) => {
-    const updated = { ...p[sec], [f]: !p[sec][f] };
-    if (f === "filed" && p[sec].filed) { updated.granted = false; updated.grantNo = ""; updated.grantDate = ""; }
-    return { ...p, [sec]: updated };
-  });
-  const toggleSh   = (id)     => setStakeholders((p) => p.map((s) => ({ ...s, open: s.id === id ? !s.open : false })));
-  const updateSh   = (id, f, v) => setStakeholders((p) => p.map((s) => s.id === id ? { ...s, [f]: v } : s));
+  const toggleDoc = (d) =>
+    setCheckedDocs((p) => {
+      const n = new Set(p);
+      n.has(d) ? n.delete(d) : n.add(d);
+      return n;
+    });
+  const toggleIpr = (sec, f) =>
+    setIprData((p) => {
+      const updated = { ...p[sec], [f]: !p[sec][f] };
+      if (f === "filed" && p[sec].filed) {
+        updated.granted = false;
+        updated.grantNo = "";
+        updated.grantDate = "";
+      }
+      return { ...p, [sec]: updated };
+    });
 
   const openAddPartner = () => {
     setEditingPartnerId(null);
     setPartnerData({
-      totFirm: "", latotSigningDate: "", sampleSubmissionForTechAbsorptionDate: "",
-      totCertificateDate: "", totValidityDate: "",
+      totFirm: "",
+      latotSigningDate: "",
+      sampleSubmissionForTechAbsorptionDate: "",
+      totCertificateDate: "",
+      totValidityDate: "",
     });
     setShowPartnerModal(true);
   };
@@ -249,7 +484,8 @@ export default function AddItemForm({ onCancel, onSuccess }) {
     setPartnerData({
       totFirm: p.totFirm,
       latotSigningDate: p.latotSigningDate,
-      sampleSubmissionForTechAbsorptionDate: p.sampleSubmissionForTechAbsorptionDate,
+      sampleSubmissionForTechAbsorptionDate:
+        p.sampleSubmissionForTechAbsorptionDate,
       totCertificateDate: p.totCertificateDate || "",
       totValidityDate: p.totValidityDate,
     });
@@ -260,12 +496,15 @@ export default function AddItemForm({ onCancel, onSuccess }) {
     const record = {
       totFirm: partnerData.totFirm.trim(),
       latotSigningDate: partnerData.latotSigningDate,
-      sampleSubmissionForTechAbsorptionDate: partnerData.sampleSubmissionForTechAbsorptionDate,
+      sampleSubmissionForTechAbsorptionDate:
+        partnerData.sampleSubmissionForTechAbsorptionDate,
       totCertificateDate: partnerData.totCertificateDate || null,
       totValidityDate: partnerData.totValidityDate,
     };
     if (editingPartnerId) {
-      setTotPartners((p) => p.map((x) => x.id === editingPartnerId ? { ...x, ...record } : x));
+      setTotPartners((p) =>
+        p.map((x) => (x.id === editingPartnerId ? { ...x, ...record } : x)),
+      );
     } else {
       setTotPartners((p) => [...p, { id: uid(), ...record }]);
     }
@@ -273,42 +512,47 @@ export default function AddItemForm({ onCancel, onSuccess }) {
     setEditingPartnerId(null);
   };
 
-  const saveStakeholder = () => {
-    if (!stakeholderData.name.trim()) return;
-    setStakeholders((p) => [...p, {
-      id: uid(), name: stakeholderData.name.trim(), open: true,
-      contactPerson: stakeholderData.contactPerson || "",
-      address: stakeholderData.address || "",
-      phone: stakeholderData.phone || "",
-      sampleNo: stakeholderData.sampleNo || "",
-      sampleReqDate: stakeholderData.sampleReqDate,
-      sampleSubDate: stakeholderData.sampleSubDate,
-      feedback: "", corrections: "", furtherActions: "",
-    }]);
-    setStakeholderData({ name: "", contactPerson: "", address: "", phone: "", sampleNo: "", sampleReqDate: "", sampleSubDate: "" });
-    setShowStakeholderModal(false);
-  };
   const openAddFirm = () => {
     setEditingFirmId(null);
-    setFirmData({ agency: "", totFirmNo: "", noOfItemProcured: "", productionValue: "", orderNo: "", date: "" });
+    setFirmData({
+      agency: "",
+      totFirmNo: "",
+      noOfItemProcured: "",
+      productionValue: "",
+      orderNo: "",
+      date: "",
+    });
     setShowFirmModal(true);
   };
   const openEditFirm = (p) => {
     setEditingFirmId(p.id);
     setFirmData({
-      agency: p.agency, totFirmNo: p.totFirmNo || "", noOfItemProcured: p.noOfItemProcured ?? "",
-      productionValue: p.productionValue || "", orderNo: p.orderNo, date: p.date,
+      agency: p.agency,
+      totFirmNo: p.totFirmNo || "",
+      noOfItemProcured: p.noOfItemProcured ?? "",
+      productionValue: p.productionValue || "",
+      orderNo: p.orderNo,
+      date: p.date,
     });
     setShowFirmModal(true);
   };
   const saveFirm = () => {
     if (!firmData.agency.trim()) return;
     if (editingFirmId) {
-      setProcurements((p) => p.map((x) => x.id === editingFirmId ? { ...x, ...firmData } : x));
+      setProcurements((p) =>
+        p.map((x) => (x.id === editingFirmId ? { ...x, ...firmData } : x)),
+      );
     } else {
       setProcurements((p) => [...p, { id: uid(), ...firmData }]);
     }
-    setFirmData({ agency: "", totFirmNo: "", noOfItemProcured: "", productionValue: "", orderNo: "", date: "" });
+    setFirmData({
+      agency: "",
+      totFirmNo: "",
+      noOfItemProcured: "",
+      productionValue: "",
+      orderNo: "",
+      date: "",
+    });
     setEditingFirmId(null);
     setShowFirmModal(false);
   };
@@ -316,7 +560,11 @@ export default function AddItemForm({ onCancel, onSuccess }) {
     if (!newDocumentName.trim()) return;
     const d = newDocumentName.trim();
     setCustomDocuments((p) => [...p, d]);
-    setCheckedDocs((p) => { const n = new Set(p); n.add(d); return n; });
+    setCheckedDocs((p) => {
+      const n = new Set(p);
+      n.add(d);
+      return n;
+    });
     setNewDocumentName("");
     setShowDocumentModal(false);
   };
@@ -328,17 +576,24 @@ export default function AddItemForm({ onCancel, onSuccess }) {
       {/* ── Step tab bar ── */}
       <div className="aif__tabs">
         {STEPS.map((s) => {
-          const isDone   = done.has(s.id) && s.id !== step;
+          const isDone = done.has(s.id) && s.id !== step;
           const isActive = s.id === step;
           return (
-            <div key={s.id}
+            <div
+              key={s.id}
               className={`aif__tab aif__tab--clickable${isActive ? " aif__tab--active" : ""}${isDone ? " aif__tab--done" : ""}`}
               title={s.label}
               onClick={() => setStep(s.id)}>
-              {isDone
-                ? <span className="aif__tab-dot aif__tab-dot--done">{Icons.check}</span>
-                : <span className={`aif__tab-dot${isActive ? " aif__tab-dot--active" : ""}`}>{s.id}</span>
-              }
+              {isDone ? (
+                <span className="aif__tab-dot aif__tab-dot--done">
+                  {Icons.check}
+                </span>
+              ) : (
+                <span
+                  className={`aif__tab-dot${isActive ? " aif__tab-dot--active" : ""}`}>
+                  {s.id}
+                </span>
+              )}
               <span className="aif__tab-lbl">{s.label}</span>
             </div>
           );
@@ -348,7 +603,8 @@ export default function AddItemForm({ onCancel, onSuccess }) {
       <div className="aif__card">
         {/* Card header */}
         <div className="aif__card-head">
-          <span className={`aif__card-icon aif__card-icon--${STEP_COLORS[cur.icon]}`}>
+          <span
+            className={`aif__card-icon aif__card-icon--${STEP_COLORS[cur.icon]}`}>
             {Icons[cur.icon]}
           </span>
           <span className="aif__card-title">{cur.label}</span>
@@ -359,25 +615,49 @@ export default function AddItemForm({ onCancel, onSuccess }) {
           <>
             <div className="aif__s1-layout">
               <div className="aif__img-col">
-                <div className={`aif__img-box${imagePreview ? " aif__img-box--filled" : ""}`}
+                <div
+                  className={`aif__img-box${imagePreview ? " aif__img-box--filled" : ""}`}
                   onClick={() => fileInputRef.current?.click()}>
-                  {imagePreview
-                    ? <img src={imagePreview} alt="preview" className="aif__img-preview" />
-                    : <>
-                        <span className="aif__img-icon">{Icons.upload}</span>
-                        <span className="aif__img-label">Upload Image</span>
-                        <span className="aif__img-hint">Click to browse<br />JPG, PNG up to 5MB</span>
-                      </>
-                  }
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="preview"
+                      className="aif__img-preview"
+                    />
+                  ) : (
+                    <>
+                      <span className="aif__img-icon">{Icons.upload}</span>
+                      <span className="aif__img-label">Upload Image</span>
+                      <span className="aif__img-hint">
+                        Click to browse
+                        <br />
+                        JPG, PNG up to 5MB
+                      </span>
+                    </>
+                  )}
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/*" hidden
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) { setImageFile(f); setImagePreview(URL.createObjectURL(f)); }
-                  }} />
+                    if (f) {
+                      setImageFile(f);
+                      setImagePreview(URL.createObjectURL(f));
+                    }
+                  }}
+                />
                 {imagePreview && (
-                  <button type="button" className="aif__img-remove"
-                    onClick={() => { setImageFile(null); setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>
+                  <button
+                    type="button"
+                    className="aif__img-remove"
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreview(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}>
                     Remove
                   </button>
                 )}
@@ -386,52 +666,101 @@ export default function AddItemForm({ onCancel, onSuccess }) {
               <div className="aif__s1-fields">
                 <div className="aif__row2">
                   <div className="form-group">
-                    <label className="form-label">Item Name <span className="required">*</span></label>
-                    <input className={`form-control${errors.name ? " form-control--error" : ""}`}
+                    <label className="form-label">
+                      Item Name <span className="required">*</span>
+                    </label>
+                    <input
+                      className={`form-control${errors.name ? " form-control--error" : ""}`}
                       placeholder="e.g. Knee Brace (must be unique)"
-                      {...register("name", { required: "Required" })} />
-                    {errors.name && <span className="form-error">{errors.name.message}</span>}
+                      {...register("name", { required: "Required" })}
+                    />
+                    {errors.name && (
+                      <span className="form-error">{errors.name.message}</span>
+                    )}
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Category <span className="required">*</span></label>
-                    <select className={`form-control${errors.category ? " form-control--error" : ""}`}
+                    <label className="form-label">
+                      Category <span className="required">*</span>
+                    </label>
+                    <select
+                      className={`form-control${errors.category ? " form-control--error" : ""}`}
                       {...register("category", { required: "Required" })}>
                       <option value="">Select category</option>
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
                     </select>
-                    {errors.category && <span className="form-error">{errors.category.message}</span>}
+                    {errors.category && (
+                      <span className="form-error">
+                        {errors.category.message}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="aif__row2">
                   <div className="form-group">
-                    <label className="form-label">Development Status <span className="required">*</span></label>
-                    <select className={`form-control${errors.developmentStatus ? " form-control--error" : ""}`}
-                      {...register("developmentStatus", { required: "Required" })}>
+                    <label className="form-label">
+                      Development Status <span className="required">*</span>
+                    </label>
+                    <select
+                      className={`form-control${errors.developmentStatus ? " form-control--error" : ""}`}
+                      {...register("developmentStatus", {
+                        required: "Required",
+                      })}>
                       <option value="">Select status</option>
-                      {Object.values(DEVELOPMENT_STATUS).map((s) => <option key={s} value={s}>{s}</option>)}
+                      {Object.values(DEVELOPMENT_STATUS).map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
                     </select>
-                    {errors.developmentStatus && <span className="form-error">{errors.developmentStatus.message}</span>}
+                    {errors.developmentStatus && (
+                      <span className="form-error">
+                        {errors.developmentStatus.message}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">Inventor</label>
-                    <input className="form-control" placeholder="Name of the inventor"
-                      {...register("inventor")} />
+                    <input
+                      className="form-control"
+                      placeholder="Name of the inventor"
+                      {...register("inventor")}
+                    />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Description <span className="required">*</span></label>
-                  <textarea className={`form-control${errors.description ? " form-control--error" : ""}`}
-                    placeholder="Brief item description..." rows={3} maxLength={200}
-                    {...register("description", { required: "Required" })} />
-                  {errors.description && <span className="form-error">{errors.description.message}</span>}
+                  <label className="form-label">
+                    Description <span className="required">*</span>
+                  </label>
+                  <textarea
+                    className={`form-control${errors.description ? " form-control--error" : ""}`}
+                    placeholder="Brief item description..."
+                    rows={3}
+                    maxLength={200}
+                    {...register("description", { required: "Required" })}
+                  />
+                  {errors.description && (
+                    <span className="form-error">
+                      {errors.description.message}
+                    </span>
+                  )}
                 </div>
 
                 <div className="aif__row2">
                   <div className="form-group">
-                    <label className="form-label">Product Development Completion Date</label>
-                    <input type="date" className="form-control" {...register("productDevCompletionDate")} />
+                    <label className="form-label">
+                      Product Development Completion Date
+                    </label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      {...register("productDevCompletionDate")}
+                    />
                   </div>
                 </div>
               </div>
@@ -442,9 +771,12 @@ export default function AddItemForm({ onCancel, onSuccess }) {
               <span className="aif__variant-note-icon">{Icons.file}</span>
               <div>
                 <strong>Variants are managed separately.</strong>
-                <p>Save this item first, then open it and use <em>“Manage Variants”</em> to add
-                  variants — each one gets its own independent Basic Info, ToT, IPR, Trial
-                  Stakeholders, Documentation and Procurement details.</p>
+                <p>
+                  Save this item first, then open it and use{" "}
+                  <em>“Manage Variants”</em> to add variants — each one gets its
+                  own independent Basic Info, ToT, IPR, Trial Stakeholders,
+                  Documentation and Procurement details.
+                </p>
               </div>
             </div>
           </>
@@ -457,8 +789,12 @@ export default function AddItemForm({ onCancel, onSuccess }) {
               <label className="form-label">ToT Status</label>
               <div className="aif__radio-row">
                 {Object.values(TOT_STATUS).map((opt) => (
-                  <label key={opt} className="aif__radio-item" onClick={() => setTotStatus(opt)}>
-                    <span className={`aif__radio${totStatus === opt ? " aif__radio--on" : ""}`}>
+                  <label
+                    key={opt}
+                    className="aif__radio-item"
+                    onClick={() => setTotStatus(opt)}>
+                    <span
+                      className={`aif__radio${totStatus === opt ? " aif__radio--on" : ""}`}>
                       {totStatus === opt && <span className="aif__radio-dot" />}
                     </span>
                     {opt}
@@ -472,8 +808,12 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                 <label className="form-label">ToT Document Filed</label>
                 <div className="aif__cert-row">
                   {Object.keys(TOT_DOCUMENTS).map((cert) => (
-                    <label key={cert} className="aif__cert-item"
-                      onClick={() => setTotCerts((p) => ({ ...p, [cert]: !p[cert] }))}>
+                    <label
+                      key={cert}
+                      className="aif__cert-item"
+                      onClick={() =>
+                        setTotCerts((p) => ({ ...p, [cert]: !p[cert] }))
+                      }>
                       <Checkbox checked={totCerts[cert]} onChange={() => {}} />
                       {TOT_DOCUMENTS[cert]}
                     </label>
@@ -485,35 +825,70 @@ export default function AddItemForm({ onCancel, onSuccess }) {
             <div>
               <div className="aif__tbl-head-row">
                 <span className="aif__section-label">ToT Partners</span>
-                <button type="button" className="aif__add-link" onClick={openAddPartner}>
+                <button
+                  type="button"
+                  className="aif__add-link"
+                  onClick={openAddPartner}>
                   {Icons.plus} Add Partner
                 </button>
               </div>
               <div className="aif__tbl-wrap">
                 <table className="aif__tbl">
-                  <thead><tr>
-                    <th>ToT Firm</th><th>LAToT Signing Date</th>
-                    <th>Sample Submission for Technology Absorption Date</th>
-                    <th>ToT Certificate Date</th><th>ToT Validity Date</th><th>Actions</th>
-                  </tr></thead>
+                  <thead>
+                    <tr>
+                      <th>ToT Firm</th>
+                      <th>LAToT Signing Date</th>
+                      <th>Sample Submission for Technology Absorption Date</th>
+                      <th>ToT Certificate Date</th>
+                      <th>ToT Validity Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {totPartners.length === 0 ? (
-                      <tr><td colSpan={6} style={{ textAlign:"center", padding:"20px 0", color:"var(--color-text-muted)", fontSize:12.5 }}>No partners added yet</td></tr>
-                    ) : totPartners.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.totFirm}</td>
-                        <td>{p.latotSigningDate || "—"}</td>
-                        <td>{p.sampleSubmissionForTechAbsorptionDate || "—"}</td>
-                        <td>{p.totCertificateDate || "—"}</td>
-                        <td>{p.totValidityDate || "—"}</td>
-                        <td style={{ display: "flex", gap: 6 }}>
-                          <button type="button" className="aif__action-btn aif__action-btn--edit"
-                            onClick={() => openEditPartner(p)}>{Icons.edit}</button>
-                          <button type="button" className="aif__del-btn"
-                            onClick={() => setTotPartners((x) => x.filter((t) => t.id !== p.id))}>{Icons.trash}</button>
+                      <tr>
+                        <td
+                          colSpan={6}
+                          style={{
+                            textAlign: "center",
+                            padding: "20px 0",
+                            color: "var(--color-text-muted)",
+                            fontSize: 12.5,
+                          }}>
+                          No partners added yet
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      totPartners.map((p) => (
+                        <tr key={p.id}>
+                          <td>{p.totFirm}</td>
+                          <td>{p.latotSigningDate || "—"}</td>
+                          <td>
+                            {p.sampleSubmissionForTechAbsorptionDate || "—"}
+                          </td>
+                          <td>{p.totCertificateDate || "—"}</td>
+                          <td>{p.totValidityDate || "—"}</td>
+                          <td style={{ display: "flex", gap: 6 }}>
+                            <button
+                              type="button"
+                              className="aif__action-btn aif__action-btn--edit"
+                              onClick={() => openEditPartner(p)}>
+                              {Icons.edit}
+                            </button>
+                            <button
+                              type="button"
+                              className="aif__del-btn"
+                              onClick={() =>
+                                setTotPartners((x) =>
+                                  x.filter((t) => t.id !== p.id),
+                                )
+                              }>
+                              {Icons.trash}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -525,96 +900,187 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         {step === 3 && (
           <div className="aif__step-body">
             <div className="aif__ipr-wrap">
-            {[
-              { key: "patent",    title: "Patent",    fLbl: "Patent Filing No",    gLbl: "Patent Grant No / Granting No" },
-              { key: "trademark", title: "Trademark", fLbl: "Trademark Filing No", gLbl: "Trademark Grant No" },
-              { key: "design",    title: "Design",    fLbl: "Design Filing No",    gLbl: "Design Grant No" },
-              { key: "copyright", title: "Copyright", fLbl: "Copyright Filing No", gLbl: "Copyright Grant No" },
-            ].map(({ key, title, fLbl, gLbl }) => (
-              <div key={key} className="aif__ipr-block">
-                <div className="aif__ipr-title">
-                  <span className="aif__ipr-title-icon">{Icons.ipr}</span>
-                  {title}
-                </div>
-
-                <div className="form-group aif__ipr-inventor">
-                  <label className="form-label">Inventor</label>
-                  <input
-                    className="form-control"
-                    placeholder={`${title} inventor name`}
-                    value={iprData[key].inventor}
-                    onChange={(e) => setIprData((p) => ({ ...p, [key]: { ...p[key], inventor: e.target.value } }))}
-                  />
-                </div>
-
-                <div className="aif__ipr-grid">
-                  <div className="aif__ipr-check-row">
-                    <Checkbox checked={iprData[key].filed}   onChange={() => toggleIpr(key, "filed")}   />
-                    <span className="aif__ipr-lbl">Filed</span>
+              {[
+                {
+                  key: "patent",
+                  title: "Patent",
+                  fLbl: "Patent Filing No",
+                  gLbl: "Patent Grant No",
+                },
+                {
+                  key: "trademark",
+                  title: "Trademark",
+                  fLbl: "Trademark Filing No",
+                  gLbl: "Trademark Grant No",
+                },
+                {
+                  key: "design",
+                  title: "Design",
+                  fLbl: "Design Filing No",
+                  gLbl: "Design Grant No",
+                },
+                {
+                  key: "copyright",
+                  title: "Copyright",
+                  fLbl: "Copyright Filing No",
+                  gLbl: "Copyright Grant No",
+                },
+              ].map(({ key, title, fLbl, gLbl }) => (
+                <div key={key} className="aif__ipr-block">
+                  <div className="aif__ipr-title">
+                    <span className="aif__ipr-title-icon">{Icons.ipr}</span>
+                    {title}
                   </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">
-                      {fLbl}
-                      {iprData[key].filed && <span className="required"> *</span>}
-                    </label>
+
+                  <div className="form-group aif__ipr-inventor">
+                    <label className="form-label">Inventor</label>
                     <input
                       className="form-control"
-                      value={iprData[key].filingNo}
-                      required={iprData[key].filed}
-                      placeholder={iprData[key].filed ? "Required when Filed is checked" : ""}
-                      style={iprData[key].filed && !iprData[key].filingNo ? { borderColor: "var(--color-danger)" } : {}}
-                      onChange={(e) => setIprData((p) => ({ ...p, [key]: { ...p[key], filingNo: e.target.value } }))}
-                    />
-                    {iprData[key].filed && !iprData[key].filingNo && (
-                      <span className="aif__ipr-err">Required when Filed is checked</span>
-                    )}
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Filing Date</label>
-                    <input type="date" className="form-control" disabled={!iprData[key].filed}
-                      value={iprData[key].filingDate}
-                      onChange={(e) => setIprData((p) => ({ ...p, [key]: { ...p[key], filingDate: e.target.value } }))}
+                      placeholder={`${title} inventor name`}
+                      value={iprData[key].inventor}
+                      onChange={(e) =>
+                        setIprData((p) => ({
+                          ...p,
+                          [key]: { ...p[key], inventor: e.target.value },
+                        }))
+                      }
                     />
                   </div>
 
-                  <div className="aif__ipr-check-row">
-                    <Checkbox
-                      checked={iprData[key].granted}
-                      disabled={!iprData[key].filed}
-                      onChange={() => iprData[key].filed && toggleIpr(key, "granted")}
-                    />
-                    <span className={`aif__ipr-lbl${!iprData[key].filed ? " aif__ipr-lbl--disabled" : ""}`}>
-                      Granted {!iprData[key].filed && <span className="aif__ipr-hint">(File first)</span>}
-                    </span>
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">
-                      {gLbl}
-                      {iprData[key].granted && <span className="required"> *</span>}
-                    </label>
-                    <input
-                      className="form-control"
-                      value={iprData[key].grantNo}
-                      disabled={!iprData[key].granted}
-                      required={iprData[key].granted}
-                      placeholder={!iprData[key].filed ? "File first to enable" : iprData[key].granted ? "Required" : ""}
-                      style={iprData[key].granted && !iprData[key].grantNo ? { borderColor: "var(--color-danger)" } : !iprData[key].filed ? { background: "var(--color-surface-alt)", color: "var(--color-text-muted)" } : {}}
-                      onChange={(e) => setIprData((p) => ({ ...p, [key]: { ...p[key], grantNo: e.target.value } }))}
-                    />
-                    {iprData[key].granted && !iprData[key].grantNo && (
-                      <span className="aif__ipr-err">Required when Granted is checked</span>
-                    )}
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Grant Date</label>
-                    <input type="date" className="form-control" disabled={!iprData[key].granted}
-                      value={iprData[key].grantDate}
-                      onChange={(e) => setIprData((p) => ({ ...p, [key]: { ...p[key], grantDate: e.target.value } }))}
-                    />
+                  <div className="aif__ipr-grid">
+                    <div className="aif__ipr-check-row">
+                      <Checkbox
+                        checked={iprData[key].filed}
+                        onChange={() => toggleIpr(key, "filed")}
+                      />
+                      <span className="aif__ipr-lbl">Filed</span>
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">
+                        {fLbl}
+                        {iprData[key].filed && (
+                          <span className="required"> *</span>
+                        )}
+                      </label>
+                      <input
+                        className="form-control"
+                        value={iprData[key].filingNo}
+                        required={iprData[key].filed}
+                        placeholder={
+                          iprData[key].filed
+                            ? "Required when Filed is checked"
+                            : ""
+                        }
+                        style={
+                          iprData[key].filed && !iprData[key].filingNo
+                            ? { borderColor: "var(--color-danger)" }
+                            : {}
+                        }
+                        onChange={(e) =>
+                          setIprData((p) => ({
+                            ...p,
+                            [key]: { ...p[key], filingNo: e.target.value },
+                          }))
+                        }
+                      />
+                      {iprData[key].filed && !iprData[key].filingNo && (
+                        <span className="aif__ipr-err">
+                          Required when Filed is checked
+                        </span>
+                      )}
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Filing Date</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        disabled={!iprData[key].filed}
+                        value={iprData[key].filingDate}
+                        onChange={(e) =>
+                          setIprData((p) => ({
+                            ...p,
+                            [key]: { ...p[key], filingDate: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="aif__ipr-check-row">
+                      <Checkbox
+                        checked={iprData[key].granted}
+                        disabled={!iprData[key].filed}
+                        onChange={() =>
+                          iprData[key].filed && toggleIpr(key, "granted")
+                        }
+                      />
+                      <span
+                        className={`aif__ipr-lbl${!iprData[key].filed ? " aif__ipr-lbl--disabled" : ""}`}>
+                        Granted{" "}
+                        {!iprData[key].filed && (
+                          <span className="aif__ipr-hint">(File first)</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">
+                        {gLbl}
+                        {iprData[key].granted && (
+                          <span className="required"> *</span>
+                        )}
+                      </label>
+                      <input
+                        className="form-control"
+                        value={iprData[key].grantNo}
+                        disabled={!iprData[key].granted}
+                        required={iprData[key].granted}
+                        placeholder={
+                          !iprData[key].filed
+                            ? "File first to enable"
+                            : iprData[key].granted
+                              ? "Required"
+                              : ""
+                        }
+                        style={
+                          iprData[key].granted && !iprData[key].grantNo
+                            ? { borderColor: "var(--color-danger)" }
+                            : !iprData[key].filed
+                              ? {
+                                  background: "var(--color-surface-alt)",
+                                  color: "var(--color-text-muted)",
+                                }
+                              : {}
+                        }
+                        onChange={(e) =>
+                          setIprData((p) => ({
+                            ...p,
+                            [key]: { ...p[key], grantNo: e.target.value },
+                          }))
+                        }
+                      />
+                      {iprData[key].granted && !iprData[key].grantNo && (
+                        <span className="aif__ipr-err">
+                          Required when Granted is checked
+                        </span>
+                      )}
+                    </div>
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label className="form-label">Grant Date</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        disabled={!iprData[key].granted}
+                        value={iprData[key].grantDate}
+                        onChange={(e) =>
+                          setIprData((p) => ({
+                            ...p,
+                            [key]: { ...p[key], grantDate: e.target.value },
+                          }))
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
             </div>
           </div>
         )}
@@ -622,152 +1088,10 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         {/* ── STEP 4: Trial Stakeholders ── */}
         {step === 4 && (
           <div className="aif__step-body">
-            <div className="aif__tbl-head-row">
-              <span className="aif__section-label">
-                Trial stakeholders
-                <span className="aif__count-pill">{stakeholders.length}</span>
-              </span>
-              <button type="button" className="aif__add-link" onClick={() => setShowStakeholderModal(true)}>
-                {Icons.plus} Add Stakeholder
-              </button>
-            </div>
-
-            {stakeholders.length === 0 ? (
-              <div className="aif__empty-card">
-                <p>No stakeholders added yet</p>
-              </div>
-            ) : stakeholders.map((s) => (
-              <div key={s.id} className={`aif__stakeholder-card${s.open ? " open" : ""}`}>
-
-                {/* Header / toggle row */}
-                <div className="aif__stakeholder-header" onClick={() => toggleSh(s.id)}>
-                  <div className="aif__stakeholder-avatar">{getInitials(s.name)}</div>
-
-                  <div className="aif__stakeholder-info">
-                    <div className="aif__stakeholder-name">{s.name || "Unnamed stakeholder"}</div>
-                    {(s.contactPerson || s.phone || s.sampleNo || s.sampleReqDate || s.sampleSubDate) && (
-                      <div className="aif__stakeholder-meta">
-                        {s.contactPerson && `Contact: ${s.contactPerson}`}
-                        {s.contactPerson && s.phone && " · "}
-                        {s.phone && `Ph: ${s.phone}`}
-                        {(s.contactPerson || s.phone) && s.sampleNo && " · "}
-                        {s.sampleNo && `Sample No: ${s.sampleNo}`}
-                        {(s.contactPerson || s.phone || s.sampleNo) && (s.sampleReqDate || s.sampleSubDate) && " · "}
-                        {s.sampleReqDate && `Req: ${s.sampleReqDate}`}
-                        {s.sampleReqDate && s.sampleSubDate && " · "}
-                        {s.sampleSubDate && `Sub: ${s.sampleSubDate}`}
-                      </div>
-                    )}
-                  </div>
-
-                  <select
-                    className="aif__stakeholder-status-select"
-                    value={s.status || "Not Started"}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => updateSh(s.id, "status", e.target.value)}
-                  >
-                    <option value="Not Started">Not Started</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Testing">Testing</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Pending">Pending</option>
-                  </select>
-
-                  <span className="aif__stakeholder-chevron">{Icons.chevronDown}</span>
-
-                  <button
-                    type="button"
-                    className="aif__del-btn"
-                    onClick={(e) => { e.stopPropagation(); setStakeholders((x) => x.filter((it) => it.id !== s.id)); }}
-                  >
-                    {Icons.trash}
-                  </button>
-                </div>
-
-                {/* Expanded body */}
-                {s.open && (
-                  <div className="aif__stakeholder-body">
-                    <span className="aif__section-label">Stakeholder Details</span>
-                    <div className="aif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Trial Stakeholder Name</label>
-                        <input className="form-control" value={s.name || ""}
-                          placeholder="Firm / organisation name"
-                          onChange={(e) => updateSh(s.id, "name", e.target.value)} />
-                      </div>
-                    </div>
-
-                    <span className="aif__section-label">Contact Person</span>
-                    <div className="aif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Contact Person Name</label>
-                        <input className="form-control" value={s.contactPerson || ""}
-                          placeholder="Name of the individual contact"
-                          onChange={(e) => updateSh(s.id, "contactPerson", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Address</label>
-                        <input className="form-control" value={s.address || ""}
-                          placeholder="Contact person address"
-                          onChange={(e) => updateSh(s.id, "address", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Phone Number</label>
-                        <input className="form-control" value={s.phone || ""}
-                          placeholder="Contact person phone number"
-                          onChange={(e) => updateSh(s.id, "phone", e.target.value)} />
-                      </div>
-                    </div>
-
-                    <span className="aif__section-label">Trial Sample Details</span>
-                    <div className="aif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Sample No</label>
-                        <input className="form-control" value={s.sampleNo || ""}
-                          placeholder="Sample number"
-                          onChange={(e) => updateSh(s.id, "sampleNo", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Request for sample trial date</label>
-                        <input type="date" className="form-control" value={s.sampleReqDate}
-                          onChange={(e) => updateSh(s.id, "sampleReqDate", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Date of sample submission</label>
-                        <input type="date" className="form-control" value={s.sampleSubDate}
-                          onChange={(e) => updateSh(s.id, "sampleSubDate", e.target.value)} />
-                      </div>
-                    </div>
-
-                    <div className="aif__stakeholder-divider" />
-
-                    <div className="aif__stakeholder-fields">
-                      <div className="form-group">
-                        <label className="form-label">Feedback</label>
-                        <textarea rows={3} className="form-control"
-                          placeholder="Enter feedback from stakeholder…"
-                          value={s.feedback}
-                          onChange={(e) => updateSh(s.id, "feedback", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Corrections</label>
-                        <textarea rows={3} className="form-control"
-                          placeholder="List any corrections required…"
-                          value={s.corrections}
-                          onChange={(e) => updateSh(s.id, "corrections", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Further actions</label>
-                        <textarea rows={3} className="form-control"
-                          placeholder="Describe further actions…"
-                          value={s.furtherActions || ""}
-                          onChange={(e) => updateSh(s.id, "furtherActions", e.target.value)} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+            <TrialStakeholders
+              value={stakeholders}
+              onChange={setStakeholders}
+            />
           </div>
         )}
 
@@ -776,7 +1100,10 @@ export default function AddItemForm({ onCancel, onSuccess }) {
           <div className="aif__step-body">
             <div className="aif__tbl-head-row">
               <span className="aif__section-label">Documentation Status</span>
-              <button type="button" className="aif__add-link" onClick={() => setShowDocumentModal(true)}>
+              <button
+                type="button"
+                className="aif__add-link"
+                onClick={() => setShowDocumentModal(true)}>
                 {Icons.plus} Add Document
               </button>
             </div>
@@ -784,16 +1111,32 @@ export default function AddItemForm({ onCancel, onSuccess }) {
               {[...DOCUMENTATION_ITEMS, ...customDocuments].map((d) => {
                 const attached = pendingFiles.find((f) => f.name === d);
                 return (
-                  <div key={d} className="aif__doc-row" onClick={() => toggleDoc(d)}>
+                  <div
+                    key={d}
+                    className="aif__doc-row"
+                    onClick={() => toggleDoc(d)}>
                     <div className="aif__doc-left">
-                      <Checkbox checked={checkedDocs.has(d)} onChange={() => {}} />
+                      <Checkbox
+                        checked={checkedDocs.has(d)}
+                        onChange={() => {}}
+                      />
                       <span className="aif__doc-name">{d}</span>
                     </div>
                     {attached ? (
-                      <span className="aif__doc-attached" onClick={(e) => e.stopPropagation()}>
-                        <span className="aif__doc-attached-name">{attached.file.name}</span>
-                        <button type="button" className="aif__doc-attached-remove"
-                          onClick={() => setPendingFiles((p) => p.filter((f) => f.id !== attached.id))}>
+                      <span
+                        className="aif__doc-attached"
+                        onClick={(e) => e.stopPropagation()}>
+                        <span className="aif__doc-attached-name">
+                          {attached.file.name}
+                        </span>
+                        <button
+                          type="button"
+                          className="aif__doc-attached-remove"
+                          onClick={() =>
+                            setPendingFiles((p) =>
+                              p.filter((f) => f.id !== attached.id),
+                            )
+                          }>
                           {Icons.close}
                         </button>
                       </span>
@@ -801,13 +1144,18 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                       <button
                         type="button"
                         className="aif__doc-upload-btn"
-                        title={`Upload file for ${d}`}
+                        disabled={!checkedDocs.has(d)}
+                        title={
+                          checkedDocs.has(d)
+                            ? `Upload file for ${d}`
+                            : "Check this document first to enable upload"
+                        }
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (!checkedDocs.has(d)) return;
                           setPendingFileName(d);
                           docFileInputRef.current?.click();
-                        }}
-                      >
+                        }}>
                         {Icons.uploadArrow}
                       </button>
                     )}
@@ -823,7 +1171,14 @@ export default function AddItemForm({ onCancel, onSuccess }) {
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                setPendingFiles((p) => [...p, { id: uid(), name: pendingFileName.trim() || file.name, file }]);
+                setPendingFiles((p) => [
+                  ...p,
+                  {
+                    id: uid(),
+                    name: pendingFileName.trim() || file.name,
+                    file,
+                  },
+                ]);
                 setPendingFileName("");
                 e.target.value = "";
               }}
@@ -836,44 +1191,73 @@ export default function AddItemForm({ onCancel, onSuccess }) {
           <div className="aif__step-body">
             <div className="aif__tbl-head-row">
               <span className="aif__section-label">
-                {procurements.length} firm{procurements.length !== 1 ? "s" : ""} listed
+                {procurements.length} firm{procurements.length !== 1 ? "s" : ""}{" "}
+                listed
               </span>
-              <button type="button" className="aif__add-link" onClick={openAddFirm}>
+              <button
+                type="button"
+                className="aif__add-link"
+                onClick={openAddFirm}>
                 {Icons.plus} Add Firm / Organisation
               </button>
             </div>
             <div className="aif__tbl-wrap">
               <table className="aif__tbl">
-                <thead><tr>
-                  <th>Procurement Agency</th>
-                  <th>ToT Firm</th>
-                  <th>No of Item Procured</th>
-                  <th>Production Value</th>
-                  <th>Order Number</th>
-                  <th>Order Date</th>
-                  <th>Actions</th>
-                </tr></thead>
+                <thead>
+                  <tr>
+                    <th>Procurement Agency</th>
+                    <th>ToT Firm</th>
+                    <th>No of Item Procured</th>
+                    <th>Production Value</th>
+                    <th>Order Number</th>
+                    <th>Order Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {procurements.length === 0 ? (
-                    <tr><td colSpan={7} style={{ textAlign:"center", padding:"20px 0", color:"var(--color-text-muted)", fontSize:12.5 }}>No procurement entries yet</td></tr>
-                  ) : procurements.map((p) => (
-                    <tr key={p.id}>
-                      <td>{p.agency}</td>
-                      <td>{p.totFirmNo || "—"}</td>
-                      <td>{p.noOfItemProcured ?? "—"}</td>
-                      <td>{p.productionValue || "—"}</td>
-                      <td>{p.orderNo || "—"}</td>
-                      <td>{p.date || "—"}</td>
-                      <td style={{ display: "flex", gap: 6 }}>
-                        <button type="button" className="aif__action-btn aif__action-btn--edit"
-                          onClick={() => openEditFirm(p)}>{Icons.edit}</button>
-                        <button type="button" className="aif__del-btn"
-                          onClick={() => setProcurements((x) => x.filter((t) => t.id !== p.id))}>
-                          {Icons.trash}
-                        </button>
+                    <tr>
+                      <td
+                        colSpan={7}
+                        style={{
+                          textAlign: "center",
+                          padding: "20px 0",
+                          color: "var(--color-text-muted)",
+                          fontSize: 12.5,
+                        }}>
+                        No procurement entries yet
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    procurements.map((p) => (
+                      <tr key={p.id}>
+                        <td>{p.agency}</td>
+                        <td>{p.totFirmNo || "—"}</td>
+                        <td>{p.noOfItemProcured ?? "—"}</td>
+                        <td>{p.productionValue || "—"}</td>
+                        <td>{p.orderNo || "—"}</td>
+                        <td>{p.date || "—"}</td>
+                        <td style={{ display: "flex", gap: 6 }}>
+                          <button
+                            type="button"
+                            className="aif__action-btn aif__action-btn--edit"
+                            onClick={() => openEditFirm(p)}>
+                            {Icons.edit}
+                          </button>
+                          <button
+                            type="button"
+                            className="aif__del-btn"
+                            onClick={() =>
+                              setProcurements((x) =>
+                                x.filter((t) => t.id !== p.id),
+                              )
+                            }>
+                            {Icons.trash}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -884,87 +1268,131 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         <div className="aif__footer">
           <div>
             {step > 1 && (
-              <button type="button" className="aif__nav-btn aif__nav-btn--prev" onClick={goPrev}>
+              <button
+                type="button"
+                className="aif__nav-btn aif__nav-btn--prev"
+                onClick={goPrev}>
                 {Icons.arrowLeft} Previous
               </button>
             )}
           </div>
           <div className="aif__footer-right">
-            <button type="button" className="aif__nav-btn aif__nav-btn--cancel" onClick={onCancel}>
+            <button
+              type="button"
+              className="aif__nav-btn aif__nav-btn--cancel"
+              onClick={onCancel}>
               {Icons.close} Cancel
             </button>
-            {step < STEPS.length
-              ? <button type="button" className="aif__nav-btn aif__nav-btn--next" onClick={goNext}>
-                  Next {Icons.arrowRight}
-                </button>
-              : <button type="button" className="aif__nav-btn aif__nav-btn--save"
-                  disabled={submitting} onClick={handleSubmit(onSubmit)}>
-                  {submitting ? <span className="aif__spin" /> : Icons.check}
-                  {submitting ? "Saving…" : "Create Item"}
-                </button>
-            }
+            {step < STEPS.length ? (
+              <button
+                type="button"
+                className="aif__nav-btn aif__nav-btn--next"
+                onClick={goNext}>
+                Next {Icons.arrowRight}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="aif__nav-btn aif__nav-btn--save"
+                disabled={submitting}
+                onClick={handleSubmit(onSubmit)}>
+                {submitting ? <span className="aif__spin" /> : Icons.check}
+                {submitting ? "Saving…" : "Create Item"}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* ── Modals ── */}
-      <AddRecordModal open={showPartnerModal} title={editingPartnerId ? "Edit ToT Partner" : "Add ToT Partner"}
+      <AddRecordModal
+        open={showPartnerModal}
+        title={editingPartnerId ? "Edit ToT Partner" : "Add ToT Partner"}
         fields={[
           { name: "totFirm", label: "ToT Firm" },
-          { name: "latotSigningDate", label: "LAToT Signing Date", type: "date" },
-          { name: "sampleSubmissionForTechAbsorptionDate", label: "Sample Submission for Technology Absorption Date", type: "date" },
-          { name: "totCertificateDate", label: "ToT Certificate Date", type: "date" },
+          {
+            name: "latotSigningDate",
+            label: "LAToT Signing Date",
+            type: "date",
+          },
+          {
+            name: "sampleSubmissionForTechAbsorptionDate",
+            label: "Sample Submission for Technology Absorption Date",
+            type: "date",
+          },
+          {
+            name: "totCertificateDate",
+            label: "ToT Certificate Date",
+            type: "date",
+          },
           { name: "totValidityDate", label: "ToT Validity Date", type: "date" },
         ]}
         values={partnerData}
         onChange={(n, v) => setPartnerData((p) => ({ ...p, [n]: v }))}
-        onClose={() => { setShowPartnerModal(false); setEditingPartnerId(null); }} onSave={savePartner} />
+        onClose={() => {
+          setShowPartnerModal(false);
+          setEditingPartnerId(null);
+        }}
+        onSave={savePartner}
+      />
 
-      <AddRecordModal open={showStakeholderModal} title="Add Stakeholder"
+      <AddRecordModal
+        open={showFirmModal}
+        title={
+          editingFirmId ? "Edit Procurement Entry" : "Add Procurement Entry"
+        }
         fields={[
-          { name: "name",          label: "Trial Stakeholder Name", section: "Stakeholder Details" },
-          { name: "contactPerson", label: "Contact Person Name", section: "Contact Person" },
-          { name: "address",       label: "Address", section: "Contact Person" },
-          { name: "phone",         label: "Phone Number", section: "Contact Person" },
-          { name: "sampleNo",      label: "Sample No", section: "Trial Sample Details" },
-          { name: "sampleReqDate", label: "Request Trial Date",     type: "date", section: "Trial Sample Details" },
-          { name: "sampleSubDate", label: "Sample Submission Date", type: "date", section: "Trial Sample Details" },
-        ]}
-        values={stakeholderData}
-        onChange={(n, v) => setStakeholderData((p) => ({ ...p, [n]: v }))}
-        onClose={() => setShowStakeholderModal(false)} onSave={saveStakeholder} />
-
-      <AddRecordModal open={showFirmModal} title={editingFirmId ? "Edit Procurement Entry" : "Add Procurement Entry"}
-        fields={[
-          { name: "agency",          label: "Procurement Agency" },
-          { name: "totFirmNo",       label: "ToT Firm" },
-          { name: "noOfItemProcured", label: "No of Item Procured", type: "number" },
+          { name: "agency", label: "Procurement Agency" },
+          { name: "totFirmNo", label: "ToT Firm" },
+          {
+            name: "noOfItemProcured",
+            label: "No of Item Procured",
+            type: "number",
+          },
           { name: "productionValue", label: "Production Value" },
-          { name: "orderNo",         label: "Order Number" },
-          { name: "date",            label: "Order Date",             type: "date" },
+          { name: "orderNo", label: "Order Number" },
+          { name: "date", label: "Order Date", type: "date" },
         ]}
         values={firmData}
         onChange={(n, v) => setFirmData((p) => ({ ...p, [n]: v }))}
-        onClose={() => { setShowFirmModal(false); setEditingFirmId(null); }} onSave={saveFirm} />
+        onClose={() => {
+          setShowFirmModal(false);
+          setEditingFirmId(null);
+        }}
+        onSave={saveFirm}
+      />
 
       {showDocumentModal && (
         <div className="arm__overlay">
           <div className="arm__modal">
             <div className="arm__header">
               <h3>Add Document</h3>
-              <button className="arm__close" onClick={() => setShowDocumentModal(false)}>✕</button>
+              <button
+                className="arm__close"
+                onClick={() => setShowDocumentModal(false)}>
+                ✕
+              </button>
             </div>
             <div className="arm__body">
               <div className="arm__group">
                 <label>Document Name</label>
-                <input type="text" value={newDocumentName}
+                <input
+                  type="text"
+                  value={newDocumentName}
                   onChange={(e) => setNewDocumentName(e.target.value)}
-                  placeholder="e.g. Trial Report" />
+                  placeholder="e.g. Trial Report"
+                />
               </div>
             </div>
             <div className="arm__footer">
-              <button className="arm__cancel" onClick={() => setShowDocumentModal(false)}>Cancel</button>
-              <button className="arm__save" onClick={saveDocument}>Save</button>
+              <button
+                className="arm__cancel"
+                onClick={() => setShowDocumentModal(false)}>
+                Cancel
+              </button>
+              <button className="arm__save" onClick={saveDocument}>
+                Save
+              </button>
             </div>
           </div>
         </div>

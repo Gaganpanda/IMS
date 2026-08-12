@@ -21,7 +21,7 @@
   position: relative;
   height: 210px;
   /* background: linear-gradient(160deg, var(--color-surface-alt), var(--color-primary-light)); */
-  background-color:white;
+  /* background-color:white; */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,9 +70,23 @@
   color: var(--color-text-primary);
   margin: 0;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.item-card__name-text {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.item-card__overdue-icon {
+  flex-shrink: 0;
+  color: var(--color-danger);
+  font-size: 14px;
+  line-height: 1;
 }
 
 .item-card__tags {

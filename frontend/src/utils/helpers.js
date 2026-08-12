@@ -87,3 +87,20 @@ export function cleanParams(obj) {
     Object.entries(obj).filter(([, v]) => v !== "" && v != null)
   );
 }
+
+/**
+ * Build a friendly download filename for an uploaded item document:
+ * "<document name>_<item name><original extension>", e.g.
+ * "Trial Certificate_Smart Helmet.pdf". Strips characters that aren't
+ * safe in filenames on any OS.
+ */
+export function buildDocDownloadName(docName, itemName, originalFileName) {
+  const sanitize = (s) =>
+    (s || "").toString().trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, " ");
+  const ext = originalFileName && originalFileName.includes(".")
+    ? originalFileName.slice(originalFileName.lastIndexOf("."))
+    : "";
+  const base = [sanitize(docName), sanitize(itemName)].filter(Boolean).join("_");
+  return `${base || "document"}${ext}`;
+}
+

@@ -2,7 +2,8 @@ package com.ims.dto;
 
 import lombok.*;
 
-import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -21,17 +22,17 @@ public class TrialStakeholderDTO {
 
     private String stakeholderPhone;
 
-    private String sampleNo;
+    /** Overall trial status for this stakeholder — e.g. "Not Started",
+     *  "In Progress", "Testing", "Completed", "On Hold". Independent of any
+     *  single feedback round's own status. */
+    private String trialStatus;
 
-    private LocalDate sampleRequestDate;
+    /** Every feedback/trial round for this stakeholder — "Feedback 1",
+     *  "Feedback 2", etc. Always appended to, never overwritten. */
+    @Builder.Default
+    private List<TrialFeedbackDTO> feedbacks = new ArrayList<>();
 
-    private LocalDate sampleSubmissionDate;
-
-    private String feedback;
-
-    private String correction;
-
-    private String furtherAction;
-
-    private String status;
+    /** Read-only: true when any feedback round on this stakeholder is
+     *  currently overdue. */
+    private boolean hasOverdueFeedback;
 }

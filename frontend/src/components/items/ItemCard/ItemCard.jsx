@@ -5,6 +5,7 @@ import StatusBadge from "../StatusBadge/StatusBadge";
 import { formatDate } from "../../../utils/formatDate";
 import { getImageUrl } from "../../../utils/imageUrl";
 import Icon from "../../common/Icon/Icon";
+import AlertIcon from "../../common/AlertIcon/AlertIcon";
 import "./ItemCard.css";
 
 export default function ItemCard({ item }) {
@@ -42,7 +43,15 @@ export default function ItemCard({ item }) {
 
         <div className="item-card__body">
           <div className="item-card__title-row">
-            <h3 className="item-card__name">{item.name}</h3>
+            <h3 className="item-card__name">
+              <span className="item-card__name-text">{item.name}</span>
+              {item.hasOverdueFeedback && (
+                <AlertIcon message="A trial sample was submitted but feedback hasn't been received in time." />
+              )}
+              {item.hasOverdueTot && (
+                <AlertIcon message={item.totOverdueMessage || "ToT validity has expired and renewal is pending."} />
+              )}
+            </h3>
             <StatusBadge status={item.developmentStatus} />
           </div>
           <div className="item-card__tags">

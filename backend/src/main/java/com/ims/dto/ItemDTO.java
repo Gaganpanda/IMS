@@ -130,6 +130,19 @@ public class ItemDTO {
          *  should no longer be edited/displayed; each variant is independent. */
         private boolean hasVariants;
 
+        /** True when any trial-feedback round on this item or any of its
+         *  variants is currently overdue (7+ days since sample submission with
+         *  no feedback received). Drives the ⚠ warning icon. */
+        private boolean hasOverdueFeedback;
+
+        /** True when a ToT partner's validity date (on this item or any
+         *  variant) has expired with no renewal recorded yet. Drives the
+         *  ⚠ warning icon. */
+        private boolean hasOverdueTot;
+
+        /** Human-readable reason for the ToT-overdue warning (hover tooltip). */
+        private String totOverdueMessage;
+
         private Integer crbfCount;
         private Integer ssbCount;
 
@@ -175,6 +188,10 @@ public class ItemDTO {
         @Builder.Default
         private List<ItemVariantDTO> variants = new ArrayList<>();
         private boolean hasVariants;
+        private boolean hasOverdueFeedback;
+        /** True when a ToT partner's validity date (item or any variant) has
+         *  expired with no renewal recorded — drives the ⚠ warning icon. */
+        private boolean hasOverdueTot;
         private LocalDateTime updatedAt;
     }
 }

@@ -3,7 +3,8 @@ package com.ims.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "trial_stakeholders")
@@ -30,22 +31,26 @@ public class TrialStakeholder {
 
     private String stakeholderPhone;
 
-    private String sampleNo;
-
-    private LocalDate sampleRequestDate;
-
-    private LocalDate sampleSubmissionDate;
-
-    private String feedback;
-
-    private String correction;
-
-    private String furtherAction;
-
+    /* Overall trial status for this stakeholder (independent of any single
+     * feedback round's own status) — set when the stakeholder is added via
+     * the "Add ToT Stakeholder" popup so the summary card/list can show it
+     * without needing to open a feedback round. */
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 30)
+    @Column(name = "trial_status", length = 30)
     @Builder.Default
-    private Status status = Status.NOT_STARTED;
+    private Status trialStatus = Status.NOT_STARTED;
+
+    /* A stakeholder can be sent samples and asked for feedback any number of
+     * times — each round (sample no., dates, status, feedback text) is its
+     * own independent TrialFeedback row. "+ Add Trial / Feedback" always
+     * appends a new one here; existing rounds are never overwritten. */
+    @OneToMany(
+            mappedBy = "trialStakeholder",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @Builder.Default
+    private List<TrialFeedback> feedbacks = new ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "item_id")

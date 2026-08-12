@@ -4,6 +4,7 @@
     import VariantSelectModal from "../VariantSelectModal/VariantSelectModal";
     import { formatDate, timeAgo } from "../../../utils/formatDate";
     import { getImageUrl } from "../../../utils/imageUrl";
+    import AlertIcon from "../../common/AlertIcon/AlertIcon";
     import "./ItemTable.css";
 
     const COLUMNS = [
@@ -92,7 +93,15 @@
                         )}
                       </div>
                       <div>
-                        <div className="item-table__name">{item.name}</div>
+                        <div className="item-table__name">
+                          {item.name}
+                          {item.hasOverdueFeedback && (
+                            <AlertIcon message="A trial sample was submitted but feedback hasn't been received in time." />
+                          )}
+                          {item.hasOverdueTot && (
+                            <AlertIcon message={item.totOverdueMessage || "ToT validity has expired and renewal is pending."} />
+                          )}
+                        </div>
                         {item.inventor && (
                           <div className="item-table__code">Inventor: {item.inventor}</div>
                         )}

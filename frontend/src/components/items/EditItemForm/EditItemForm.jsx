@@ -5,12 +5,14 @@ import {
   updateItemAsync, uploadImageAsync, uploadDocumentAsync, deleteDocumentAsync,
 } from "../../../redux/slices/itemSlice";
 import AddRecordModal from "../../common/AddRecordModal/AddRecordModal";
+import TrialStakeholders, { stakeholdersFromApi, stakeholdersToApi } from "../TrialStakeholders/TrialStakeholders";
 import {
   CATEGORIES, DEVELOPMENT_STATUS, TOT_STATUS, TOT_DOCUMENTS,
   DOCUMENTATION_ITEMS,
 } from "../../../utils/constants";
 import { toInputDate } from "../../../utils/formatDate";
 import { getImageUrl } from "../../../utils/imageUrl";
+import { buildDocDownloadName } from "../../../utils/helpers";
 import "./EditItemForm.css";
 
 const STEPS = [
@@ -112,8 +114,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
 
   // Step 4 – Stakeholders
   const [stakeholders, setStakeholders] = useState([]);
-  const [showStakeholderModal, setShowStakeholderModal] = useState(false);
-  const [stakeholderData, setStakeholderData] = useState({ name: "", contactPerson: "", address: "", phone: "", sampleNo: "", sampleReqDate: "", sampleSubDate: "" });
 
   // Step 5 – Docs
   const [checkedDocs, setCheckedDocs]         = useState(new Set());
@@ -217,23 +217,7 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
       },
     });
 
-    setStakeholders(
-      item.trialStakeholders?.map((s) => ({
-        id:             s.id || uid(),
-        name:           s.stakeholderName || s.name || "",
-        contactPerson:  s.contactPersonName || "",
-        address:        s.stakeholderAddress || "",
-        phone:          s.stakeholderPhone   || "",
-        sampleNo:       s.sampleNo || "",
-        sampleReqDate:  s.sampleRequestDate    || "",
-        sampleSubDate:  s.sampleSubmissionDate || "",
-        feedback:       s.feedback      || "",
-        corrections:    s.correction    || "",
-        furtherActions: s.furtherAction || "",
-        status:         s.status || "Not Started",
-        open: false,
-      })) || []
-    );
+    setStakeholders(stakeholdersFromApi(item.trialStakeholders));
 
     setProcurements(
       item.procurementDetails?.map((p) => ({
@@ -309,19 +293,7 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         copyrightGrantNo:    iprData.copyright.grantNo,
         copyrightGrantDate:  iprData.copyright.grantDate || null,
       },
-      trialStakeholders: stakeholders.map((s) => ({
-        stakeholderName:      s.name,
-        contactPersonName:    s.contactPerson || "",
-        stakeholderAddress:   s.address || "",
-        stakeholderPhone:     s.phone   || "",
-        sampleNo:             s.sampleNo || "",
-        sampleRequestDate:    s.sampleReqDate || null,
-        sampleSubmissionDate: s.sampleSubDate || null,
-        feedback:             s.feedback      || "",
-        correction:           s.corrections   || "",
-        furtherAction:        s.furtherActions|| "",
-        status:               s.status || "Not Started",
-      })),
+      trialStakeholders: stakeholdersToApi(stakeholders),
       documentation: [...checkedDocs],
       procurementDetails: procurements.map((p) => ({
         procurementAgency: p.agency,
@@ -348,9 +320,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
     if (f === "filed" && p[sec].filed) { updated.granted = false; updated.grantNo = ""; updated.grantDate = ""; }
     return { ...p, [sec]: updated };
   });
-  const toggleSh   = (id)     => setStakeholders((p) => p.map((s) => ({ ...s, open: s.id === id ? !s.open : false })));
-  const updateSh   = (id, f, v) => setStakeholders((p) => p.map((s) => s.id === id ? { ...s, [f]: v } : s));
-
   const openAddPartner = () => {
     setEditingPartnerId(null);
     setPartnerData({
@@ -388,21 +357,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
     setEditingPartnerId(null);
   };
 
-  const saveStakeholder = () => {
-    if (!stakeholderData.name.trim()) return;
-    setStakeholders((p) => [...p, {
-      id: uid(), name: stakeholderData.name.trim(), open: true,
-      contactPerson: stakeholderData.contactPerson || "",
-      address: stakeholderData.address || "",
-      phone: stakeholderData.phone || "",
-      sampleNo: stakeholderData.sampleNo || "",
-      sampleReqDate: stakeholderData.sampleReqDate,
-      sampleSubDate: stakeholderData.sampleSubDate,
-      feedback: "", corrections: "", furtherActions: "",
-    }]);
-    setStakeholderData({ name: "", contactPerson: "", address: "", phone: "", sampleNo: "", sampleReqDate: "", sampleSubDate: "" });
-    setShowStakeholderModal(false);
-  };
   const openAddFirm = () => {
     setEditingFirmId(null);
     setFirmData({ agency: "", totFirmNo: "", noOfItemProcured: "", productionValue: "", orderNo: "", date: "" });
@@ -756,154 +710,10 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         {/* ── STEP 4: Trial Stakeholders ── */}
         {step === 4 && (
           <div className="eif__step-body">
-            <div className="eif__tbl-head-row">
-              <span className="eif__section-label">
-                Trial stakeholders
-                <span className="eif__count-pill">{stakeholders.length}</span>
-              </span>
-              <button type="button" className="eif__add-link" onClick={() => setShowStakeholderModal(true)}>
-                {Icons.plus} Add Stakeholder
-              </button>
-            </div>
-
-            {stakeholders.length === 0 ? (
-              <div className="eif__empty-card">
-                <p>No stakeholders added yet</p>
-              </div>
-            ) : stakeholders.map((s) => (
-              <div key={s.id} className={`eif__stakeholder-card${s.open ? " open" : ""}`}>
-
-                {/* Header / toggle row */}
-                <div className="eif__stakeholder-header" onClick={() => toggleSh(s.id)}>
-                  <div className="eif__stakeholder-avatar">{getInitials(s.name)}</div>
-
-                  <div className="eif__stakeholder-info">
-                    <div className="eif__stakeholder-name">{s.name || "Unnamed stakeholder"}</div>
-                    {(s.contactPerson || s.phone || s.sampleNo || s.sampleReqDate || s.sampleSubDate) && (
-                      <div className="eif__stakeholder-meta">
-                        {s.contactPerson && `Contact: ${s.contactPerson}`}
-                        {s.contactPerson && s.phone && " · "}
-                        {s.phone && `Ph: ${s.phone}`}
-                        {(s.contactPerson || s.phone) && s.sampleNo && " · "}
-                        {s.sampleNo && `Sample No: ${s.sampleNo}`}
-                        {(s.contactPerson || s.phone || s.sampleNo) && (s.sampleReqDate || s.sampleSubDate) && " · "}
-                        {s.sampleReqDate && `Req: ${s.sampleReqDate}`}
-                        {s.sampleReqDate && s.sampleSubDate && " · "}
-                        {s.sampleSubDate && `Sub: ${s.sampleSubDate}`}
-                      </div>
-                    )}
-                  </div>
-
-                  <select
-                    className="eif__stakeholder-status-select"
-                    value={s.status || "Not Started"}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => updateSh(s.id, "status", e.target.value)}
-                  >
-                    <option value="Not Started">Not Started</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Testing">Testing</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Pending">Pending</option>
-                  </select>
-
-                  <span className="eif__stakeholder-chevron">{Icons.chevronDown}</span>
-
-                  <button
-                    type="button"
-                    className="eif__del-btn"
-                    onClick={(e) => { e.stopPropagation(); setStakeholders((x) => x.filter((it) => it.id !== s.id)); }}
-                  >
-                    {Icons.trash}
-                  </button>
-                </div>
-
-                {/* Expanded body */}
-                {s.open && (
-                  <div className="eif__stakeholder-body">
-                    <span className="eif__section-label">Stakeholder Details</span>
-                    <div className="eif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Trial Stakeholder Name</label>
-                        <input className="form-control" value={s.name || ""}
-                          placeholder="Firm / organisation name"
-                          onChange={(e) => updateSh(s.id, "name", e.target.value)} />
-                      </div>
-                    </div>
-
-                    <span className="eif__section-label">Contact Person</span>
-                    <div className="eif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Contact Person Name</label>
-                        <input className="form-control" value={s.contactPerson || ""}
-                          placeholder="Name of the individual contact"
-                          onChange={(e) => updateSh(s.id, "contactPerson", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Address</label>
-                        <input className="form-control" value={s.address || ""}
-                          placeholder="Contact person address"
-                          onChange={(e) => updateSh(s.id, "address", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Phone Number</label>
-                        <input className="form-control" value={s.phone || ""}
-                          placeholder="Contact person phone number"
-                          onChange={(e) => updateSh(s.id, "phone", e.target.value)} />
-                      </div>
-                    </div>
-
-                    <span className="eif__section-label">Trial Sample Details</span>
-                    <div className="eif__stakeholder-basic">
-                      <div className="form-group">
-                        <label className="form-label">Sample No</label>
-                        <input className="form-control" value={s.sampleNo || ""}
-                          placeholder="Sample number"
-                          onChange={(e) => updateSh(s.id, "sampleNo", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Request for sample trial date</label>
-                        <input type="date" className="form-control" value={s.sampleReqDate}
-                          onChange={(e) => updateSh(s.id, "sampleReqDate", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Date of sample submission</label>
-                        <input type="date" className="form-control" value={s.sampleSubDate}
-                          onChange={(e) => updateSh(s.id, "sampleSubDate", e.target.value)} />
-                      </div>
-                    </div>
-
-                    <div className="eif__stakeholder-divider" />
-
-                    <div className="eif__stakeholder-fields">
-                      <div className="form-group">
-                        <label className="form-label">Feedback</label>
-                        <textarea rows={3} className="form-control"
-                          placeholder="Enter feedback from stakeholder…"
-                          value={s.feedback}
-                          onChange={(e) => updateSh(s.id, "feedback", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Corrections</label>
-                        <textarea rows={3} className="form-control"
-                          placeholder="List any corrections required…"
-                          value={s.corrections}
-                          onChange={(e) => updateSh(s.id, "corrections", e.target.value)} />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Further actions</label>
-                        <textarea rows={3} className="form-control"
-                          placeholder="Describe further actions…"
-                          value={s.furtherActions || ""}
-                          onChange={(e) => updateSh(s.id, "furtherActions", e.target.value)} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+            <TrialStakeholders value={stakeholders} onChange={setStakeholders} />
           </div>
         )}
+
 
         {/* ── STEP 5: Documentation Status ── */}
         {step === 5 && (
@@ -934,7 +744,8 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
                             <div className="eif__doc-menu-backdrop" onClick={() => setDocMenuOpenFor(null)} />
                             <div className="eif__doc-menu">
                               <a className="eif__doc-menu-item" href={getImageUrl(attached.fileUrl)}
-                                target="_blank" rel="noreferrer" download
+                                target="_blank" rel="noreferrer"
+                                download={buildDocDownloadName(d, item?.name, attached.originalFileName || attached.fileUrl)}
                                 onClick={() => setDocMenuOpenFor(null)}>
                                 {Icons.download} Download
                               </a>
@@ -955,10 +766,11 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
                       <button
                         type="button"
                         className="eif__doc-upload-btn"
-                        title={`Upload file for ${d}`}
-                        disabled={docUploading}
+                        title={checkedDocs.has(d) ? `Upload file for ${d}` : "Check this document first to enable upload"}
+                        disabled={docUploading || !checkedDocs.has(d)}
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (!checkedDocs.has(d)) return;
                           setUploadDocName(d);
                           docFileInputRef.current?.click();
                         }}
@@ -1063,20 +875,6 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         values={partnerData}
         onChange={(n, v) => setPartnerData((p) => ({ ...p, [n]: v }))}
         onClose={() => { setShowPartnerModal(false); setEditingPartnerId(null); }} onSave={savePartner} />
-
-      <AddRecordModal open={showStakeholderModal} title="Add Stakeholder"
-        fields={[
-          { name: "name",          label: "Trial Stakeholder Name", section: "Stakeholder Details" },
-          { name: "contactPerson", label: "Contact Person Name", section: "Contact Person" },
-          { name: "address",       label: "Address", section: "Contact Person" },
-          { name: "phone",         label: "Phone Number", section: "Contact Person" },
-          { name: "sampleNo",      label: "Sample No", section: "Trial Sample Details" },
-          { name: "sampleReqDate", label: "Request Trial Date",     type: "date", section: "Trial Sample Details" },
-          { name: "sampleSubDate", label: "Sample Submission Date", type: "date", section: "Trial Sample Details" },
-        ]}
-        values={stakeholderData}
-        onChange={(n, v) => setStakeholderData((p) => ({ ...p, [n]: v }))}
-        onClose={() => setShowStakeholderModal(false)} onSave={saveStakeholder} />
 
       <AddRecordModal open={showFirmModal} title={editingFirmId ? "Edit Procurement Entry" : "Add Procurement Entry"}
         fields={[

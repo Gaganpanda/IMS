@@ -14,6 +14,10 @@ public class NotificationDTO {
         private boolean read;
         private Long   itemId;
         private String itemName;
+        private Long   variantId;
+        private Long   stakeholderId;
+        private Long   feedbackId;
+        private String sampleNo;
         private LocalDateTime createdAt;
     }
 }

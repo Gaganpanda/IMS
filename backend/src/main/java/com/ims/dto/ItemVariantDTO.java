@@ -50,12 +50,21 @@ public class ItemVariantDTO {
     @Builder.Default
     private List<ToTPartnerDTO> totPartners = new ArrayList<>();
 
+    /** True when a ToT partner's validity date on this variant has expired. */
+    private boolean hasOverdueTot;
+
+    /** Human-readable reason for the ToT-overdue warning (hover tooltip). */
+    private String totOverdueMessage;
+
     /* ── Trials ── */
     private String trialsStatus;
     private LocalDate sampleRequestDate;
     private LocalDate sampleSubmissionDate;
     @Builder.Default
     private List<TrialStakeholderDTO> trialStakeholders = new ArrayList<>();
+
+    /** True when any trial-feedback round on this variant is currently overdue. */
+    private boolean hasOverdueFeedback;
 
     /* ── IPR ── */
     private String iprStatus;
