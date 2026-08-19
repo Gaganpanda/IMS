@@ -62,6 +62,11 @@ public class TrialStakeholder {
     @JoinColumn(name = "variant_id")
     private ItemVariant itemVariant;
 
+    /* NOTE: TESTING is kept as a legacy enum constant only so stakeholder
+     * rows written before this status was retired can still be read back
+     * without throwing — it is no longer offered anywhere as a choice,
+     * and fromString() below coerces any incoming "Testing" text to
+     * IN_PROGRESS so no new row can ever be written with it. */
     public enum Status {
         NOT_STARTED, IN_PROGRESS, TESTING, COMPLETED, ON_HOLD;
 
@@ -71,7 +76,7 @@ public class TrialStakeholder {
             return switch (value.trim()) {
                 case "Not Started" -> NOT_STARTED;
                 case "In Progress" -> IN_PROGRESS;
-                case "Testing"     -> TESTING;
+                case "Testing"     -> IN_PROGRESS; // retired status, folded into In Progress
                 case "Completed"   -> COMPLETED;
                 case "Pending"     -> ON_HOLD;
                 case "On Hold"     -> ON_HOLD;

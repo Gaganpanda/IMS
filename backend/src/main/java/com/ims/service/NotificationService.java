@@ -52,6 +52,24 @@ public class NotificationService {
         return toResponse(notificationRepository.save(notif));
     }
 
+    /* ── Toggle favorite/star ── */
+    @Transactional
+    public NotificationDTO.Response toggleFavorite(Long id) {
+        Notification notif = notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+        notif.setFavorite(!notif.isFavorite());
+        return toResponse(notificationRepository.save(notif));
+    }
+
+    /* ── Toggle archived state ── */
+    @Transactional
+    public NotificationDTO.Response toggleArchived(Long id) {
+        Notification notif = notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+        notif.setArchived(!notif.isArchived());
+        return toResponse(notificationRepository.save(notif));
+    }
+
     /* ── Mark all as read ── */
     @Transactional
     public void markAllAsRead() {
@@ -201,6 +219,21 @@ public class NotificationService {
         }
     }
 
+    /* ── Resolve: same idea, for "sample submission pending" reminders —
+     * once a sample is actually submitted, any outstanding pending-sample
+     * reminder for it is stale and should disappear from the bell. ── */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void resolveSamplePendingNotifications(Long itemId, String sampleNo) {
+        if (itemId == null || sampleNo == null || sampleNo.isBlank()) return;
+        try {
+            notificationRepository.deleteByItemIdAndSampleNoAndTypeAndReadFalse(
+                    itemId, sampleNo, Notification.NotificationType.SAMPLE_PENDING);
+        } catch (Exception e) {
+            log.error("Failed to resolve sample-pending notifications for item {} sample '{}': {}",
+                    itemId, sampleNo, e.getMessage());
+        }
+    }
+
     /* ── Mapper ── */
     private NotificationDTO.Response toResponse(Notification n) {
         return NotificationDTO.Response.builder()
@@ -209,6 +242,8 @@ public class NotificationService {
                 .message(n.getMessage())
                 .type(n.getType() != null ? n.getType().name().toLowerCase() : null)
                 .read(n.isRead())
+                .favorite(n.isFavorite())
+                .archived(n.isArchived())
                 .itemId(n.getItemId())
                 .itemName(n.getItemName())
                 .variantId(n.getVariantId())

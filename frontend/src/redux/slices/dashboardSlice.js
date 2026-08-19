@@ -45,6 +45,7 @@ const dashboardSlice = createSlice({
     stats:              null,
     upcomingDueDates:   [],
     monthlyProgress:    [],
+    totStatusOverview:  [],
     trialsOverview:     [],
     documentationStats: null,
     recentActivities:   [],
@@ -68,6 +69,7 @@ const dashboardSlice = createSlice({
         state.stats             = d;
         state.trialsOverview    = d.trialsOverview    || [];
         state.monthlyProgress   = d.monthlyProgress   || [];
+        state.totStatusOverview = d.totStatusOverview || [];
         state.documentationStats= d.documentationStats || null;
         state.upcomingDueDates  = d.upcomingDueDates  || [];
         state.recentActivities  = d.recentActivities  || [];

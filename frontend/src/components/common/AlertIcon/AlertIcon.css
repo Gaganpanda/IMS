@@ -8,14 +8,18 @@
   color: var(--color-warning, #d97706);
   cursor: help;
   vertical-align: middle;
+  border-radius: 50%;
+  transition: color var(--transition-fast, 0.15s), transform var(--transition-fast, 0.15s);
 }
 
 .alert-icon svg {
   width: 100%;
   height: 100%;
-  filter: drop-shadow(0 0 0 transparent);
 }
 
-.alert-icon:hover {
+.alert-icon:hover,
+.alert-icon:focus-visible {
   color: var(--color-danger, #dc2626);
+  transform: scale(1.12);
+  outline: none;
 }

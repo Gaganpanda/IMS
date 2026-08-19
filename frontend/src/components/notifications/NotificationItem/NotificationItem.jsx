@@ -15,9 +15,14 @@ const TYPE_CONFIG = {
   trial_update:     { bg: "var(--color-teal-bg)",    color: "var(--color-teal)",    icon: "flask" },
   feedback_overdue: { bg: "var(--color-danger-bg)",  color: "var(--color-danger)",  icon: "alertTriangle" },
   feedback_received:{ bg: "var(--color-success-bg)", color: "var(--color-success)", icon: "checkCircle" },
+  sample_pending:   { bg: "var(--color-warning-bg)", color: "var(--color-warning)", icon: "alertCircle" },
+  tot_validity:     { bg: "var(--color-info-bg)",    color: "var(--color-info)",    icon: "fileCheck" },
+  dev_completion:   { bg: "var(--color-purple-bg)",  color: "var(--color-purple)",  icon: "clock" },
   general:          { bg: "var(--color-surface-alt)",color: "var(--color-text-muted)", icon: "bell" },
   default:          { bg: "var(--color-surface-alt)",color: "var(--color-text-muted)", icon: "bell" },
 };
+
+const TRIALS_TAB_TYPES = new Set(["feedback_overdue", "feedback_received", "trial_update", "sample_pending"]);
 
 export default function NotificationItem({ notification, showActions = false }) {
   const dispatch = useDispatch();
@@ -29,11 +34,13 @@ export default function NotificationItem({ notification, showActions = false }) 
     if (!read) dispatch(markAsReadAsync(id));
     if (!itemId) return;
     // Deep-link straight to the exact item/trial record this notification is
-    // about: the variant (if any) and the Trial Stakeholders tab.
+    // about: the variant (if any) and the relevant tab.
     const params = new URLSearchParams();
     if (variantId) params.set("variant", variantId);
-    if (type === "feedback_overdue" || type === "feedback_received" || type === "trial_update") {
+    if (TRIALS_TAB_TYPES.has(type)) {
       params.set("tab", "trials");
+    } else if (type === "tot_validity") {
+      params.set("tab", "tot");
     }
     const qs = params.toString();
     navigate(`/items/${itemId}${qs ? `?${qs}` : ""}`);

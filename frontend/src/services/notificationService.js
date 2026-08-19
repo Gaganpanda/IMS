@@ -14,6 +14,12 @@ export const markAsRead = (id) =>
 export const markAllAsRead = () =>
   axiosInstance.patch(`${BASE}/read-all`);
 
+export const toggleFavorite = (id) =>
+  axiosInstance.patch(`${BASE}/${id}/favorite`);
+
+export const toggleArchived = (id) =>
+  axiosInstance.patch(`${BASE}/${id}/archive`);
+
 export const deleteNotification = (id) =>
   axiosInstance.delete(`${BASE}/${id}`);
 

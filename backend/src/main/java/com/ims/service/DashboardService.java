@@ -19,6 +19,7 @@ import com.ims.model.Item;
 import com.ims.model.Notification;
 import com.ims.repository.IPRDetailRepository;
 import com.ims.repository.ItemRepository;
+import com.ims.repository.ItemVariantRepository;
 import com.ims.repository.NotificationRepository;
 import com.ims.repository.ToTPartnerRepository;
 import com.ims.repository.TrialFeedbackRepository;
@@ -34,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DashboardService {
 
     private final ItemRepository              itemRepository;
+    private final ItemVariantRepository       itemVariantRepository;
     private final NotificationRepository      notificationRepository;
     private final UserRepository              userRepository;
     private final TrialFeedbackRepository     trialFeedbackRepository;
@@ -113,6 +115,9 @@ public class DashboardService {
         List<DashboardStats.MonthlyProgressItem> monthly = buildMonthlyProgress(
                 LocalDate.now().getYear());
 
+        /* ToT pipeline overview: TTD / TNF / TAC / CEC documents → LAToT Signed → Certified */
+        List<DashboardStats.TotStatusItem> totStatusOverview = buildTotStatusOverview(ownerId);
+
         /* Documentation stats — count items that have each doc status */
         DashboardStats.DocumentationStatsItem docStats = buildDocumentationStats(total);
 
@@ -147,6 +152,7 @@ public class DashboardService {
                 .totFilledPct(totFilledPct)
                 .trialsOverview(trialsOverview)
                 .monthlyProgress(monthly)
+                .totStatusOverview(totStatusOverview)
                 .documentationStats(docStats)
                 .upcomingDueDates(upcomingDues)
                 .recentActivities(recentActivities)
@@ -186,19 +192,22 @@ public class DashboardService {
         Map<String, String> labelMap = Map.of(
                 "NOT_STARTED", "Not Started",
                 "IN_PROGRESS", "In Progress",
-                "TESTING",     "Testing",
                 "COMPLETED",   "Completed",
                 "ON_HOLD",     "On Hold"
         );
 
-        // Ensure all statuses appear even if count is 0
+        // Ensure all statuses appear even if count is 0. "TESTING" is intentionally
+        // excluded here — any legacy rows still carrying that status are dropped
+        // below rather than shown as their own bar.
+        List<String> allowedStatuses = List.of("NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD");
         Map<String, Long> counts = new LinkedHashMap<>();
-        for (String key : List.of("NOT_STARTED", "IN_PROGRESS", "TESTING", "COMPLETED", "ON_HOLD")) {
+        for (String key : allowedStatuses) {
             counts.put(key, 0L);
         }
         for (Object[] row : rows) {
             if (row[0] == null) continue;
             String status = row[0].toString();
+            if (!counts.containsKey(status)) continue; // drops TESTING and any other legacy status
             counts.put(status, ((Number) row[1]).longValue());
         }
 
@@ -227,6 +236,32 @@ public class DashboardService {
                     .count(monthMap.getOrDefault(m, 0L))
                     .build());
         }
+        return result;
+    }
+
+    private List<DashboardStats.TotStatusItem> buildTotStatusOverview(Long ownerId) {
+        // Per-document breakdown (TTD / TNF / TAC / CEC) instead of one lumped
+        // "ToT Document Filed" bucket — much more useful at a glance.
+        Map<String, Long> docCounts = new LinkedHashMap<>();
+        docCounts.put("TTD", 0L);
+        docCounts.put("TNF", 0L);
+        docCounts.put("TAC", 0L);
+        docCounts.put("CEC", 0L);
+        for (Object[] row : itemRepository.countGroupByTotDocumentCodeForOwner(ownerId)) {
+            if (row[0] == null) continue;
+            String code = row[0].toString();
+            if (!docCounts.containsKey(code)) continue; // ignore unknown/legacy codes
+            docCounts.put(code, ((Number) row[1]).longValue());
+        }
+
+        long latotSigned = totPartnerRepository.countLatotSignedForOwner(ownerId);
+        long certified    = totPartnerRepository.countCertifiedForOwner(ownerId);
+
+        List<DashboardStats.TotStatusItem> result = new ArrayList<>();
+        docCounts.forEach((code, count) ->
+                result.add(DashboardStats.TotStatusItem.builder().status(code).count(count).build()));
+        result.add(DashboardStats.TotStatusItem.builder().status("LAToT Signed").count(latotSigned).build());
+        result.add(DashboardStats.TotStatusItem.builder().status("ToT Certification").count(certified).build());
         return result;
     }
 
@@ -267,33 +302,67 @@ public class DashboardService {
                 })
                 .toList();
 
+        // Variants carry their own, independent Product Development Completion
+        // date — previously left out of this widget entirely.
+        List<DashboardStats.UpcomingDueDateItem> variantDevDates = itemVariantRepository
+                .findUpcomingDueDatesForOwner(ownerId, today, future).stream()
+                .filter(v -> v.getItem() != null)
+                .map(v -> {
+                    long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(
+                            today, v.getProductDevCompletionDate());
+                    return DashboardStats.UpcomingDueDateItem.builder()
+                            .id(v.getItem().getId())
+                            .name(v.getItem().getName() + " — " + v.getName())
+                            .label("Product Development Completion")
+                            .dueDate(v.getProductDevCompletionDate().toString())
+                            .daysLeft(daysLeft)
+                            .type("dev")
+                            .build();
+                })
+                .toList();
+
+        // Now resolves the item either directly or via the partner's variant —
+        // previously silently dropped every variant-only ToT partner.
         List<DashboardStats.UpcomingDueDateItem> totDates = totPartnerRepository
                 .findUpcomingValidityForOwner(ownerId, today, future).stream()
-                .filter(p -> p.getItem() != null)
                 .map(p -> {
+                    Item item = p.getItem() != null ? p.getItem()
+                            : (p.getItemVariant() != null ? p.getItemVariant().getItem() : null);
+                    if (item == null) return null;
                     long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(
                             today, p.getTotValidityDate());
                     String firm = p.getTotFirm() != null && !p.getTotFirm().isBlank()
                             ? " (" + p.getTotFirm() + ")" : "";
+                    String name = p.getItemVariant() != null
+                            ? item.getName() + " — " + p.getItemVariant().getName()
+                            : item.getName();
                     return DashboardStats.UpcomingDueDateItem.builder()
-                            .id(p.getItem().getId())
-                            .name(p.getItem().getName())
+                            .id(item.getId())
+                            .name(name)
                             .label("ToT Validity Renewal" + firm)
                             .dueDate(p.getTotValidityDate().toString())
                             .daysLeft(daysLeft)
                             .type("tot")
                             .build();
                 })
+                .filter(java.util.Objects::nonNull)
                 .toList();
 
-        return java.util.stream.Stream.concat(devDates.stream(), totDates.stream())
+        // Sorted soonest/most-overdue first so the dashboard card and the
+        // "View All" popup both read in due-date order without any client
+        // re-sort. Limit raised from 10 -> 50 so "View All" has real depth
+        // to show beyond the top few the card teases.
+        return java.util.stream.Stream.of(devDates, variantDevDates, totDates)
+                .flatMap(List::stream)
                 .sorted(java.util.Comparator.comparingLong(DashboardStats.UpcomingDueDateItem::getDaysLeft))
-                .limit(10)
+                .limit(50)
                 .toList();
     }
 
     private List<DashboardStats.RecentActivityItem> buildRecentActivities(Long userId) {
-        // Pull from the current user's own notification feed — latest 10
+        // Pull from the current user's own notification feed — latest 50
+        // (raised from 10 so the dashboard's "View All" popup has more than
+        // the handful shown inline on the card)
         List<Notification> source = userId != null
                 ? notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 : notificationRepository.findAll();
@@ -301,7 +370,7 @@ public class DashboardService {
         return source.stream()
                 .filter(n -> n.getCreatedAt() != null)
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
-                .limit(10)
+                .limit(50)
                 .map(n -> {
                     String color = switch (n.getType()) {
                         case ITEM_ADDED      -> "#22c55e";

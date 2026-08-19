@@ -4,18 +4,29 @@
   gap: 16px;
 }
 
+/* ── Breadcrumb — sole page-level wayfinding element; title/subtitle
+   already live in the navbar so we don't repeat them here ── */
 .edit-item-page__breadcrumb {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 7px;
+  font-size: 12.5px;
 }
 
 .edit-item-page__crumb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--color-text-secondary);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   transition: color 0.15s;
 }
 .edit-item-page__crumb-link:hover { color: var(--color-primary); }
-.edit-item-page__crumb-cur { color: var(--color-text-primary); font-weight: 600; }
+
+.edit-item-page__crumb-arrow {
+  color: var(--color-border-strong);
+  flex-shrink: 0;
+}
+
+.edit-item-page__crumb-cur { color: var(--color-text-primary); font-weight: 700; }

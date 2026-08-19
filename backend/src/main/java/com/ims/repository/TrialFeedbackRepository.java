@@ -15,6 +15,10 @@ public interface TrialFeedbackRepository extends JpaRepository<TrialFeedback, Lo
      *  received yet — candidates for the overdue-reminder scan. */
     List<TrialFeedback> findBySampleSubmissionDateIsNotNullAndFeedbackReceivedDateIsNull();
 
+    /** Every feedback round where a trial was requested but the sample has
+     *  not been submitted yet — candidates for the sample-pending reminder. */
+    List<TrialFeedback> findByRequestTrialDateIsNotNullAndSampleSubmissionDateIsNull();
+
     /**
      * Count feedback rounds grouped by status.
      * When ownerId is non-null, only rounds belonging to that user's items are counted.

@@ -206,40 +206,38 @@ function TotTab({ item }) {
 
       <Section title="ToT Partners" icon="file" color="blue">
         {item.totPartners?.length ? (
-          <div className="idet__tbl-wrap">
-            <table className="idet__tbl">
-              <thead>
-                <tr>
-                  <th>ToT Firm</th>
-                  <th>LAToT Signing Date</th>
-                  <th>Sample Submission for Technology Absorption Date</th>
-                  <th>ToT Certificate Date</th>
-                  <th>ToT Validity Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {item.totPartners.map((p) => {
-                  const isExpired = p.totValidityDate && new Date(p.totValidityDate) < new Date(new Date().toDateString());
-                  return (
-                    <tr key={p.id}>
-                      <td>{p.totFirm}</td>
-                      <td>{formatDate(p.latotSigningDate)}</td>
-                      <td>{formatDate(p.sampleSubmissionForTechAbsorptionDate)}</td>
-                      <td>{p.totCertificateDate ? formatDate(p.totCertificateDate) : "—"}</td>
-                      <td>
-                        {formatDate(p.totValidityDate)}
-                        {isExpired && (
-                          <AlertIcon
-                            className="idet__tot-expired-icon"
-                            message={`ToT validity with ${p.totFirm || "this partner"} expired on ${formatDate(p.totValidityDate)} — renewal pending.`}
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="idet__partner-grid stagger-children">
+            {item.totPartners.map((p) => {
+              const isExpired = p.totValidityDate && new Date(p.totValidityDate) < new Date(new Date().toDateString());
+              return (
+                <div key={p.id} className={`idet__partner-card${isExpired ? " idet__partner-card--expired" : ""}`}>
+                  <div className="idet__partner-card-head">
+                    <span className="idet__partner-avatar">{(p.totFirm || "?").slice(0, 1).toUpperCase()}</span>
+                    <span className="idet__partner-name">{p.totFirm || "—"}</span>
+                    {isExpired && (
+                      <AlertIcon
+                        className="idet__partner-alert"
+                        message={`ToT validity with ${p.totFirm || "this partner"} expired on ${formatDate(p.totValidityDate)} — renewal pending.`}
+                      />
+                    )}
+                  </div>
+                  <div className="idet__partner-grid-fields">
+                    <Field label="LAToT Signing Date" value={formatDate(p.latotSigningDate)} />
+                    <Field label="Sample Submission (Tech. Absorption)" value={formatDate(p.sampleSubmissionForTechAbsorptionDate)} />
+                    <Field label="ToT Certificate Date" value={p.totCertificateDate ? formatDate(p.totCertificateDate) : "—"} />
+                    <Field
+                      label="ToT Validity Date"
+                      value={
+                        <span className={isExpired ? "idet__validity-expired" : ""}>
+                          {formatDate(p.totValidityDate)}
+                          {isExpired && <span className="idet__expired-pill">Expired</span>}
+                        </span>
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="idet__empty">No ToT partners added.</p>
@@ -354,92 +352,80 @@ function IprTab({ item }) {
 /* ── TRIALS TAB ── */
 function TrialsTab({ item }) {
   const stakeholders = item.trialStakeholders || [];
-  // Flatten to one row per feedback round so every independent trial/feedback
-  // entry is visible, with the stakeholder's own columns only shown once
-  // (rowSpan) at the top of its group.
-  const rows = [];
-  stakeholders.forEach((s) => {
-    const feedbacks = s.feedbacks && s.feedbacks.length ? s.feedbacks : [null];
-    feedbacks.forEach((f, idx) => rows.push({ s, f, idx, isFirst: idx === 0, span: feedbacks.length }));
-  });
 
   return (
     <Section title="Trial Stakeholders" icon="flask" color="teal">
       {!stakeholders.length ? (
         <p className="idet__empty">No stakeholders added.</p>
       ) : (
-        <div className="idet__tbl-wrap">
-          <table className="idet__tbl">
-            <thead>
-              <tr>
-                <th>Trial Stakeholder</th>
-                <th>Trial Status</th>
-                <th>Contact Person</th>
-                <th>Round</th>
-                <th>Sample No</th>
-                <th>Status</th>
-                <th>Request Trial Date</th>
-                <th>Sample Submission Date</th>
-                <th>Feedback Received Date</th>
-                <th>Feedback</th>
-                <th>Correction</th>
-                <th>Further Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ s, f, idx, isFirst, span }) => (
-                <tr key={`${s.id}-${idx}`}>
-                  {isFirst && (
-                    <td rowSpan={span}>
-                      <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                        {s.stakeholderName || "—"}
-                        {s.hasOverdueFeedback && (
-                          <AlertIcon message="This stakeholder has a feedback round overdue — sample submitted but no feedback received." />
-                        )}
-                      </div>
-                    </td>
-                  )}
-                  {isFirst && (
-                    <td rowSpan={span}>
-                      <StatusBadge status={s.trialStatus || "Not Started"} />
-                    </td>
-                  )}
-                  {isFirst && (
-                    <td rowSpan={span}>
-                      <div>{s.contactPersonName || "—"}</div>
-                      {(s.stakeholderAddress || s.stakeholderPhone) && (
-                        <div style={{ fontSize: 12, color: "var(--color-text-muted)", marginTop: 2 }}>
-                          {s.stakeholderAddress || ""}
-                          {s.stakeholderAddress && s.stakeholderPhone ? " · " : ""}
-                          {s.stakeholderPhone || ""}
-                        </div>
+        <div className="idet__stakeholder-list stagger-children">
+          {stakeholders.map((s) => {
+            const feedbacks = s.feedbacks && s.feedbacks.length ? s.feedbacks : [];
+            return (
+              <div key={s.id} className="idet__stakeholder-card">
+                <div className="idet__stakeholder-head">
+                  <span className="idet__stakeholder-avatar">
+                    {(s.stakeholderName || "?").slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="idet__stakeholder-head-info">
+                    <div className="idet__stakeholder-name-row">
+                      <span className="idet__stakeholder-name">{s.stakeholderName || "—"}</span>
+                      {s.hasOverdueFeedback && (
+                        <AlertIcon message="This stakeholder has a feedback round overdue — sample submitted but no feedback received." />
                       )}
-                    </td>
-                  )}
-                  {f === null ? (
-                    <td colSpan={9} style={{ color: "var(--color-text-muted)" }}>No feedback rounds yet.</td>
-                  ) : (
-                    <>
-                      <td>
-                        Feedback {idx + 1}
-                        {f.feedbackOverdue && (
-                          <AlertIcon message="Sample was submitted 7+ days ago but no feedback has been received yet." />
-                        )}
-                      </td>
-                      <td>{f.sampleNo || "—"}</td>
-                      <td><StatusBadge status={f.status || "Not Started"} /></td>
-                      <td>{formatDate(f.requestTrialDate)}</td>
-                      <td>{formatDate(f.sampleSubmissionDate)}</td>
-                      <td>{formatDate(f.feedbackReceivedDate)}</td>
-                      <td>{f.feedback    || "—"}</td>
-                      <td>{f.correction  || "—"}</td>
-                    </>
-                  )}
-                  {f !== null && <td>{f.furtherAction || "—"}</td>}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </div>
+                    {(s.contactPersonName || s.stakeholderAddress || s.stakeholderPhone) && (
+                      <div className="idet__stakeholder-contact">
+                        {s.contactPersonName && <span>{s.contactPersonName}</span>}
+                        {s.stakeholderAddress && <span>{s.stakeholderAddress}</span>}
+                        {s.stakeholderPhone && <span>{s.stakeholderPhone}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <StatusBadge status={s.trialStatus || "Not Started"} />
+                </div>
+
+                {!feedbacks.length ? (
+                  <p className="idet__empty idet__empty--inset">No feedback rounds yet.</p>
+                ) : (
+                  <div className="idet__feedback-timeline">
+                    {feedbacks.map((f, idx) => (
+                      <div key={f.id || idx} className="idet__feedback-item">
+                        <div className="idet__feedback-item-rail">
+                          <span className="idet__feedback-dot" />
+                          {idx < feedbacks.length - 1 && <span className="idet__feedback-line" />}
+                        </div>
+                        <div className="idet__feedback-item-body">
+                          <div className="idet__feedback-item-head">
+                            <span className="idet__feedback-round">
+                              Round {idx + 1}
+                              {f.feedbackOverdue && (
+                                <AlertIcon message="Sample was submitted 7+ days ago but no feedback has been received yet." />
+                              )}
+                            </span>
+                            <StatusBadge status={f.status || "Not Started"} size="sm" />
+                            {f.sampleNo && <span className="idet__feedback-sample">Sample #{f.sampleNo}</span>}
+                          </div>
+                          <div className="idet__feedback-dates">
+                            <span><em>Requested</em> {formatDate(f.requestTrialDate)}</span>
+                            <span><em>Sample sent</em> {formatDate(f.sampleSubmissionDate)}</span>
+                            <span><em>Feedback received</em> {formatDate(f.feedbackReceivedDate)}</span>
+                          </div>
+                          {(f.feedback || f.correction || f.furtherAction) && (
+                            <div className="idet__feedback-notes">
+                              {f.feedback && <div className="idet__feedback-note"><span>Feedback</span><p>{f.feedback}</p></div>}
+                              {f.correction && <div className="idet__feedback-note"><span>Correction</span><p>{f.correction}</p></div>}
+                              {f.furtherAction && <div className="idet__feedback-note"><span>Further Action</span><p>{f.furtherAction}</p></div>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </Section>
@@ -550,31 +536,24 @@ function ProcurementTab({ item }) {
       {procs.length === 0 ? (
         <p className="idet__empty">No procurement records added.</p>
       ) : (
-        <div className="idet__tbl-wrap">
-          <table className="idet__tbl">
-            <thead>
-              <tr>
-                <th>Procurement Agency</th>
-                <th>ToT Firm</th>
-                <th>No of Item Procured</th>
-                <th>Production Value</th>
-                <th>Order Number</th>
-                <th>Order Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {procs.map((p) => (
-                <tr key={p.id}>
-                  <td style={{ fontWeight: 600 }}>{p.procurementAgency}</td>
-                  <td>{p.totFirmNo || "—"}</td>
-                  <td>{p.noOfItemProcured ?? "—"}</td>
-                  <td>{p.productionValue || "—"}</td>
-                  <td>{p.orderNumber || "—"}</td>
-                  <td>{formatDate(p.orderDate)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="idet__partner-grid stagger-children">
+          {procs.map((p) => (
+            <div key={p.id} className="idet__partner-card idet__proc-card">
+              <div className="idet__partner-card-head">
+                <span className="idet__partner-avatar idet__partner-avatar--green">
+                  {Icons.cart}
+                </span>
+                <span className="idet__partner-name">{p.procurementAgency || "—"}</span>
+              </div>
+              <div className="idet__partner-grid-fields">
+                <Field label="ToT Firm" value={p.totFirmNo} />
+                <Field label="No. of Items Procured" value={p.noOfItemProcured ?? "—"} />
+                <Field label="Production Value" value={p.productionValue} />
+                <Field label="Order Number" value={p.orderNumber} />
+                <Field label="Order Date" value={formatDate(p.orderDate)} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </Section>
@@ -731,7 +710,6 @@ export default function ItemDetails() {
                 </>
               )}
             </div>
-            <p className="idet__hero-desc">{activeVariant?.description || item.description}</p>
           </div>
 
           {/* Actions */}

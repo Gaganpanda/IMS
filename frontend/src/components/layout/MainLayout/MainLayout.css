@@ -36,6 +36,24 @@
   scroll-behavior: smooth;
 }
 
+/* Dashboard-only: fill the remaining viewport exactly and never grow a
+   page scrollbar — Dashboard.css sizes its rows to this fixed height via
+   flexbox. Below 768px there's genuinely too much content for one screen,
+   so scrolling comes back rather than squashing every card unreadably. */
+.layout__main--fit {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.layout__main--fit > * { flex: 1; min-height: 0; }
+
+@media (max-width: 768px) {
+  .layout__main--fit {
+    overflow-y: auto;
+    display: block;
+  }
+}
+
 .layout__main::-webkit-scrollbar {
   width: 6px;
 }

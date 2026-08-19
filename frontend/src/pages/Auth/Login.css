@@ -574,7 +574,7 @@
 }
 
 /* ── Form ── */
-.form-group {
+.login__field-group {
   margin-bottom: 16px;
 }
 .input-wrap {
@@ -607,7 +607,7 @@
 .input-wrap:focus-within .input-icon {
   color: var(--color-primary);
 }
-.form-control {
+.login__field {
   flex: 1;
   min-width: 0;
   height: 44px;
@@ -619,16 +619,16 @@
   padding-right: 12px;
   font-family: var(--font-body);
 }
-.form-control::placeholder {
+.login__field::placeholder {
   color: var(--color-text-muted);
 }
-.form-control--pw {
+.login__field--pw {
   padding-right: 4px;
 }
-.form-control--error {
+.login__field--error {
   color: var(--color-danger);
 }
-.input-wrap:has(.form-control--error) {
+.input-wrap:has(.login__field--error) {
   border-color: var(--color-danger);
 }
 .input-eye {
@@ -649,14 +649,43 @@
   width: 17px;
   height: 17px;
 }
-.form-error {
+.login__field-error {
   display: block;
   margin-top: 6px;
   font-size: 12px;
   color: var(--color-danger);
 }
 
-.btn {
+/* Caps Lock notice — informational, not an error, so it gets its own
+   amber treatment instead of borrowing the red validation-error style. */
+.login__field-warning {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-warning);
+}
+.login__field-warning svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* Autofill — browsers force their own yellow/blue background on
+   autofilled inputs unless the box-shadow trick below overrides it,
+   which otherwise looks broken against the dark glass card. */
+.login__field:-webkit-autofill,
+.login__field:-webkit-autofill:hover,
+.login__field:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.login__btn {
   width: 100%;
   height: 46px;
   border-radius: var(--radius-md);
@@ -671,7 +700,7 @@
   gap: 8px;
   transition: var(--transition-base);
 }
-.btn--primary {
+.login__btn--primary {
   position: relative;
   overflow: hidden;
   margin-top: 6px;
@@ -679,7 +708,7 @@
   color: var(--color-text-on-accent);
   box-shadow: var(--glow-primary);
 }
-.btn--primary::before {
+.login__btn--primary::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -687,27 +716,27 @@
   transform: translateX(-120%);
   transition: transform 0.7s ease;
 }
-.btn--primary:hover::before {
+.login__btn--primary:hover::before {
   transform: translateX(120%);
 }
-.btn--primary:hover {
+.login__btn--primary:hover {
   transform: translateY(-1px);
   box-shadow: var(--glow-accent);
 }
-.btn--primary:active {
+.login__btn--primary:active {
   transform: translateY(0);
 }
-.btn--primary:disabled {
+.login__btn--primary:disabled {
   opacity: 0.75;
   cursor: not-allowed;
   transform: none;
 }
-.btn--primary svg {
+.login__btn--primary svg {
   width: 16px;
   height: 16px;
   transition: transform 0.25s ease;
 }
-.btn--primary:hover svg {
+.login__btn--primary:hover svg {
   transform: translateX(3px);
 }
 
@@ -827,7 +856,7 @@
   .login__hexcore-ring,
   .login__logo-ring,
   .login__status-dot,
-  .btn--primary::before {
+  .login__btn--primary::before {
     animation: none !important;
   }
   .login__brand,

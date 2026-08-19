@@ -140,4 +140,19 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     List<Object[]> countGroupByTrialsStatus();
 
     List<Item> findTop10ByOrderByUpdatedAtDesc();
+
+    /**
+     * ToT document breakdown — counts how many items have each individual
+     * ToT document code (TTD / TNF / TAC / CEC) checked off in
+     * item_tot_documents, owner-scoped. Drives the "ToT Status Overview"
+     * dashboard chart instead of a single lumped "ToT Document Filed" bar.
+     */
+    @Query(value = """
+            SELECT d.document_code AS code, COUNT(DISTINCT d.item_id) AS cnt
+            FROM item_tot_documents d
+            JOIN items i ON i.id = d.item_id
+            WHERE (:ownerId IS NULL OR i.created_by_id = :ownerId)
+            GROUP BY d.document_code
+            """, nativeQuery = true)
+    List<Object[]> countGroupByTotDocumentCodeForOwner(@Param("ownerId") Long ownerId);
 }

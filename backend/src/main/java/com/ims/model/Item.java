@@ -267,6 +267,11 @@ public class Item {
         }
     }
 
+    /* NOTE: TESTING is kept as a legacy enum constant only so rows written
+     * before this status was retired can still be read back without
+     * throwing — it is no longer offered anywhere as a choice, and
+     * fromString() below coerces any incoming "Testing" text to
+     * IN_PROGRESS so no new row can ever be written with it. */
     public enum TrialsStatus {
         PENDING, IN_PROGRESS, TESTING, COMPLETED, ON_HOLD;
 
@@ -276,7 +281,7 @@ public class Item {
             return switch (value.trim()) {
                 case "Pending"     -> PENDING;
                 case "In Progress" -> IN_PROGRESS;
-                case "Testing"     -> TESTING;
+                case "Testing"     -> IN_PROGRESS; // retired status, folded into In Progress
                 case "Completed"   -> COMPLETED;
                 case "On Hold"     -> ON_HOLD;
                 default -> {

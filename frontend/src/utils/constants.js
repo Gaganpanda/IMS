@@ -34,7 +34,6 @@ export const IPR_STATUS = {
 export const TRIAL_STATUS = {
   NOT_STARTED: "Not Started",
   IN_PROGRESS: "In Progress",
-  TESTING:     "Testing",
   COMPLETED:   "Completed",
   PENDING:     "Pending",
 };
@@ -117,7 +116,6 @@ export const STATUS_BADGE_MAP = {
   "Under Review":      "warning",
   "Not Filed":         "neutral",
   // Trials
-  "Testing":           "info",
   "Pending":           "neutral",
   "Completed":         "success",
   "On Hold":           "warning",

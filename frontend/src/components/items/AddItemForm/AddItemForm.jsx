@@ -571,36 +571,50 @@ export default function AddItemForm({ onCancel, onSuccess }) {
 
   const cur = STEPS[step - 1];
 
+  const progressPct = Math.round(((done.size) / STEPS.length) * 100);
+
   return (
     <>
-      {/* ── Step tab bar ── */}
-      <div className="aif__tabs">
-        {STEPS.map((s) => {
-          const isDone = done.has(s.id) && s.id !== step;
-          const isActive = s.id === step;
-          return (
-            <div
-              key={s.id}
-              className={`aif__tab aif__tab--clickable${isActive ? " aif__tab--active" : ""}${isDone ? " aif__tab--done" : ""}`}
-              title={s.label}
-              onClick={() => setStep(s.id)}>
-              {isDone ? (
-                <span className="aif__tab-dot aif__tab-dot--done">
-                  {Icons.check}
-                </span>
-              ) : (
-                <span
-                  className={`aif__tab-dot${isActive ? " aif__tab-dot--active" : ""}`}>
-                  {s.id}
-                </span>
-              )}
-              <span className="aif__tab-lbl">{s.label}</span>
-            </div>
-          );
-        })}
+      {/* ── Stepper header ── */}
+      <div className="aif__stepper-wrap">
+        <div className="aif__stepper-meta">
+          <span className="aif__eyebrow">New Item &middot; Step {step} of {STEPS.length}</span>
+          <span className="aif__progress-pct">{progressPct}% complete</span>
+        </div>
+        <div className="aif__progress-track">
+          <div className="aif__progress-fill" style={{ width: `${progressPct}%` }}>
+            <span className="aif__progress-sheen" />
+          </div>
+        </div>
+        <div className="aif__tabs">
+          {STEPS.map((s) => {
+            const isDone = done.has(s.id) && s.id !== step;
+            const isActive = s.id === step;
+            const isReached = s.id <= step;
+            return (
+              <div
+                key={s.id}
+                className={`aif__tab aif__tab--clickable${isActive ? " aif__tab--active" : ""}${isDone ? " aif__tab--done" : ""}${isReached ? " aif__tab--reached" : ""}`}
+                title={s.label}
+                onClick={() => setStep(s.id)}>
+                {isDone ? (
+                  <span className="aif__tab-dot aif__tab-dot--done">
+                    {Icons.check}
+                  </span>
+                ) : (
+                  <span
+                    className={`aif__tab-dot${isActive ? " aif__tab-dot--active" : ""}`}>
+                    {s.id}
+                  </span>
+                )}
+                <span className="aif__tab-lbl">{s.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="aif__card">
+      <div className="aif__card" data-accent={STEP_COLORS[cur.icon]}>
         {/* Card header */}
         <div className="aif__card-head">
           <span
@@ -741,7 +755,7 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                     className={`form-control${errors.description ? " form-control--error" : ""}`}
                     placeholder="Brief item description..."
                     rows={3}
-                    maxLength={200}
+                    maxLength={1000}
                     {...register("description", { required: "Required" })}
                   />
                   {errors.description && (

@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import AddItemForm from "../../components/items/AddItemForm/AddItemForm";
+import Icon from "../../components/common/Icon/Icon";
 import "./AddItem.css";
 
 export default function AddItem() {
@@ -7,13 +8,12 @@ export default function AddItem() {
 
   return (
     <div className="add-item-page animate-fade-in-up">
-      {/* Breadcrumb */}
+      {/* Breadcrumb — the only page-level wayfinding; title/subtitle already live in the navbar */}
       <nav className="add-item-page__breadcrumb">
-        <span className="add-item-page__crumb-link" onClick={() => navigate("/items")}>Items</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          strokeLinecap="round" className="add-item-page__crumb-arrow">
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
+        <span className="add-item-page__crumb-link" onClick={() => navigate("/items")}>
+          <Icon name="box" size={13} strokeWidth={2} /> Items
+        </span>
+        <Icon name="forward" size={12} strokeWidth={2.5} className="add-item-page__crumb-arrow" />
         <span className="add-item-page__crumb-current">Add New Item</span>
       </nav>
 

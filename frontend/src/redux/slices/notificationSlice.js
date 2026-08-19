@@ -38,6 +38,30 @@ export const markAllAsReadAsync = createAsyncThunk(
   }
 );
 
+export const toggleFavoriteAsync = createAsyncThunk(
+  "notifications/toggleFavorite",
+  async (id, { rejectWithValue }) => {
+    try {
+      const res = await notificationApi.toggleFavorite(id);
+      return res.data.data; // updated NotificationDTO.Response
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error);
+    }
+  }
+);
+
+export const toggleArchivedAsync = createAsyncThunk(
+  "notifications/toggleArchived",
+  async (id, { rejectWithValue }) => {
+    try {
+      const res = await notificationApi.toggleArchived(id);
+      return res.data.data; // updated NotificationDTO.Response
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error);
+    }
+  }
+);
+
 export const deleteNotificationAsync = createAsyncThunk(
   "notifications/delete",
   async (id, { rejectWithValue }) => {
@@ -79,7 +103,7 @@ const notificationSlice = createSlice({
     // Push real-time notification from WebSocket
     pushNotification(state, action) {
       state.list.unshift(action.payload);
-      if (!action.payload.read) state.unreadCount += 1;
+      if (!action.payload.read && !action.payload.archived) state.unreadCount += 1;
     },
     clearNotificationError(state) { state.error = null; },
   },
@@ -90,7 +114,10 @@ const notificationSlice = createSlice({
       .addCase(fetchNotificationsAsync.fulfilled, (state, action) => {
         state.loading     = false;
         state.list        = action.payload || [];
-        state.unreadCount = (action.payload || []).filter((n) => !n.read).length;
+        // Unread badge (sidebar/navbar/popup) mirrors what's actually visible
+        // in the default "All" tab — archived items are hidden there, so an
+        // unread-but-archived notification shouldn't inflate the badge.
+        state.unreadCount = state.list.filter((n) => !n.read && !n.archived).length;
       })
       .addCase(fetchNotificationsAsync.rejected, (state, action) => {
         state.loading = false;
@@ -100,7 +127,10 @@ const notificationSlice = createSlice({
     /* markAsRead */
     builder.addCase(markAsReadAsync.fulfilled, (state, action) => {
       const n = state.list.find((n) => n.id === action.payload);
-      if (n && !n.read) { n.read = true; state.unreadCount = Math.max(0, state.unreadCount - 1); }
+      if (n && !n.read) {
+        n.read = true;
+        if (!n.archived) state.unreadCount = Math.max(0, state.unreadCount - 1);
+      }
     });
 
     /* markAllAsRead */
@@ -109,10 +139,31 @@ const notificationSlice = createSlice({
       state.unreadCount = 0;
     });
 
+    /* toggle favorite */
+    builder.addCase(toggleFavoriteAsync.fulfilled, (state, action) => {
+      const n = state.list.find((n) => n.id === action.payload.id);
+      if (n) n.favorite = action.payload.favorite;
+    });
+
+    /* toggle archived */
+    builder.addCase(toggleArchivedAsync.fulfilled, (state, action) => {
+      const n = state.list.find((n) => n.id === action.payload.id);
+      if (n) {
+        const wasArchived = n.archived;
+        n.archived = action.payload.archived;
+        // Archiving/unarchiving an unread item moves it in or out of the badge count.
+        if (!n.read && wasArchived !== n.archived) {
+          state.unreadCount = n.archived
+            ? Math.max(0, state.unreadCount - 1)
+            : state.unreadCount + 1;
+        }
+      }
+    });
+
     /* delete one */
     builder.addCase(deleteNotificationAsync.fulfilled, (state, action) => {
       const n = state.list.find((n) => n.id === action.payload);
-      if (n && !n.read) state.unreadCount = Math.max(0, state.unreadCount - 1);
+      if (n && !n.read && !n.archived) state.unreadCount = Math.max(0, state.unreadCount - 1);
       state.list = state.list.filter((n) => n.id !== action.payload);
     });
 

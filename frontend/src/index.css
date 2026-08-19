@@ -9,61 +9,59 @@
 
 :root {
   /* ── Brand ── */
-  --color-primary:       #5b3df0;   /* vivid indigo-violet */
-  --color-primary-dark:  #4527d1;
-  --color-primary-light: rgba(91, 61, 240, 0.09);
-  --color-accent:        #7c5cfc;   /* lighter violet, used sparingly */
-  --color-accent-2:      #0f9d8c;   /* teal, secondary accent */
+  --color-primary:       #4338ca;   /* deep, restrained indigo */
+  --color-primary-dark:  #372ea8;
+  --color-primary-light: rgba(67, 56, 202, 0.08);
+  --color-accent:        #4338ca;   /* unified with primary — one brand color, not two */
+  --color-accent-2:      #0f766e;   /* muted teal, used only where semantically needed */
 
   /* ── Neutral (crisp, light surfaces) ── */
-  --color-bg:            #f6f5fb;
+  --color-bg:            #f7f7f9;
   --color-bg-elevated:   #ffffff;
   --color-surface:       #ffffff;
-  --color-surface-alt:   #f2f1fa;
-  --color-border:        #e5e2f5;
-  --color-border-light:  #eeedf9;
-  --color-border-strong: #c9c3ec;
+  --color-surface-alt:   #f4f4f6;
+  --color-border:        #e6e6ea;
+  --color-border-light:  #eeeef1;
+  --color-border-strong: #d3d3da;
 
   /* ── "Glass" (kept flat/solid for a crisp enterprise look) ── */
   --glass-bg:      #ffffff;
   --glass-bg-soft: rgba(255, 255, 255, 0.96);
-  --glass-border:  #e5e2f5;
+  --glass-border:  #e6e6ea;
   --glass-blur:    0px;
 
   /* ── Text ── */
-  --color-text-primary:   #1e1b2e;
-  --color-text-secondary: #5f5a76;
-  --color-text-muted:     #948fae;
+  --color-text-primary:   #1a1a24;
+  --color-text-secondary: #5c5c68;
+  --color-text-muted:     #93939f;
   --color-text-on-accent: #ffffff;
 
-  /* ── Status ── */
-  --color-success:      #1e8e3e;
-  --color-success-bg:   rgba(30, 142, 62, 0.09);
-  --color-warning:      #b45309;
-  --color-warning-bg:   rgba(217, 119, 6, 0.1);
-  --color-danger:       #d93025;
-  --color-danger-bg:    rgba(217, 48, 37, 0.08);
-  --color-info:         #5b3df0;
-  --color-info-bg:      rgba(91, 61, 240, 0.08);
-  --color-purple:       #5b3df0;
-  --color-purple-bg:    rgba(91, 61, 240, 0.09);
-  --color-teal:         #0f9d8c;
-  --color-teal-bg:      rgba(15, 157, 140, 0.09);
-  --color-gold:         #ca8a04;
-  --color-gold-bg:      rgba(202, 138, 4, 0.1);
+  /* ── Status — muted, desaturated; used only for real status meaning ── */
+  --color-success:      #1a7f43;
+  --color-success-bg:   rgba(26, 127, 67, 0.08);
+  --color-warning:      #a15c07;
+  --color-warning-bg:   rgba(161, 92, 7, 0.09);
+  --color-danger:       #b3261e;
+  --color-danger-bg:    rgba(179, 38, 30, 0.08);
+  --color-info:         #4338ca;
+  --color-info-bg:      rgba(67, 56, 202, 0.08);
+  --color-purple:       #4338ca;
+  --color-purple-bg:    rgba(67, 56, 202, 0.08);
+  --color-teal:         #0f766e;
+  --color-teal-bg:      rgba(15, 118, 110, 0.08);
+  --color-gold:         #a1670c;
+  --color-gold-bg:      rgba(161, 103, 12, 0.09);
 
   /* ── IPR category accents (used consistently across Add/Edit Item + Variant forms) ── */
-  --color-ipr-1:     #6366f1; --color-ipr-1-bg: #eef2ff;
-  --color-ipr-2:     #8b5cf6; --color-ipr-2-bg: #f5f3ff;
-  --color-ipr-3:     #0d9488; --color-ipr-3-bg: #f0fdfa;
-  --color-ipr-4:     #d97706; --color-ipr-4-bg: #fffbeb;
+  --color-ipr-1:     #4338ca; --color-ipr-1-bg: #eeedfb;
+  --color-ipr-2:     #5b4fd6; --color-ipr-2-bg: #f1effc;
+  --color-ipr-3:     #0f766e; --color-ipr-3-bg: #eef7f6;
+  --color-ipr-4:     #a1670c; --color-ipr-4-bg: #faf3e8;
 
-  /* ── Gradients ── */
-  --gradient-brand:  linear-gradient(135deg, #6d4cf0 0%, #4527d1 100%);
-  --gradient-accent: linear-gradient(135deg, #7c5cfc 0%, #5b3df0 100%);
-  --gradient-bg:     radial-gradient(circle at 12% -10%, rgba(91, 61, 240, 0.045), transparent 42%),
-                      radial-gradient(circle at 100% 0%, rgba(124, 92, 252, 0.035), transparent 38%),
-                      #f6f5fb;
+  /* ── Gradients — kept subtle; used sparingly on primary CTAs only ── */
+  --gradient-brand:  linear-gradient(135deg, #4b3fd1 0%, #3a2fb0 100%);
+  --gradient-accent: linear-gradient(135deg, #4b3fd1 0%, #3a2fb0 100%);
+  --gradient-bg:     #f7f7f9;
 
   /* ── Sidebar ── */
   --sidebar-bg:    #ffffff;
@@ -73,12 +71,12 @@
   /* ── Navbar ── */
   --navbar-height: 64px;
 
-  /* ── Shadows (soft Material-style elevation) ── */
-  --shadow-sm: 0 1px 2px rgba(30, 27, 46, 0.06), 0 1px 3px rgba(30, 27, 46, 0.08);
-  --shadow-md: 0 2px 6px rgba(30, 27, 46, 0.07), 0 8px 20px rgba(30, 27, 46, 0.08);
-  --shadow-lg: 0 8px 16px rgba(30, 27, 46, 0.08), 0 16px 40px rgba(30, 27, 46, 0.12);
-  --glow-primary: 0 1px 2px rgba(91, 61, 240, 0.25), 0 6px 16px rgba(91, 61, 240, 0.22);
-  --glow-accent:  0 1px 2px rgba(124, 92, 252, 0.22), 0 6px 16px rgba(124, 92, 252, 0.18);
+  /* ── Shadows (soft, low-contrast elevation) ── */
+  --shadow-sm: 0 1px 2px rgba(20, 20, 30, 0.05), 0 1px 3px rgba(20, 20, 30, 0.05);
+  --shadow-md: 0 2px 5px rgba(20, 20, 30, 0.05), 0 6px 16px rgba(20, 20, 30, 0.06);
+  --shadow-lg: 0 6px 12px rgba(20, 20, 30, 0.06), 0 12px 28px rgba(20, 20, 30, 0.08);
+  --glow-primary: 0 1px 2px rgba(67, 56, 202, 0.18), 0 4px 10px rgba(67, 56, 202, 0.14);
+  --glow-accent:  0 1px 2px rgba(67, 56, 202, 0.16), 0 4px 10px rgba(67, 56, 202, 0.12);
 
   /* ── Radius ── */
   --radius-sm: 8px;
@@ -98,6 +96,10 @@
   /* ── Overlay tint (page loader / modal backdrops) — theme-aware so dark
      mode doesn't get a jarring white wash across icons/controls ── */
   --overlay-bg: rgba(255, 255, 255, 0.75);
+
+  /* ── Scrollbar ── */
+  --scrollbar-thumb:       rgba(91, 61, 240, 0.22);
+  --scrollbar-thumb-hover: rgba(91, 61, 240, 0.38);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -106,34 +108,33 @@
    "material" hierarchy still read correctly on dark backgrounds.
    ══════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
-  /* ── Brand (slightly softened — the previous values were too saturated/
-     bright against the dark background and caused eye strain) ── */
+  /* ── Brand (kept as the app's accent color — used only for buttons,
+     links, focus rings and highlights, never for surfaces/backgrounds) ── */
   --color-primary:       #7c73e6;
   --color-primary-dark:  #9089ef;
   --color-primary-light: rgba(124, 115, 230, 0.14);
-  --color-accent:        #9d87e8;
+  --color-accent:        #7c73e6;
   --color-accent-2:      #2bb8a8;
 
-  /* ── Neutral (deep, slightly desaturated surfaces — less "neon", easier
-     to read for long sessions) ── */
-  --color-bg:            #14121f;
-  --color-bg-elevated:   #1c1930;
-  --color-surface:       #1c1930;
-  --color-surface-alt:   #24213a;
-  --color-border:        #2f2b47;
-  --color-border-light:  #262239;
-  --color-border-strong: #3e3960;
+  /* ── Neutral (true, neutral black/grey surfaces — no purple undertone) ── */
+  --color-bg:            #0a0a0a;
+  --color-bg-elevated:   #141414;
+  --color-surface:       #141414;
+  --color-surface-alt:   #1e1e1e;
+  --color-border:        #2a2a2a;
+  --color-border-light:  #202020;
+  --color-border-strong: #3a3a3a;
 
   /* ── "Glass" ── */
-  --glass-bg:      #1c1930;
-  --glass-bg-soft: rgba(28, 25, 48, 0.97);
-  --glass-border:  #2f2b47;
+  --glass-bg:      #141414;
+  --glass-bg-soft: rgba(20, 20, 20, 0.97);
+  --glass-border:  #2a2a2a;
   --glass-blur:    0px;
 
-  /* ── Text (brightened muted tone for legibility) ── */
-  --color-text-primary:   #edeaf9;
-  --color-text-secondary: #b3aecb;
-  --color-text-muted:     #948fb0;
+  /* ── Text (neutral greys — no purple undertone) ── */
+  --color-text-primary:   #f0f0f0;
+  --color-text-secondary: #a8a8ac;
+  --color-text-muted:     #7a7a80;
   --color-text-on-accent: #ffffff;
 
   /* ── Status (kept legible but slightly less saturated) ── */
@@ -158,28 +159,30 @@
   --color-ipr-3:     #2bb8a8; --color-ipr-3-bg: rgba(43, 184, 168, 0.12);
   --color-ipr-4:     #f2b53d; --color-ipr-4-bg: rgba(242, 181, 61, 0.12);
 
-  /* ── Gradients (much softer glow — the previous radial blobs were the
-     main source of the "blurry"/washed-out look) ── */
+  /* ── Gradients (buttons keep the brand-purple gradient; the page
+     background itself is flat, true black — no colored tint) ── */
   --gradient-brand:  linear-gradient(135deg, #7c73e6 0%, #5d4fd6 100%);
   --gradient-accent: linear-gradient(135deg, #9d87e8 0%, #7c73e6 100%);
-  --gradient-bg:     radial-gradient(circle at 12% -10%, rgba(124, 115, 230, 0.05), transparent 40%),
-                      radial-gradient(circle at 100% 0%, rgba(157, 135, 232, 0.035), transparent 36%),
-                      #14121f;
+  --gradient-bg:     #0a0a0a;
 
-  /* ── Sidebar ── */
-  --sidebar-bg: #18152a;
+  /* ── Sidebar (slightly darker than surface for depth, still neutral) ── */
+  --sidebar-bg: #0c0c0c;
 
   /* ── Shadows (lighter — heavy black shadows on a dark bg were reading as
      a hazy blur around every card) ── */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.22);
-  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.22), 0 8px 18px rgba(0, 0, 0, 0.26);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.28), 0 16px 32px rgba(0, 0, 0, 0.32);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.35), 0 8px 18px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.45);
   --glow-primary: 0 1px 2px rgba(124, 115, 230, 0.22), 0 6px 14px rgba(124, 115, 230, 0.18);
   --glow-accent:  0 1px 2px rgba(157, 135, 232, 0.2),  0 6px 14px rgba(157, 135, 232, 0.16);
 
-  /* ── Overlay tint — dark, not white, so icons/controls under a loading
-     overlay stay legible instead of washing out against a bright white haze ── */
-  --overlay-bg: rgba(20, 18, 31, 0.72);
+  /* ── Overlay tint — neutral black, not purple, so icons/controls under a
+     loading overlay stay legible instead of taking on a colored haze ── */
+  --overlay-bg: rgba(10, 10, 10, 0.75);
+
+  /* ── Scrollbar (neutral grey — not brand purple) ── */
+  --scrollbar-thumb:       rgba(255, 255, 255, 0.14);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.24);
 }
 
 /* ── Reset ── */
@@ -238,8 +241,30 @@ input, select, textarea {
 /* ── Scrollbar ── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(139, 124, 246, 0.28); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(139, 124, 246, 0.48); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+/* ── Native date/time picker icon — browser-drawn, doesn't follow CSS
+   variables, so it needs an explicit dark-mode fix or it renders as a
+   near-invisible dark glyph on dark surfaces ── */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 3px;
+  filter: none;
+}
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator,
+[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85) brightness(1.4);
+}
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator:hover,
+[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator:hover,
+[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(0.85) brightness(1.7);
+}
 
 /* ── Focus visible (keyboard navigation) ── */
 :focus-visible {
@@ -319,14 +344,14 @@ img { max-width: 100%; display: block; }
 }
 
 .btn--primary {
-  background: var(--gradient-brand);
+  background: var(--color-primary);
   color: var(--color-text-on-accent);
-  box-shadow: 0 1px 2px rgba(91, 61, 240, 0.3);
+  box-shadow: 0 1px 2px rgba(20, 20, 30, 0.12);
 }
 
 .btn--primary:hover:not(:disabled) {
-  filter: brightness(1.06);
-  box-shadow: var(--glow-primary);
+  background: var(--color-primary-dark);
+  box-shadow: 0 2px 6px rgba(20, 20, 30, 0.14);
   transform: translateY(-1px);
 }
 

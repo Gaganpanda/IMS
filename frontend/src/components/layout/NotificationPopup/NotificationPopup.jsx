@@ -21,6 +21,9 @@ const TYPE_CONFIG = {
   trial_update:     { bg: "var(--color-teal-bg)",    color: "var(--color-teal)",    icon: "flask" },
   feedback_overdue: { bg: "var(--color-danger-bg)",  color: "var(--color-danger)",  icon: "alertTriangle" },
   feedback_received:{ bg: "var(--color-success-bg)", color: "var(--color-success)", icon: "checkCircle" },
+  sample_pending:   { bg: "var(--color-warning-bg)", color: "var(--color-warning)", icon: "alertCircle" },
+  tot_validity:     { bg: "var(--color-info-bg)",    color: "var(--color-info)",    icon: "fileCheck" },
+  dev_completion:   { bg: "var(--color-purple-bg)",  color: "var(--color-purple)",  icon: "clock" },
   default:          { bg: "var(--color-surface-alt)",color: "var(--color-text-muted)", icon: "bell" },
 };
 
@@ -42,8 +45,10 @@ export default function NotificationPopup() {
   const panelRef = useRef(null);
   const [tab, setTab] = useState("all");
   const showPopup = useSelector((s) => s.notifications?.showPopup ?? false);
-  const { list = [], unreadCount = 0 } = useSelector((s) => s.notifications);
-
+  const { list: allList = [], unreadCount = 0 } = useSelector((s) => s.notifications);
+  // The quick-glance popup mirrors the default "All" tab on the full page —
+  // archived items are tucked away there, not surfaced here.
+  const list   = allList.filter((n) => !n.archived);
   const unread = list.filter((n) => !n.read);
   const read   = list.filter((n) =>  n.read);
   const displayed = tab === "unread" ? unread : tab === "read" ? read : list;
@@ -67,8 +72,10 @@ export default function NotificationPopup() {
     if (!n.itemId) return;
     const params = new URLSearchParams();
     if (n.variantId) params.set("variant", n.variantId);
-    if (n.type === "feedback_overdue" || n.type === "feedback_received" || n.type === "trial_update") {
+    if (n.type === "feedback_overdue" || n.type === "feedback_received" || n.type === "trial_update" || n.type === "sample_pending") {
       params.set("tab", "trials");
+    } else if (n.type === "tot_validity") {
+      params.set("tab", "tot");
     }
     const qs = params.toString();
     dispatch(closeNotificationPopup());
@@ -124,8 +131,11 @@ export default function NotificationPopup() {
         <div className="notif-popup__list">
           {displayed.length === 0 ? (
             <div className="notif-popup__empty">
-              <div className="notif-popup__empty-icon">🔔</div>
+              <div className="notif-popup__empty-icon">
+                <Icon name="bell" size={22} strokeWidth={1.8} />
+              </div>
               <p>No {tab !== "all" ? tab : ""} notifications</p>
+              <span>You're all caught up.</span>
             </div>
           ) : (
             displayed.map((n) => (

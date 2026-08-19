@@ -1,6 +1,13 @@
 .activity-card {
   padding: 18px;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  /* Needed for the wave */
+  position: relative;
+  overflow: hidden;
 }
 
 .activity-card__header {
@@ -32,9 +39,15 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-height: 360px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.activity-card__list--modal {
+  max-height: 60vh;
+  flex: none;
 }
 
 .activity-card__list::-webkit-scrollbar { width: 6px; }
@@ -46,27 +59,57 @@
 
 .activity-card__item {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--color-surface-alt);
+  padding: 7px 0;
 }
 
-.activity-card__item:last-child { border-bottom: none; }
+.activity-card__item:last-child { padding-bottom: 0; }
 
-.activity-card__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+/* ── Icon + connecting timeline rail ── */
+.activity-card__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   flex-shrink: 0;
-  margin-top: 4px;
 }
+
+.activity-card__rail-line {
+  width: 2px;
+  flex: 1;
+  min-height: 14px;
+  margin: 4px 0;
+  background: var(--color-border);
+  border-radius: 1px;
+}
+
+.activity-card__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.activity-card__item:hover .activity-card__icon { transform: scale(1.08); }
+
+.activity-card__icon--green  { background: var(--color-success-bg); color: var(--color-success); }
+.activity-card__icon--blue   { background: var(--color-primary-light); color: var(--color-primary); }
+.activity-card__icon--orange { background: var(--color-warning-bg); color: var(--color-warning); }
+.activity-card__icon--red    { background: var(--color-danger-bg); color: var(--color-danger); }
+.activity-card__icon--purple { background: var(--color-purple-bg); color: var(--color-accent); }
+.activity-card__icon--gold   { background: var(--color-gold-bg); color: var(--color-gold); }
+.activity-card__icon--teal   { background: var(--color-teal-bg); color: var(--color-accent-2); }
+.activity-card__icon--grey   { background: var(--color-surface-alt); color: var(--color-text-muted); }
 
 .activity-card__body {
   display: flex;
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  padding-bottom: 12px;
 }
 
 .activity-card__msg {
@@ -82,8 +125,44 @@
 }
 
 .activity-card__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   font-size: 13px;
   color: var(--color-text-muted);
   text-align: center;
-  padding: 24px 0;
+  padding: 28px 0;
+}
+
+.activity-card__empty-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+}
+
+/* Decorative wave — static, sits behind the list/header, no animation */
+.activity-card__wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70px;
+  pointer-events: none;
+  z-index: 0;
+}
+.activity-card__wave svg {
+  display: block;
+}
+
+/* Keep header/list above the wave */
+.activity-card__header,
+.activity-card__list {
+  position: relative;
+  z-index: 1;
 }

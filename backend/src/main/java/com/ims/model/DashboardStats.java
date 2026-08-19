@@ -43,6 +43,7 @@ public class DashboardStats implements Serializable {
     /* ── Charts ── */
     private List<TrialsOverviewItem>  trialsOverview;
     private List<MonthlyProgressItem> monthlyProgress;
+    private List<TotStatusItem>       totStatusOverview;
     private DocumentationStatsItem    documentationStats;
 
     /* ── Widgets ── */
@@ -59,6 +60,13 @@ public class DashboardStats implements Serializable {
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class MonthlyProgressItem implements Serializable {
         private String month;
+        private long   count;
+    }
+
+    /* ToT pipeline breakdown: Document Filed / LAToT Signed / Certified */
+    @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class TotStatusItem implements Serializable {
+        private String status;
         private long   count;
     }
 

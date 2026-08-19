@@ -12,6 +12,8 @@ export const notificationApi = {
   getUnreadCount: () => axiosInstance.get(`${BASE}/unread-count`),
   markAsRead:   (id) => axiosInstance.patch(`${BASE}/${id}/read`),
   markAllAsRead: ()  => axiosInstance.patch(`${BASE}/read-all`),
+  toggleFavorite: (id) => axiosInstance.patch(`${BASE}/${id}/favorite`),
+  toggleArchived: (id) => axiosInstance.patch(`${BASE}/${id}/archive`),
   deleteOne:    (id) => axiosInstance.delete(`${BASE}/${id}`),
   deleteAll:    ()   => axiosInstance.delete(`${BASE}/all`),
 };

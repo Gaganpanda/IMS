@@ -68,11 +68,11 @@ export default function Navbar({ onMenuClick = () => {} }) {
 
         {/* Notification bell */}
         <button
-          className={`navbar__bell press-scale${showPopup ? " navbar__bell--active" : ""}`}
+          className={`navbar__bell press-scale${showPopup ? " navbar__bell--active" : ""}${unreadCount > 0 ? " navbar__bell--has-unread" : ""}`}
           onClick={() => dispatch(toggleNotificationPopup())}
           aria-label="Notifications"
         >
-          <Icon name="bell" size={20} />
+          <Icon name="bell" size={20} className="navbar__bell-icon" />
           {unreadCount > 0 && (
             <span className="navbar__bell-badge">
               {unreadCount > 9 ? "9+" : unreadCount}

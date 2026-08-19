@@ -1,6 +1,9 @@
 .due-date-card {
   padding: 18px;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .due-date-card__header {
@@ -10,10 +13,36 @@
   margin-bottom: 16px;
 }
 
+.due-date-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .due-date-card__title {
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text-primary);
+}
+
+.due-date-card__flag-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  animation: dueDateBadgePulse 2.4s ease-in-out infinite;
+}
+
+@keyframes dueDateBadgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-danger) 45%, transparent); }
+  50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-danger) 0%, transparent); }
 }
 
 .due-date-card__view-all {
@@ -31,9 +60,17 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 360px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+/* Inside the "View All" modal there's no surrounding flex card to size
+   against, so cap height to the modal's own scroll area instead. */
+.due-date-card__list--modal {
+  max-height: 60vh;
+  flex: none;
 }
 
 .due-date-card__list::-webkit-scrollbar { width: 6px; }
@@ -44,6 +81,7 @@
 .due-date-card__list::-webkit-scrollbar-track { background: transparent; }
 
 .due-date-card__item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -58,20 +96,61 @@
 .due-date-card__item--clickable:focus-visible { outline: 2px solid var(--color-primary, #4f46e5); outline-offset: 2px; }
 .due-date-card__item--clickable:active { transform: scale(0.995); }
 
+/* ── Static urgency highlight for overdue & urgent due dates ──
+   A tinted background plus a solid left accent bar reads as "urgent" at a
+   glance without any motion — flat and calm rather than an animated
+   traveling border. */
+.due-date-card__item--overdue,
+.due-date-card__item--urgent {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--flash-color) 6%, var(--color-surface));
+  border-left: 3px solid var(--flash-color);
+  padding-left: 6px;
+}
+
+/* Both overdue and "due within 10 days" flag red — red reads as urgent at
+   a glance, and the badge/icon for these two states are already red. */
+.due-date-card__item--overdue,
+.due-date-card__item--urgent { --flash-color: var(--color-danger); }
+
+.due-date-card__item--overdue:hover,
+.due-date-card__item--urgent:hover {
+  background: color-mix(in srgb, var(--flash-color) 10%, var(--color-surface-alt));
+}
+
 .due-date-card__icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
   flex-shrink: 0;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.due-date-card__icon--dev { background: var(--color-purple-bg); }
-.due-date-card__icon--tot { background: var(--color-danger-bg); }
+.due-date-card__item:hover .due-date-card__icon { transform: scale(1.06); }
+
+.due-date-card__icon--dev { background: var(--color-purple-bg); color: var(--color-accent); }
+.due-date-card__icon--tot { background: var(--color-teal-bg); color: var(--color-accent-2); }
+
+/* Urgency wins over the plain type color — the badge should read at a glance */
+.due-date-card__icon--overdue,
+.due-date-card__icon--urgent {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+.due-date-card__icon--soon {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+.due-date-card__icon--normal {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
 
 .due-date-card__body {
   display: flex;

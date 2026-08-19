@@ -45,6 +45,26 @@ public class NotificationController {
                         notificationService.markAsRead(id)));
     }
 
+    /* ── PATCH toggle favorite/star ── */
+    @PatchMapping("/{id}/favorite")
+    @Operation(summary = "Toggle favorite (star) on a notification")
+    public ResponseEntity<ApiResponse<NotificationDTO.Response>> toggleFavorite(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Favorite updated",
+                        notificationService.toggleFavorite(id)));
+    }
+
+    /* ── PATCH toggle archived ── */
+    @PatchMapping("/{id}/archive")
+    @Operation(summary = "Toggle archived state on a notification")
+    public ResponseEntity<ApiResponse<NotificationDTO.Response>> toggleArchived(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Archive state updated",
+                        notificationService.toggleArchived(id)));
+    }
+
     /* ── PATCH mark all as read ── */
     @PatchMapping("/read-all")
     @Operation(summary = "Mark all notifications as read")

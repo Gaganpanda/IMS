@@ -47,6 +47,19 @@ public class FeedbackReminderService {
                 .forEach(f -> checkAndNotify(f, today));
     }
 
+    /* Runs every day at 08:00 server time — separate scan for trials that
+     * were requested but the sample was never actually submitted. These
+     * previously got no reminder at all, since the overdue scan above only
+     * looks at rounds that already have a submission date. */
+    @Scheduled(cron = "0 0 8 * * *")
+    @Transactional
+    public void sendSamplePendingReminders() {
+        LocalDate today = LocalDate.now();
+
+        trialFeedbackRepository.findByRequestTrialDateIsNotNullAndSampleSubmissionDateIsNull()
+                .forEach(f -> checkAndNotifySamplePending(f, today));
+    }
+
     private void checkAndNotify(TrialFeedback f, LocalDate today) {
         long daysSinceSubmission = ChronoUnit.DAYS.between(f.getSampleSubmissionDate(), today);
         if (daysSinceSubmission < 7) {
@@ -89,6 +102,50 @@ public class FeedbackReminderService {
                 f.getSampleNo());
 
         log.info("Feedback overdue reminder sent — item '{}', sample '{}'", item.getName(), sampleLabel);
+    }
+
+    private void checkAndNotifySamplePending(TrialFeedback f, LocalDate today) {
+        long daysSinceRequest = ChronoUnit.DAYS.between(f.getRequestTrialDate(), today);
+        if (daysSinceRequest < 7) {
+            return;
+        }
+
+        TrialStakeholder stakeholder = f.getTrialStakeholder();
+        if (stakeholder == null) return;
+
+        Item item = resolveItem(stakeholder);
+        if (item == null) return;
+
+        boolean alreadyFlagged = f.isSamplePending();
+
+        if (!alreadyFlagged) {
+            f.setSamplePending(true);
+            trialFeedbackRepository.save(f);
+        }
+
+        // Only fire once per round, right when it first crosses the 7-day mark —
+        // same duplicate-avoidance pattern as the feedback-overdue reminder.
+        if (alreadyFlagged) {
+            return;
+        }
+
+        String sampleLabel = (f.getSampleNo() != null && !f.getSampleNo().isBlank())
+                ? f.getSampleNo() : ("#" + f.getId());
+        Long ownerId = item.getCreatedBy() != null ? item.getCreatedBy().getId() : null;
+        ItemVariant variant = stakeholder.getItemVariant();
+
+        notificationService.createNotification(
+                "Sample submission pending",
+                "Trial was requested for Sample " + sampleLabel + " on " + f.getRequestTrialDate()
+                        + " but the sample has not been submitted yet (7+ days).",
+                Notification.NotificationType.SAMPLE_PENDING,
+                item.getId(), item.getName(), ownerId,
+                variant != null ? variant.getId() : null,
+                stakeholder.getId(),
+                f.getId(),
+                f.getSampleNo());
+
+        log.info("Sample-pending reminder sent — item '{}', sample '{}'", item.getName(), sampleLabel);
     }
 
     private Item resolveItem(TrialStakeholder stakeholder) {

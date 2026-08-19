@@ -40,6 +40,17 @@ public class Notification {
     @Builder.Default
     private boolean read = false;
 
+    /* Starred by the user — shown under the "Favorite" tab, independent of read state */
+    @Column(name = "is_favorite", nullable = false)
+    @Builder.Default
+    private boolean favorite = false;
+
+    /* Archived by the user — removed from the default "All" view without being
+     * permanently deleted, shown under the "Archive" tab. */
+    @Column(name = "is_archived", nullable = false)
+    @Builder.Default
+    private boolean archived = false;
+
     /* Optional reference to the related item */
     @Column(name = "item_id")
     private Long itemId;
@@ -88,6 +99,7 @@ public class Notification {
         DEV_COMPLETION,
         FEEDBACK_OVERDUE,
         FEEDBACK_RECEIVED,
+        SAMPLE_PENDING,
         GENERAL
     }
 }

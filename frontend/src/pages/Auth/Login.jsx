@@ -433,14 +433,14 @@ export default function Login() {
 
               <form onSubmit={handleSubmit(onSubmit)} noValidate>
                 {/* Username */}
-                <div className="form-group">
+                <div className="login__field-group">
                   <div
                     className={`input-wrap ${focusField === "username" ? "input-wrap--focus" : ""}`}>
                     <span className="input-icon">
                       <IconUser />
                     </span>
                     <input
-                      className={`form-control ${errors.username ? "form-control--error" : ""}`}
+                      className={`login__field ${errors.username ? "login__field--error" : ""}`}
                       placeholder="Enter your username"
                       autoComplete="username"
                       onFocus={() => setFocusField("username")}
@@ -451,12 +451,12 @@ export default function Login() {
                     />
                   </div>
                   {errors.username && (
-                    <span className="form-error">{errors.username.message}</span>
+                    <span className="login__field-error">{errors.username.message}</span>
                   )}
                 </div>
 
                 {/* Password */}
-                <div className="form-group">
+                <div className="login__field-group">
                   <div
                     className={`input-wrap ${focusField === "password" ? "input-wrap--focus" : ""}`}>
                     <span className="input-icon">
@@ -464,7 +464,7 @@ export default function Login() {
                     </span>
                     <input
                       type={showPassword ? "text" : "password"}
-                      className={`form-control form-control--pw ${errors.password ? "form-control--error" : ""}`}
+                      className={`login__field login__field--pw ${errors.password ? "login__field--error" : ""}`}
                       placeholder="Enter your password"
                       autoComplete="current-password"
                       onFocus={() => setFocusField("password")}
@@ -488,14 +488,17 @@ export default function Login() {
                     </button>
                   </div>
                   {capsLockOn && !errors.password && (
-                    <span className="form-error">Caps Lock is on</span>
+                    <span className="login__field-warning">
+                      <IconAlert />
+                      Caps Lock is on
+                    </span>
                   )}
                   {errors.password && (
-                    <span className="form-error">{errors.password.message}</span>
+                    <span className="login__field-error">{errors.password.message}</span>
                   )}
                 </div>
 
-                <button type="submit" className="btn btn--primary" disabled={loading}>
+                <button type="submit" className="login__btn login__btn--primary" disabled={loading}>
                   {loading ? (
                     <>
                       <span className="login__spinner" />

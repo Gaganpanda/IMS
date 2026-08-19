@@ -6,12 +6,16 @@ import { formatDate } from "../../../utils/formatDate";
 import { getImageUrl } from "../../../utils/imageUrl";
 import Icon from "../../common/Icon/Icon";
 import AlertIcon from "../../common/AlertIcon/AlertIcon";
+import { STATUS_BADGE_MAP } from "../../../utils/constants";
 import "./ItemCard.css";
 
 export default function ItemCard({ item }) {
   const navigate = useNavigate();
   const [showVariants, setShowVariants] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const hasVariants = item.variants && item.variants.length > 0;
+  const statusVariant = STATUS_BADGE_MAP[item.developmentStatus] || "neutral";
+  const hasAlert = Boolean(item.hasOverdueFeedback || item.hasOverdueTot);
 
   const handleOpen = () => {
     if (hasVariants) {
@@ -28,37 +32,54 @@ export default function ItemCard({ item }) {
 
   return (
     <>
-      <div className="item-card" onClick={handleOpen}>
+      <div
+        className={`item-card${hasAlert ? " item-card--alert" : ""}`}
+        data-status={statusVariant}
+        onClick={handleOpen}
+      >
         <div className="item-card__image">
-          {item.imageUrl ? (
+          {item.imageUrl && !imgError ? (
             <img
               src={getImageUrl(item.imageUrl)}
               alt={item.name}
-              onError={(e) => { e.target.style.display = "none"; }}
+              onError={() => setImgError(true)}
             />
           ) : (
-            <div className="item-card__image-placeholder"><Icon name="box" size={40} strokeWidth={1.2} style={{ opacity: 0.25 }} /></div>
+            <div className="item-card__image-placeholder"><Icon name="box" size={38} strokeWidth={1.2} /></div>
           )}
+          {item.category && <span className="item-card__category-chip">{item.category}</span>}
         </div>
 
         <div className="item-card__body">
           <div className="item-card__title-row">
-            <h3 className="item-card__name">
+            <h3 className="item-card__name" title={item.name}>
               <span className="item-card__name-text">{item.name}</span>
-              {item.hasOverdueFeedback && (
-                <AlertIcon message="A trial sample was submitted but feedback hasn't been received in time." />
-              )}
-              {item.hasOverdueTot && (
-                <AlertIcon message={item.totOverdueMessage || "ToT validity has expired and renewal is pending."} />
-              )}
             </h3>
             <StatusBadge status={item.developmentStatus} />
           </div>
+
+          <div className="item-card__meta-row">
+            {(item.hasOverdueFeedback || item.hasOverdueTot) && (
+              <div className="item-card__alerts">
+                {item.hasOverdueFeedback && (
+                  <AlertIcon message="A trial sample was submitted but feedback hasn't been received in time." />
+                )}
+                {item.hasOverdueTot && (
+                  <AlertIcon message={item.totOverdueMessage || "ToT validity has expired and renewal is pending."} />
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="item-card__tags">
-            {item.category && <span className="item-card__category">{item.category}</span>}
-            {hasVariants && (
+            {hasVariants ? (
               <span className="item-card__variant-pill">
+                <Icon name="layers" size={12} strokeWidth={2} />
                 {item.variants.length} variant{item.variants.length !== 1 ? "s" : ""}
+              </span>
+            ) : (
+              <span className="item-card__variant-pill item-card__variant-pill--muted">
+                Single SKU
               </span>
             )}
           </div>

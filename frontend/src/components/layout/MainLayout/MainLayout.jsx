@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../Sidebar/Sidebar";
 import Navbar from "../Navbar/Navbar";
 import NotificationPopup from "../NotificationPopup/NotificationPopup";
@@ -8,6 +8,12 @@ import "./MainLayout.css";
 export default function MainLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const { pathname } = useLocation();
+
+  // The dashboard is laid out to fill the available viewport exactly (no
+  // page-level scrollbar — see Dashboard.css); every other page keeps the
+  // normal scrolling <main>.
+  const isDashboard = pathname === "/" || pathname === "/dashboard";
 
   return (
     <div className={`layout${collapsed ? " layout--collapsed" : ""}`}>
@@ -31,7 +37,7 @@ export default function MainLayout() {
       <div className="layout__body">
         <Navbar onMenuClick={() => setMobileNavOpen((v) => !v)} />
 
-        <main className="layout__main">
+        <main className={`layout__main${isDashboard ? " layout__main--fit" : ""}`}>
           <Outlet />
         </main>
       </div>

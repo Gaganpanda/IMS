@@ -83,10 +83,10 @@
 }
 
 [data-theme="dark"] .idet__hero-img {
-  background-color: #1c1930;
+  background-color: var(--color-surface-alt);
 }
 [data-theme="dark"] .idet__hero-img img {
-  background-color: #1c1930;
+  background-color: var(--color-surface-alt);
 }
 
 .idet__hero-info { flex: 1; min-width: 0; }
@@ -228,12 +228,6 @@
   gap: 20px;
 }
 
-@media (max-width: 1200px) {
-  .idet__tab-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ── Section card ── */
 .idet__section {
   background: var(--glass-bg);
@@ -248,9 +242,9 @@
   flex-direction: column;
   gap: 14px;
 
-  min-width: 600px;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
 }
 .idet__section-head {
   display: flex;
@@ -280,29 +274,45 @@
 .idet__section-title { font-size: 13.5px; font-weight: 700; color: var(--color-text-primary); }
 
 /* ── Fields ── */
-.idet__fields { display: flex; flex-direction: column; gap: 10px; }
+.idet__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 12px;
+}
 
-.idet__field { display: flex; align-items: flex-start; gap: 12px; }
+.idet__field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 14px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-light);
+  border-radius: 9px;
+}
 
 .idet__field-label {
-  font-size: 11.5px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  width: 140px;
+  letter-spacing: 0.05em;
+  width: auto;
   flex-shrink: 0;
-  padding-top: 2px;
+  padding-top: 0;
 }
 
 .idet__field-value {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--color-text-primary);
   flex: 1;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
-.idet__field--full { flex-direction: column; gap: 6px; }
+.idet__field--full { grid-column: 1 / -1; flex-direction: column; gap: 6px; }
 .idet__field--full .idet__field-label { width: auto; padding-top: 0; }
 
 .idet__tot-pending {
@@ -395,7 +405,7 @@
 .idet__ipr-check--on svg { width: 9px; height: 9px; stroke: var(--color-text-on-accent); stroke-width: 3; }
 .idet__ipr-lbl { font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); }
 
-/* ── Table ── */
+/* ── Table (legacy — kept in case any old markup still references it) ── */
 .idet__tbl-wrap { border: 1px solid var(--color-border); border-radius: 10px; overflow-x: auto; }
 .idet__tbl { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 12.5px; }
 .idet__tbl thead tr { background: var(--color-surface-alt); border-bottom: 1px solid var(--color-border); }
@@ -407,6 +417,219 @@
   background: var(--color-primary-light);
   box-shadow: inset 3px 0 0 var(--color-primary);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Display cards — replaces raw <table> markup on the ToT Partners,
+   Trial Stakeholders and Procurement tabs with an animated,
+   scannable "profile card" layout instead of a pasted-in grid.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── ToT Partner / Procurement cards ── */
+.idet__partner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.idet__partner-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--color-surface);
+  transition: border-color var(--transition-fast, 0.15s), box-shadow var(--transition-fast, 0.15s), transform var(--transition-fast, 0.15s);
+}
+.idet__partner-card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+.idet__partner-card--expired { border-color: var(--color-danger-bg); background: var(--color-danger-bg); }
+
+.idet__partner-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.idet__partner-avatar {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800;
+  flex-shrink: 0;
+}
+.idet__partner-avatar--green { background: var(--color-success-bg); color: var(--color-success); }
+.idet__partner-avatar--green svg { width: 16px; height: 16px; }
+
+.idet__partner-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.idet__partner-alert { flex-shrink: 0; }
+
+.idet__partner-grid-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px 18px;
+}
+.idet__partner-grid-fields .idet__field { flex-direction: column; align-items: flex-start; gap: 4px; }
+.idet__partner-grid-fields .idet__field-label { width: auto; padding-top: 0; }
+
+.idet__validity-expired { color: var(--color-danger); font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.idet__expired-pill {
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+  background: var(--color-danger); color: #fff; padding: 1px 7px; border-radius: 99px;
+}
+
+.idet__proc-card .idet__partner-avatar { background: var(--color-success-bg); color: var(--color-success); }
+
+/* ── Trial Stakeholder cards + feedback timeline ── */
+.idet__stakeholder-list { display: flex; flex-direction: column; gap: 14px; }
+
+.idet__stakeholder-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast, 0.15s), border-color var(--transition-fast, 0.15s);
+}
+.idet__stakeholder-card:hover { box-shadow: var(--shadow-sm); border-color: var(--color-border-strong); }
+
+.idet__stakeholder-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.idet__stakeholder-avatar {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: var(--gradient-brand);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: var(--glow-primary);
+}
+
+.idet__stakeholder-head-info { flex: 1; min-width: 0; }
+
+.idet__stakeholder-name-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.idet__stakeholder-name { font-size: 14px; font-weight: 700; color: var(--color-text-primary); }
+
+.idet__stakeholder-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.idet__stakeholder-contact span:not(:last-child)::after { content: "·"; margin-left: 10px; color: var(--color-border-strong); }
+
+.idet__feedback-timeline { padding: 16px; display: flex; flex-direction: column; }
+
+.idet__feedback-item { display: flex; gap: 12px; }
+
+.idet__feedback-item-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 12px;
+}
+.idet__feedback-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.idet__feedback-line {
+  flex: 1;
+  width: 2px;
+  background: var(--color-border);
+  margin: 2px 0;
+  min-height: 24px;
+}
+
+.idet__feedback-item-body { flex: 1; min-width: 0; padding-bottom: 20px; }
+.idet__feedback-item:last-child .idet__feedback-item-body { padding-bottom: 0; }
+
+.idet__feedback-item-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+.idet__feedback-round {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.idet__feedback-sample {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface-alt);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.idet__feedback-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: 10px;
+}
+.idet__feedback-dates em { font-style: normal; color: var(--color-text-muted); margin-right: 4px; }
+
+.idet__feedback-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  background: var(--color-surface-alt);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.idet__feedback-note span {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+.idet__feedback-note p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.idet__empty--inset { padding: 14px 16px; margin: 0; }
 
 /* ── Variants: card grid ── */
 .idet__variant-count {
@@ -652,3 +875,83 @@
    UPLOADED FILES (Documentation tab)
 ══════════════════════════════ */
 /* ── Documentation tab actions moved into per-row menu (see .idet__doc-menu*) ── */
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — tablet & mobile
+   The page previously only reflowed its top-level overview grid;
+   the hero, tabs, field rows and section cards stayed at fixed
+   desktop widths (one section even forced a 600px min-width),
+   which is what made things overflow/break on narrower screens.
+   Everything below fixes that so the layout adapts smoothly from
+   large desktop down to small phones instead of just clipping.
+   ══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 900px) {
+  .idet__hero-body { flex-wrap: wrap; }
+  .idet__hero-img { width: 96px; height: 96px; }
+  .idet__hero-name { font-size: 18px; }
+  .idet__hero-actions { width: 100%; order: 3; }
+  .idet__hero-actions .btn,
+  .idet__hero-actions .idet__delete-btn { flex: 1; justify-content: center; }
+
+  .idet__partner-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .idet {
+    gap: 12px;
+    padding: 0 2px;
+  }
+
+  .idet__hero-body {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px 16px 14px;
+    gap: 14px;
+  }
+  .idet__hero-img { width: 100%; height: 160px; }
+  .idet__hero-info { width: 100%; }
+  .idet__hero-title-row { justify-content: space-between; }
+  .idet__hero-actions { flex-wrap: wrap; }
+
+  .idet__variant-banner { flex-direction: column; align-items: flex-start; padding: 10px 16px; }
+  .idet__variant-banner button { align-self: flex-start; }
+
+  .idet__tabs { padding: 0 12px; }
+  .idet__tab { padding: 10px 12px; font-size: 12.5px; }
+
+  .idet__section { padding: 16px 14px; border-radius: 12px; }
+  .idet__section-title { font-size: 13px; }
+
+  .idet__field {
+    padding: 9px 12px;
+  }
+  .idet__field-label { width: auto; padding-top: 0; }
+  .idet__fields { grid-template-columns: 1fr; gap: 8px; }
+
+  .idet__ipr-status-row { gap: 16px; flex-wrap: wrap; }
+  .idet__ipr-block-grid { grid-template-columns: 1fr; gap: 12px; }
+  .idet__ipr-block { padding: 12px 14px; }
+
+  .idet__partner-grid-fields { grid-template-columns: 1fr; gap: 10px; }
+  .idet__partner-card { padding: 14px; }
+
+  .idet__stakeholder-head { flex-wrap: wrap; padding: 12px 14px; }
+  .idet__stakeholder-head > .status-badge,
+  .idet__stakeholder-head > span[class*="statusBadge"] { margin-left: 50px; }
+  .idet__feedback-timeline { padding: 14px 12px; }
+  .idet__feedback-dates { flex-direction: column; gap: 4px; }
+  .idet__feedback-notes { grid-template-columns: 1fr; }
+
+  .idet__doc-row { padding: 10px 12px; flex-wrap: wrap; }
+  .idet__doc-name { min-width: 140px; }
+
+  .idet__variant-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 420px) {
+  .idet__hero-name { font-size: 16.5px; }
+  .idet__hero-desc { font-size: 12.5px; }
+  .idet__action-btn, .idet__delete-btn { padding: 0 10px; font-size: 12.5px; }
+  .idet__stakeholder-avatar, .idet__partner-avatar { width: 32px; height: 32px; font-size: 13px; }
+}

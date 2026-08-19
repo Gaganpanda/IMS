@@ -119,6 +119,27 @@ export function daysUntil(value) {
 }
 
 /**
+ * dateGroupLabel("2026-08-17T09:00:00") → "Today" | "Yesterday" | "This Week" | "Earlier"
+ * Used to bucket activity/notification feeds the way enterprise inboxes
+ * (Slack, GitHub, Linear) group them, instead of one flat undated list.
+ */
+export function dateGroupLabel(value) {
+  if (!value) return "Earlier";
+  const date = toUtcAwareDate(value);
+  if (isNaN(date.getTime())) return "Earlier";
+
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const today = startOfDay(new Date());
+  const target = startOfDay(date);
+  const diffDays = Math.round((today - target) / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays <= 7) return "This Week";
+  return "Earlier";
+}
+
+/**
  * toInputDate(new Date()) → "2026-05-20"  (for <input type="date">)
  */
 export function toInputDate(value) {

@@ -473,7 +473,7 @@ export default function EditVariantForm() {
 
             <div className="form-group">
               <label className="form-label">Description</label>
-              <textarea className="form-control" rows={3} maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} />
+              <textarea className="form-control" rows={3} maxLength={1000} value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchItemByIdAsync, clearSelectedItem } from "../../redux/slices/itemSlice";
 import EditItemForm from "../../components/items/EditItemForm/EditItemForm";
 import Loader from "../../components/common/Loader/Loader";
+import Icon from "../../components/common/Icon/Icon";
 import "./EditItem.css";
 
 export default function EditItem() {
@@ -21,20 +22,16 @@ export default function EditItem() {
 
   return (
     <div className="edit-item-page animate-fade-in-up">
-      {/* Breadcrumb */}
+      {/* Breadcrumb — the only page-level wayfinding; title/subtitle already live in the navbar */}
       <nav className="edit-item-page__breadcrumb">
-        <span className="edit-item-page__crumb-link" onClick={() => navigate("/items")}>Items</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-          style={{ width:13, height:13, color:"var(--color-border-strong)" }}>
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
+        <span className="edit-item-page__crumb-link" onClick={() => navigate("/items")}>
+          <Icon name="box" size={13} strokeWidth={2} /> Items
+        </span>
+        <Icon name="forward" size={12} strokeWidth={2.5} className="edit-item-page__crumb-arrow" />
         <span className="edit-item-page__crumb-link" onClick={() => navigate(`/items/${id}`)}>
           {selectedItem.name}
         </span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-          style={{ width:13, height:13, color:"var(--color-border-strong)" }}>
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
+        <Icon name="forward" size={12} strokeWidth={2.5} className="edit-item-page__crumb-arrow" />
         <span className="edit-item-page__crumb-cur">Edit</span>
       </nav>
 

@@ -8,7 +8,6 @@ import "./TrialStakeholders.css";
 const TRIAL_STATUS_OPTIONS = [
   { value: "Not Started", label: "Not Started" },
   { value: "In Progress",  label: "In Progress" },
-  { value: "Testing",      label: "Testing" },
   { value: "Completed",    label: "Completed" },
   { value: "On Hold",      label: "Pending" },
 ];

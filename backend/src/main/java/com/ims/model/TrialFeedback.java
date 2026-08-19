@@ -63,6 +63,16 @@ public class TrialFeedback {
     @Column(name = "overdue_notified_at")
     private LocalDateTime overdueNotifiedAt;
 
+    /* ── Sample-pending reminder tracking ──
+     * True once a trial has been requested, 7+ days have passed, and the
+     * sample still hasn't been submitted. Cleared automatically the moment
+     * sampleSubmissionDate is set. Mirrors feedbackOverdue's role: lets the
+     * reminder job tell "already flagged" apart from "newly overdue" so it
+     * doesn't send a duplicate notification every day it runs. */
+    @Column(name = "sample_pending", nullable = false)
+    @Builder.Default
+    private boolean samplePending = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "stakeholder_id")
     private TrialStakeholder trialStakeholder;

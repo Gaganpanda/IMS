@@ -12,6 +12,8 @@ public class NotificationDTO {
         private String message;
         private String type;
         private boolean read;
+        private boolean favorite;
+        private boolean archived;
         private Long   itemId;
         private String itemName;
         private Long   variantId;

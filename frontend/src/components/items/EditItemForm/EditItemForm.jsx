@@ -412,28 +412,42 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
 
   const cur = STEPS[step - 1];
 
+  const progressPct = Math.round(((done.size) / STEPS.length) * 100);
+
   return (
     <>
-      {/* ── Step tab bar ── */}
-      <div className="eif__tabs">
-        {STEPS.map((s) => {
-          const isDone   = done.has(s.id) && s.id !== step;
-          const isActive = s.id === step;
-          return (
-            <div key={s.id}
-              className={`eif__tab eif__tab--clickable${isActive ? " eif__tab--active" : ""}${isDone ? " eif__tab--done" : ""}`}
-              onClick={() => setStep(s.id)}>
-              {isDone
-                ? <span className="eif__tab-dot eif__tab-dot--done">{Icons.check}</span>
-                : <span className={`eif__tab-dot${isActive ? " eif__tab-dot--active" : ""}`}>{s.id}</span>
-              }
-              <span className="eif__tab-lbl">{s.label}</span>
-            </div>
-          );
-        })}
+      {/* ── Stepper header ── */}
+      <div className="eif__stepper-wrap">
+        <div className="eif__stepper-meta">
+          <span className="eif__eyebrow">Editing Item &middot; Step {step} of {STEPS.length}</span>
+          <span className="eif__progress-pct">{progressPct}% complete</span>
+        </div>
+        <div className="eif__progress-track">
+          <div className="eif__progress-fill" style={{ width: `${progressPct}%` }}>
+            <span className="eif__progress-sheen" />
+          </div>
+        </div>
+        <div className="eif__tabs">
+          {STEPS.map((s) => {
+            const isDone   = done.has(s.id) && s.id !== step;
+            const isActive = s.id === step;
+            const isReached = s.id <= step;
+            return (
+              <div key={s.id}
+                className={`eif__tab eif__tab--clickable${isActive ? " eif__tab--active" : ""}${isDone ? " eif__tab--done" : ""}${isReached ? " eif__tab--reached" : ""}`}
+                onClick={() => setStep(s.id)}>
+                {isDone
+                  ? <span className="eif__tab-dot eif__tab-dot--done">{Icons.check}</span>
+                  : <span className={`eif__tab-dot${isActive ? " eif__tab-dot--active" : ""}`}>{s.id}</span>
+                }
+                <span className="eif__tab-lbl">{s.label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="eif__card">
+      <div className="eif__card" data-accent={STEP_COLORS[cur.icon]}>
         {/* Card header */}
         <div className="eif__card-head">
           <span className={`eif__card-icon eif__card-icon--${STEP_COLORS[cur.icon]}`}>
@@ -511,7 +525,7 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
                 <div className="form-group">
                   <label className="form-label">Description <span className="required">*</span></label>
                   <textarea className={`form-control${errors.description ? " form-control--error" : ""}`}
-                    placeholder="Brief item description..." rows={3} maxLength={200}
+                    placeholder="Brief item description..." rows={3} maxLength={1000}
                     {...register("description", { required: "Required" })} />
                   {errors.description && <span className="form-error">{errors.description.message}</span>}
                 </div>

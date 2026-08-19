@@ -22,14 +22,16 @@ import com.ims.model.User;
 import com.ims.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -53,9 +55,67 @@ public class ItemService {
         private final IPRDetailRepository iprDetailRepository;
         private final ItemVariantRepository itemVariantRepository;
         private final ItemDocumentRepository itemDocumentRepository;
+        private final CacheManager cacheManager;
 
         @Value("${app.upload.dir:uploads/}")
         private String uploadDir;
+
+        /*
+         * ── Cache eviction, done right ──
+         *
+         * Every write method below used to carry @CacheEvict/@Caching right next
+         * to @Transactional on the same method. Spring does not guarantee which
+         * of those two AOP proxies runs "outer" when neither declares an
+         * explicit @Order, so eviction could fire *before* the surrounding
+         * transaction actually committed. A GET landing in that tiny window
+         * would then read the still-uncommitted (old) row from the DB and,
+         * because the entry had already been evicted, re-populate Redis with
+         * that stale value — where it would then sit for the full cache TTL.
+         * That is what produced the intermittent "edit didn't take / doc
+         * checkbox reverted, but it's correct again after logging back in"
+         * behaviour: the eviction/read race only bit sometimes, and the fix
+         * only ever became visible once the stale TTL happened to expire.
+         *
+         * These helpers instead register the eviction with Spring's
+         * TransactionSynchronizationManager so it only ever runs in
+         * afterCommit() — strictly after the DB write is durable, regardless
+         * of AOP advisor ordering. If no transaction is active (shouldn't
+         * happen here, but just in case) it evicts immediately.
+         */
+        private void evictAfterCommit(String cacheName, Object key) {
+                Runnable evict = () -> {
+                        Cache cache = cacheManager.getCache(cacheName);
+                        if (cache != null) cache.evict(key);
+                };
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                                @Override public void afterCommit() { evict.run(); }
+                        });
+                } else {
+                        evict.run();
+                }
+        }
+
+        private void clearAfterCommit(String cacheName) {
+                Runnable clear = () -> {
+                        Cache cache = cacheManager.getCache(cacheName);
+                        if (cache != null) cache.clear();
+                };
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                                @Override public void afterCommit() { clear.run(); }
+                        });
+                } else {
+                        clear.run();
+                }
+        }
+
+        /** Common pattern: evict this item's detail cache plus the list/dashboard caches. */
+        private void evictItemCaches(Long id) {
+                evictAfterCommit("item-detail", id);
+                clearAfterCommit("items");
+                clearAfterCommit("dashboard");
+        }
 
         /* ── GET ALL with filters ── */
         @Transactional(readOnly = true)
@@ -101,7 +161,6 @@ public class ItemService {
                 return switch (value.trim()) {
                         case "Not Started" -> TrialStakeholder.Status.NOT_STARTED;
                         case "In Progress" -> TrialStakeholder.Status.IN_PROGRESS;
-                        case "Testing" -> TrialStakeholder.Status.TESTING;
                         case "Completed" -> TrialStakeholder.Status.COMPLETED;
                         case "On Hold" -> TrialStakeholder.Status.ON_HOLD;
                         default -> null;
@@ -147,10 +206,6 @@ public class ItemService {
 
         /* ── CREATE ── */
         @Transactional
-        @Caching(evict = {
-                        @CacheEvict(value = "items", allEntries = true),
-                        @CacheEvict(value = "dashboard", allEntries = true)
-        })
         public ItemDTO.Response createItem(ItemDTO.Request request) {
                 if (itemRepository.existsByName(request.getName())) {
                         throw new IllegalArgumentException(
@@ -197,16 +252,13 @@ public class ItemService {
                                 saved.getCreatedBy() != null ? saved.getCreatedBy().getId() : null);
 
                 log.info("Item created: {}", saved.getName());
+                clearAfterCommit("items");
+                clearAfterCommit("dashboard");
                 return toResponse(saved);
         }
 
         /* ── UPDATE ── */
         @Transactional
-        @Caching(evict = {
-                        @CacheEvict(value = "items", allEntries = true),
-                        @CacheEvict(value = "item-detail", key = "#id"),
-                        @CacheEvict(value = "dashboard", allEntries = true)
-        })
         public ItemDTO.Response updateItem(Long id, ItemDTO.Request request) {
                 Item existing = findById(id);
                 assertAccess(existing);
@@ -246,6 +298,7 @@ public class ItemService {
                 // Intentionally no "item updated" notification — per requirements, only
                 // "item created" and ToT validity notifications should be generated.
                 log.info("Item updated: {}", saved.getName());
+                evictItemCaches(id);
                 return toResponse(saved);
         }
 
@@ -306,7 +359,16 @@ public class ItemService {
                         if (feedbacks == null) return;
                         feedbacks.forEach(f -> {
                                 String sampleNo = f.getSampleNo();
-                                if (sampleNo == null || sampleNo.isBlank() || f.getFeedbackReceivedDate() == null) return;
+                                if (sampleNo == null || sampleNo.isBlank()) return;
+
+                                // A sample that now has a submission date is no longer
+                                // "pending" — clear any stale reminder for it regardless
+                                // of feedback status.
+                                if (f.getSampleSubmissionDate() != null) {
+                                        notificationService.resolveSamplePendingNotifications(item.getId(), sampleNo);
+                                }
+
+                                if (f.getFeedbackReceivedDate() == null) return;
 
                                 notificationService.resolveFeedbackOverdueNotifications(item.getId(), sampleNo);
 
@@ -357,6 +419,9 @@ public class ItemService {
                                 // the instant a sample is saved as submitted, without waiting for
                                 // the next scheduled reminder run.
                                 f.setFeedbackOverdue(isOverdue(f.getSampleSubmissionDate(), f.getFeedbackReceivedDate()));
+                                // Same idea for a trial that was requested but the sample was
+                                // never actually submitted — re-derive on every save.
+                                f.setSamplePending(isSamplePending(f.getRequestTrialDate(), f.getSampleSubmissionDate()));
                                 t.getFeedbacks().add(f);
                         });
                 }
@@ -369,6 +434,14 @@ public class ItemService {
                 if (sampleSubmissionDate == null || feedbackReceivedDate != null)
                         return false;
                 return java.time.temporal.ChronoUnit.DAYS.between(sampleSubmissionDate, LocalDate.now()) >= 7;
+        }
+
+        /** A trial round has a pending sample once it's been requested, 7+ days
+         *  have passed, and the sample still hasn't been submitted. */
+        private boolean isSamplePending(LocalDate requestTrialDate, LocalDate sampleSubmissionDate) {
+                if (requestTrialDate == null || sampleSubmissionDate != null)
+                        return false;
+                return java.time.temporal.ChronoUnit.DAYS.between(requestTrialDate, LocalDate.now()) >= 7;
         }
 
         /* Deep-copies a stakeholder entity (and every one of its feedback rounds)
@@ -397,6 +470,7 @@ public class ItemService {
                                 f.setFurtherAction(fs.getFurtherAction());
                                 f.setStatus(fs.getStatus());
                                 f.setFeedbackOverdue(isOverdue(f.getSampleSubmissionDate(), f.getFeedbackReceivedDate()));
+                                f.setSamplePending(isSamplePending(f.getRequestTrialDate(), f.getSampleSubmissionDate()));
                                 t.getFeedbacks().add(f);
                         });
                 }
@@ -427,15 +501,10 @@ public class ItemService {
                 if (statuses.stream().anyMatch(s -> s == TrialStakeholder.Status.ON_HOLD)) {
                         return Item.TrialsStatus.ON_HOLD;
                 }
-                // If any stakeholder is Testing, overall = Testing
-                if (statuses.stream().allMatch(
-                                s -> s == TrialStakeholder.Status.TESTING || s == TrialStakeholder.Status.COMPLETED)) {
-                        return Item.TrialsStatus.TESTING;
-                }
-                if (statuses.stream().anyMatch(s -> s == TrialStakeholder.Status.TESTING)) {
-                        return Item.TrialsStatus.TESTING;
-                }
-                if (statuses.stream().anyMatch(s -> s == TrialStakeholder.Status.IN_PROGRESS)) {
+                // TESTING is a retired stakeholder status — any legacy stakeholder still
+                // carrying it counts toward "In Progress" here, same as IN_PROGRESS itself.
+                if (statuses.stream().anyMatch(
+                                s -> s == TrialStakeholder.Status.IN_PROGRESS || s == TrialStakeholder.Status.TESTING)) {
                         return Item.TrialsStatus.IN_PROGRESS;
                 }
                 // All NOT_STARTED
@@ -758,11 +827,6 @@ public class ItemService {
 
         /* ── DELETE ── */
         @Transactional
-        @Caching(evict = {
-                        @CacheEvict(value = "items", allEntries = true),
-                        @CacheEvict(value = "item-detail", key = "#id"),
-                        @CacheEvict(value = "dashboard", allEntries = true)
-        })
         public void deleteItem(Long id) {
                 Item item = findById(id);
                 assertAccess(item);
@@ -771,11 +835,11 @@ public class ItemService {
                 // Intentionally no "item deleted" notification — only "item created" and
                 // ToT validity notifications should be generated per requirements.
                 log.info("Item deleted: {}", name);
+                evictItemCaches(id);
         }
 
         /* ── UPLOAD IMAGE ── */
         @Transactional
-        @CacheEvict(value = "item-detail", key = "#id")
         public ItemDTO.Response uploadImage(Long id, MultipartFile file) throws IOException {
                 Item item = findById(id);
                 assertAccess(item);
@@ -790,12 +854,12 @@ public class ItemService {
                 item.setImageUrl("/uploads/" + filename);
                 Item saved = itemRepository.save(item);
                 // Intentionally no notification for image uploads.
+                evictAfterCommit("item-detail", id);
                 return toResponse(saved);
         }
 
         /* ── UPLOAD DOCUMENT ── */
         @Transactional
-        @CacheEvict(value = "item-detail", key = "#id")
         public ItemDTO.Response uploadDocument(Long id, String docName, MultipartFile file) throws IOException {
                 Item item = findById(id);
                 assertAccess(item);
@@ -816,6 +880,7 @@ public class ItemService {
                 itemDocumentRepository.save(doc);
 
                 // Intentionally no notification for document uploads.
+                evictAfterCommit("item-detail", id);
                 return toResponse(findById(id));
         }
 
@@ -825,11 +890,6 @@ public class ItemService {
          * across. Nothing is lost — the item becomes a container and Variant 1
          * carries everything the item used to hold directly. */
         @Transactional
-        @Caching(evict = {
-                        @CacheEvict(value = "items", allEntries = true),
-                        @CacheEvict(value = "item-detail", key = "#id"),
-                        @CacheEvict(value = "dashboard", allEntries = true)
-        })
         public ItemDTO.Response convertToVariant(Long id, ItemVariantDTO.ConvertRequest req) {
                 Item item = findById(id);
                 assertAccess(item);
@@ -905,6 +965,7 @@ public class ItemService {
                 });
 
                 log.info("Item '{}' converted to variants — Variant 1 = '{}'", item.getName(), saved.getName());
+                evictItemCaches(id);
                 return toResponse(findById(id));
         }
 
@@ -917,11 +978,6 @@ public class ItemService {
          * which silently turned the item's own data into an auto-generated
          * "Variant 1" the user never asked for. That requirement is gone. */
         @Transactional
-        @Caching(evict = {
-                        @CacheEvict(value = "items", allEntries = true),
-                        @CacheEvict(value = "item-detail", key = "#id"),
-                        @CacheEvict(value = "dashboard", allEntries = true)
-        })
         public ItemDTO.Response createVariant(Long id, ItemVariantDTO.CreateRequest req) {
                 Item item = findById(id);
                 assertAccess(item);
@@ -956,6 +1012,7 @@ public class ItemService {
                 // the user fills in every tab from scratch, completely independent of
                 // every other variant.
 
+                evictItemCaches(id);
                 return toResponse(findById(id));
         }
 
@@ -1172,7 +1229,6 @@ public class ItemService {
 
         /* ── UPDATE VARIANT (full independent data across every tab) ── */
         @Transactional
-        @CacheEvict(value = "item-detail", key = "#id")
         public ItemDTO.Response updateVariant(Long id, Long variantId, ItemVariantDTO dto) {
                 Item item = findById(id);
                 assertAccess(item);
@@ -1190,6 +1246,7 @@ public class ItemService {
                 saveVariantProcurementDetails(saved, dto.getProcurementDetails());
                 saveVariantIprDetail(saved, dto.getIprDetail());
 
+                evictItemCaches(id);
                 return toResponse(findById(id));
         }
 
@@ -1201,7 +1258,6 @@ public class ItemService {
          * item's own image, the same as uploadImage(id, file) above, so the
          * result is never stale/variant-only data that toResponse() ignores. */
         @Transactional
-        @CacheEvict(value = "item-detail", key = "#id")
         public ItemDTO.Response uploadVariantImage(Long id, Long variantId, MultipartFile file) throws IOException {
                 Item item = findById(id);
                 assertAccess(item);
@@ -1219,12 +1275,12 @@ public class ItemService {
                 item.setImageUrl("/uploads/" + filename);
                 itemRepository.save(item);
 
+                evictAfterCommit("item-detail", id);
                 return toResponse(findById(id));
         }
 
         /* ── DELETE VARIANT ── */
         @Transactional
-        @CacheEvict(value = "item-detail", key = "#id")
         public ItemDTO.Response deleteVariant(Long id, Long variantId) {
                 Item item = findById(id);
                 assertAccess(item);
@@ -1235,6 +1291,7 @@ public class ItemService {
                 // procurement details, documents and IPR record along with it.
                 itemVariantRepository.delete(v);
 
+                evictItemCaches(id);
                 return toResponse(findById(id));
         }
 
@@ -1249,7 +1306,6 @@ public class ItemService {
 
         /* ── DELETE DOCUMENT ── */
         @Transactional
-        @CacheEvict(value = "item-detail", key = "#id")
         public ItemDTO.Response deleteDocument(Long id, Long docId) {
                 Item item = findById(id);
                 assertAccess(item);
@@ -1270,6 +1326,7 @@ public class ItemService {
                 }
 
                 itemDocumentRepository.delete(doc);
+                evictAfterCommit("item-detail", id);
                 return toResponse(findById(id));
         }
 
@@ -1785,6 +1842,9 @@ public class ItemService {
         private String formatTrialStakeholderStatus(Enum<?> e) {
                 if (e == null)
                         return null;
+                // "TESTING" can no longer be newly assigned (see Status.fromString) but is
+                // kept here so any pre-existing stakeholder row still shows a real label
+                // instead of the raw enum name.
                 return switch (e.name()) {
                         case "NOT_STARTED" -> "Not Started";
                         case "IN_PROGRESS" -> "In Progress";
