@@ -193,13 +193,13 @@ public class DashboardService {
                 "NOT_STARTED", "Not Started",
                 "IN_PROGRESS", "In Progress",
                 "COMPLETED",   "Completed",
-                "ON_HOLD",     "On Hold"
+                "PENDING",     "Pending"
         );
 
         // Ensure all statuses appear even if count is 0. "TESTING" is intentionally
         // excluded here — any legacy rows still carrying that status are dropped
         // below rather than shown as their own bar.
-        List<String> allowedStatuses = List.of("NOT_STARTED", "IN_PROGRESS", "COMPLETED", "ON_HOLD");
+        List<String> allowedStatuses = List.of("NOT_STARTED", "IN_PROGRESS", "COMPLETED", "PENDING");
         Map<String, Long> counts = new LinkedHashMap<>();
         for (String key : allowedStatuses) {
             counts.put(key, 0L);
@@ -207,8 +207,12 @@ public class DashboardService {
         for (Object[] row : rows) {
             if (row[0] == null) continue;
             String status = row[0].toString();
+            // "ON_HOLD" is the retired name for this same status — legacy rows still
+            // carrying it are folded into the "Pending" bucket, same as "Testing" is
+            // folded into "In Progress" elsewhere.
+            if ("ON_HOLD".equals(status)) status = "PENDING";
             if (!counts.containsKey(status)) continue; // drops TESTING and any other legacy status
-            counts.put(status, ((Number) row[1]).longValue());
+            counts.merge(status, ((Number) row[1]).longValue(), Long::sum);
         }
 
         return counts.entrySet().stream()

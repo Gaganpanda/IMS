@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { toggleNotificationPopup } from "../../../redux/slices/notificationSlice";
@@ -9,7 +10,7 @@ import "./Navbar.css";
 const PAGE_META = {
   "/dashboard":     { title: "Dashboard",      subtitle: "Welcome back, Admin! Here's what's happening today." },
   "/items":         { title: "Items",           subtitle: "Manage, track and monitor all items in the system" },
-  "/items/add":     { title: "Add New Item",    subtitle: "Fill in the details to add a new item" },
+  "/items/add":     { title: "Add New Item",    subtitle: "Create and manage product information through a guided workflow" },
   "/notifications": { title: "Notifications",  subtitle: "View all your notifications" },
 };
 
@@ -29,6 +30,23 @@ export default function Navbar({ onMenuClick = () => {} }) {
   const unreadCount = useSelector((s) => s.notifications?.unreadCount ?? 0);
   const showPopup   = useSelector((s) => s.notifications?.showPopup ?? false);
   const { isDark, toggleTheme } = useTheme();
+
+  // Fire a stronger "vibrate" burst on the bell the moment a *new*
+  // notification arrives (unreadCount ticking up), on top of the gentle
+  // always-on ring it already does while anything is unread — this is
+  // what makes a fresh alert actually catch the eye instead of blending
+  // into the same idle animation that's been running the whole session.
+  const prevUnreadRef = useRef(unreadCount);
+  const [justArrived, setJustArrived] = useState(false);
+  useEffect(() => {
+    if (unreadCount > prevUnreadRef.current) {
+      setJustArrived(true);
+      const t = setTimeout(() => setJustArrived(false), 900);
+      prevUnreadRef.current = unreadCount;
+      return () => clearTimeout(t);
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 
   const { title, subtitle } = getPageMeta(pathname);
   const initials = user?.name
@@ -68,7 +86,7 @@ export default function Navbar({ onMenuClick = () => {} }) {
 
         {/* Notification bell */}
         <button
-          className={`navbar__bell press-scale${showPopup ? " navbar__bell--active" : ""}${unreadCount > 0 ? " navbar__bell--has-unread" : ""}`}
+          className={`navbar__bell press-scale${showPopup ? " navbar__bell--active" : ""}${unreadCount > 0 ? " navbar__bell--has-unread" : ""}${justArrived ? " navbar__bell--vibrate" : ""}`}
           onClick={() => dispatch(toggleNotificationPopup())}
           aria-label="Notifications"
         >

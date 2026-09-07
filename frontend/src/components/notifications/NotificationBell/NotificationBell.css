@@ -38,4 +38,64 @@
   text-align: center;
   border: 1.5px solid var(--color-surface);
   line-height: 1.2;
+  transition: transform 0.2s;
+}
+
+/* Bell "ring" — triggered whenever the unread count goes up, i.e. a new
+   notification just arrived. Rotates around the top of the bell (like a
+   clapper swinging) rather than the whole button, which reads as a much
+   more natural ring than a plain shake. */
+@keyframes notif-bell-ring {
+  0%   { transform: rotate(0deg); }
+  8%   { transform: rotate(16deg); }
+  16%  { transform: rotate(-14deg); }
+  24%  { transform: rotate(11deg); }
+  32%  { transform: rotate(-8deg); }
+  40%  { transform: rotate(5deg); }
+  48%  { transform: rotate(-3deg); }
+  56%  { transform: rotate(2deg); }
+  64%  { transform: rotate(-1deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.notif-bell--ring .notif-bell__icon {
+  transform-origin: 50% 4px;
+  animation: notif-bell-ring 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* A soft pulsing ring that expands out from the bell on arrival, echoing a
+   real chime, plus a quick pop on the badge itself so the new count reads
+   as "just landed" rather than a static number. */
+.notif-bell--ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  border: 2px solid var(--color-primary);
+  opacity: 0.6;
+  animation: notif-bell-pulse 0.9s ease-out;
+  pointer-events: none;
+}
+
+@keyframes notif-bell-pulse {
+  0%   { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.notif-bell__badge--pop {
+  animation: notif-bell-badge-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes notif-bell-badge-pop {
+  0%   { transform: scale(0.4); }
+  55%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-bell--ring .notif-bell__icon,
+  .notif-bell--ring::after,
+  .notif-bell__badge--pop {
+    animation: none;
+  }
 }

@@ -139,6 +139,25 @@
   animation: navbarBellRing 3.2s ease-in-out infinite;
 }
 
+/* Sharp shake burst — fires once when a *new* notification lands, layered
+   on top of the slower idle ring above so a fresh alert reads differently
+   from the passive "you still have unread" reminder. */
+.navbar__bell--vibrate .navbar__bell-icon {
+  animation: navbarBellVibrate 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes navbarBellVibrate {
+  10%, 90%  { transform: translateX(-1px) rotate(0deg); }
+  20%, 80%  { transform: translateX(2px) rotate(-4deg); }
+  30%, 50%, 70% { transform: translateX(-3px) rotate(6deg); }
+  40%, 60%  { transform: translateX(3px) rotate(-6deg); }
+  0%, 100%  { transform: translateX(0) rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar__bell--vibrate .navbar__bell-icon { animation: none; }
+}
+
 @keyframes navbarBellRing {
   0%, 74%, 100% { transform: rotate(0deg); }
   78%  { transform: rotate(13deg); }

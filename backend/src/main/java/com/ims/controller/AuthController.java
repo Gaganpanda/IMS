@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,20 @@ public class AuthController {
 
     private final AuthService authService;
     private final LoginRateLimiter rateLimiter;
+
+    /**
+     * FIX: X-Forwarded-For is only trustworthy when it's set by a proxy you
+     * actually control (nginx/ALB/etc. in front of this app). Left on by
+     * default with no proxy in the path, any client can set this header
+     * themselves and put a fresh fake IP on every single request — which
+     * completely defeats the per-IP login rate limiter (an attacker just
+     * increments a counter in the header instead of their real IP). Default
+     * to false (trust only the socket's real remote address) and opt in
+     * explicitly once there's a real reverse proxy terminating in front of
+     * this service.
+     */
+    @Value("${app.security.trust-proxy-headers:false}")
+    private boolean trustProxyHeaders;
 
     @PostMapping("/login")
     @Operation(summary = "Login and receive JWT token")
@@ -48,11 +63,18 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(authService.getCurrentUser()));
     }
 
-    /** Honours a load-balancer / reverse-proxy's X-Forwarded-For header, falling back to the raw remote address. */
+    /**
+     * Honours a load-balancer / reverse-proxy's X-Forwarded-For header only when
+     * app.security.trust-proxy-headers is explicitly enabled (see field above);
+     * otherwise always uses the raw socket remote address, which a client cannot
+     * forge.
+     */
     private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        if (trustProxyHeaders) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
         }
         return request.getRemoteAddr();
     }

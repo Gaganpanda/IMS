@@ -24,6 +24,16 @@ public class ItemVariantDTO {
 
     private Long id;
 
+    /* Optimistic-locking version. Echoed by the client on update, used to
+     * detect concurrent edits of the same variant (see ItemVariant#version). */
+    private Long version;
+
+    /* True once this variant has been archived instead of deleted, because
+     * it had documents/procurement/trial records attached. Read-only from
+     * the client's perspective — set via the archive endpoint, not by
+     * sending it back in an update. */
+    private boolean archived;
+
     private String name;
 
     private String category;

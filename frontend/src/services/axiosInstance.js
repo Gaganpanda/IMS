@@ -29,7 +29,16 @@ axiosInstance.interceptors.response.use(
                  || error.response?.data?.message
                  || "Something went wrong";
 
-    if (status === 401) {
+    // FIX: a failed /auth/login attempt (wrong password) also comes back as a
+    // 401, and it used to fall into this same branch — so on top of the
+    // correct inline "Invalid username or password" message under the field,
+    // the user also got a misleading "Session expired. Please login again."
+    // toast for a login they never had a session for in the first place. Only
+    // treat a 401 as a stale/expired session when it's *not* the login call
+    // itself.
+    const isLoginRequest = error.config?.url?.includes("/auth/login");
+
+    if (status === 401 && !isLoginRequest) {
       localStorage.removeItem("token");
       window.dispatchEvent(new CustomEvent("auth:unauthorized"));
       toast.error("Session expired. Please login again.");
@@ -38,7 +47,14 @@ axiosInstance.interceptors.response.use(
     } else if (status === 404) {
       toast.error("Resource not found.");
     } else if (status === 409) {
-      toast.error(message);
+      // ITEM_STALE (concurrent-edit conflict) and HAS_DEPENDENCIES (blocked
+      // delete) get dedicated inline UI at the call site (a conflict banner
+      // / an "archive instead?" prompt) rather than a generic toast, so skip
+      // the blanket toast here to avoid showing both.
+      const code = error.response?.data?.code;
+      if (code !== "ITEM_STALE" && code !== "HAS_DEPENDENCIES") {
+        toast.error(message);
+      }
     } else if (status >= 500) {
       toast.error("Server error. Please try again later.");
     } else if (status && status !== 400) {

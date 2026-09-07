@@ -50,23 +50,10 @@ function Field({ label, value }) {
   );
 }
 
-/* ── IPR check indicator ── */
-function IprCheck({ checked }) {
-  return (
-    <div className={`idet__ipr-check${checked ? " idet__ipr-check--on" : ""}`}>
-      {checked && (
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="1.5 6 4.5 9 10.5 3" />
-        </svg>
-      )}
-    </div>
-  );
-}
-
 /* ── Section card ── */
 function Section({ title, icon, color = "blue", children }) {
   return (
-    <div className="idet__section">
+    <div className={`idet__section idet__section--${color}`}>
       <div className="idet__section-head">
         <span className={`idet__section-icon idet__section-icon--${color}`}>{Icons[icon]}</span>
         <span className="idet__section-title">{title}</span>
@@ -247,6 +234,23 @@ function TotTab({ item }) {
   );
 }
 
+/* ── IPR status pill — replaces the bare checkbox+label with a proper
+   filled/outline badge, matching the StatusBadge language used everywhere
+   else in the app instead of a form-control-style checkbox on a detail
+   page. ── */
+function IprStatusPill({ label, active }) {
+  return (
+    <span className={`idet__ipr-pill${active ? " idet__ipr-pill--on" : ""}`}>
+      {active && (
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="1.5 6 4.5 9 10.5 3" />
+        </svg>
+      )}
+      {label}
+    </span>
+  );
+}
+
 /* ── IPR TAB ── */
 function IprTab({ item }) {
   const ipr = item.iprDetail;
@@ -303,19 +307,18 @@ function IprTab({ item }) {
       {!filledRows.length ? (
         <p className="idet__empty">No IPR details recorded.</p>
       ) : (
-        <div className="idet__ipr-sections">
+        // A responsive card grid (2-up on wide screens, 1-up below ~900px)
+        // instead of a single full-width stack — each IPR type is a
+        // self-contained record card sized to its content, rather than a
+        // sparse row of fields spread across the whole page width.
+        <div className="idet__ipr-grid stagger-children">
           {filledRows.map((r) => (
             <div key={r.label} className="idet__ipr-block">
-              <div className="idet__ipr-block-title">{r.label}</div>
-
-              <div className="idet__ipr-status-row">
-                <div className="idet__ipr-check-row">
-                  <IprCheck checked={r.filed} />
-                  <span className="idet__ipr-lbl">Filed</span>
-                </div>
-                <div className="idet__ipr-check-row">
-                  <IprCheck checked={r.granted} />
-                  <span className="idet__ipr-lbl">Granted</span>
+              <div className="idet__ipr-block-head">
+                <span className="idet__ipr-block-title">{r.label}</span>
+                <div className="idet__ipr-status-row">
+                  <IprStatusPill label="Filed" active={!!r.filed} />
+                  <IprStatusPill label="Granted" active={!!r.granted} />
                 </div>
               </div>
 
@@ -404,7 +407,11 @@ function TrialsTab({ item }) {
                               )}
                             </span>
                             <StatusBadge status={f.status || "Not Started"} size="sm" />
-                            {f.sampleNo && <span className="idet__feedback-sample">Sample #{f.sampleNo}</span>}
+                            {f.sampleNo !== null && f.sampleNo !== undefined && f.sampleNo !== "" && (
+                              <span className="idet__feedback-sample">
+                                {f.sampleNo} {Number(f.sampleNo) === 1 ? "sample" : "samples"} sent
+                              </span>
+                            )}
                           </div>
                           <div className="idet__feedback-dates">
                             <span><em>Requested</em> {formatDate(f.requestTrialDate)}</span>
@@ -463,64 +470,90 @@ function DocsTab({ item }) {
     setDeletingId(null);
   };
 
+  const uploadedCount = docs.filter((doc) =>
+    item.uploadedDocuments?.some((f) => (f.docName || f.originalFileName) === doc)
+  ).length;
+
   return (
     <Section title="Documentation Status" icon="file" color="teal">
       {docs.length === 0
         ? <p className="idet__empty">No documents added.</p>
         : (
-          <div className="idet__doc-list">
-            {docs.map((doc) => {
-              const attached = item.uploadedDocuments?.find((f) => (f.docName || f.originalFileName) === doc);
-              return (
-                <div key={doc} className="idet__doc-row">
-                  <div className="idet__doc-check">{Icons.check}</div>
-                  <span className="idet__doc-name">{doc}</span>
-
-                  {attached ? (
-                    <DropdownMenu
-                      trigger={Icons.moreVert}
-                      open={menuOpenFor === doc}
-                      onOpenChange={(v) => setMenuOpenFor(v ? doc : null)}
-                    >
-                      <a
-                        href={getImageUrl(attached.fileUrl)}
-                        target="_blank" rel="noreferrer"
-                        download={buildDocDownloadName(doc, item.name, attached.originalFileName || attached.fileUrl)}
-                        className="ddm__item"
-                      >
-                        {Icons.download} Download
-                      </a>
+          <>
+            <div className="idet__doc-summary">
+              <span className="idet__doc-summary-count">{uploadedCount}</span>
+              <span className="idet__doc-summary-label">
+                of {docs.length} document{docs.length === 1 ? "" : "s"} uploaded
+              </span>
+            </div>
+            {/* Fixed-width cards instead of a full-bleed row — a single
+                document no longer stretches edge-to-edge; every card reads
+                as a distinct, precisely-sized tile the way a real document
+                inventory would present them. */}
+            <div className="idet__doc-grid stagger-children">
+              {docs.map((doc) => {
+                const attached = item.uploadedDocuments?.find((f) => (f.docName || f.originalFileName) === doc);
+                return (
+                  <div key={doc} className={`idet__doc-card${attached ? " idet__doc-card--attached" : ""}`}>
+                    <div className="idet__doc-card-top">
+                      <span className={`idet__doc-card-icon${attached ? " idet__doc-card-icon--on" : ""}`}>
+                        {Icons.file}
+                      </span>
+                      <div className="idet__doc-card-top-right">
+                        <span className={`idet__doc-card-status idet__doc-card-status--${attached ? "done" : "pending"}`}>
+                          {attached && Icons.check}
+                          {attached ? "Uploaded" : "Pending"}
+                        </span>
+                        {attached && (
+                          <DropdownMenu
+                            trigger={Icons.moreVert}
+                            open={menuOpenFor === doc}
+                            onOpenChange={(v) => setMenuOpenFor(v ? doc : null)}
+                          >
+                            <a
+                              href={getImageUrl(attached.fileUrl)}
+                              target="_blank" rel="noreferrer"
+                              download={buildDocDownloadName(doc, item.name, attached.originalFileName || attached.fileUrl)}
+                              className="ddm__item"
+                            >
+                              {Icons.download} Download
+                            </a>
+                            <button
+                              type="button"
+                              className="ddm__item"
+                              onClick={() => { setActiveDocName(doc); fileInputRef.current?.click(); }}
+                            >
+                              {Icons.uploadArrow} Replace
+                            </button>
+                            <button
+                              type="button"
+                              className="ddm__item ddm__item--danger"
+                              disabled={deletingId === attached.id}
+                              onClick={() => handleDelete(attached.id)}
+                            >
+                              {Icons.trash} Delete
+                            </button>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    </div>
+                    <span className="idet__doc-card-name" title={doc}>{doc}</span>
+                    {!attached && (
                       <button
                         type="button"
-                        className="ddm__item"
+                        className="idet__doc-card-upload"
+                        disabled={uploading && activeDocName === doc}
                         onClick={() => { setActiveDocName(doc); fileInputRef.current?.click(); }}
                       >
-                        {Icons.uploadArrow} Replace
+                        {Icons.uploadArrow}
+                        {uploading && activeDocName === doc ? "Uploading…" : "Upload File"}
                       </button>
-                      <button
-                        type="button"
-                        className="ddm__item ddm__item--danger"
-                        disabled={deletingId === attached.id}
-                        onClick={() => handleDelete(attached.id)}
-                      >
-                        {Icons.trash} Delete
-                      </button>
-                    </DropdownMenu>
-                  ) : (
-                    <button
-                      type="button"
-                      className="idet__doc-upload-btn"
-                      disabled={uploading && activeDocName === doc}
-                      title={`Upload file for ${doc}`}
-                      onClick={() => { setActiveDocName(doc); fileInputRef.current?.click(); }}
-                    >
-                      {Icons.uploadArrow}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )
       }
       <input ref={fileInputRef} type="file" hidden onChange={handleFileChosen} />
@@ -657,6 +690,7 @@ export default function ItemDetails() {
 
       {/* Hero card */}
       <div className="idet__hero card">
+        <span className="idet__hero-decor" aria-hidden="true" />
         {activeVariant && item.variants?.length > 1 && (
           <div className="idet__variant-banner">
             <span>
@@ -743,7 +777,7 @@ export default function ItemDetails() {
       </div>
 
       {/* Panel */}
-      <div className="idet__panel">
+      <div className="idet__panel stagger-children" key={tab}>
         <Panel item={effectiveItem} highlightVariantId={highlightVariantId} onManageVariants={() => setShowVariantModal(true)} />
       </div>
 

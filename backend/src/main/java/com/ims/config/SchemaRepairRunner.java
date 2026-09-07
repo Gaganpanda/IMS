@@ -51,6 +51,32 @@ public class SchemaRepairRunner implements CommandLineRunner {
         widenColumnIfNeeded("notifications", "title", "VARCHAR(100) NOT NULL");
         widenColumnIfNeeded("notifications", "message", "VARCHAR(500) NOT NULL");
         widenColumnIfNeeded("notifications", "item_name", "VARCHAR(200) NULL");
+        backfillVersionIfNeeded("items");
+        backfillVersionIfNeeded("item_variants");
+    }
+
+    /**
+     * Root cause this addresses: adding {@code @Version} to {@code Item}/
+     * {@code ItemVariant} makes Hibernate ADD a nullable {@code version}
+     * BIGINT column via ddl-auto=update, but it does not backfill existing
+     * rows — they're left with {@code version = NULL}. Hibernate's optimistic
+     * lock check builds {@code ...WHERE id=? AND version=?}, and a SQL
+     * comparison against NULL never matches, so the very first edit of any
+     * item/variant that existed before this change would incorrectly fail
+     * with a stale-data conflict even though nobody else touched it. Zeroing
+     * out any leftover NULLs on every boot (idempotent — a no-op once rows
+     * are populated) keeps existing data from breaking under the new check.
+     */
+    private void backfillVersionIfNeeded(String table) {
+        try {
+            int updated = jdbcTemplate.update(
+                    "UPDATE " + table + " SET version = 0 WHERE version IS NULL");
+            if (updated > 0) {
+                log.info("Schema repair: backfilled version=0 for {} pre-existing row(s) in {}", updated, table);
+            }
+        } catch (Exception e) {
+            log.debug("Schema repair skipped for {}.version: {}", table, e.getMessage());
+        }
     }
 
     private void widenColumnIfNeeded(String table, String column, String newDefinition) {

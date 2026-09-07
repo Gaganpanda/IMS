@@ -32,8 +32,16 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Items ──────────────────────────────────────────
+-- NOTE: this file has drifted from the live schema in several places
+-- (e.g. item_variants, tot_partners, procurement_details, ipr_detail,
+-- item_documents and item_tot_documents/item_documentation aren't listed
+-- below even though they exist — they were added via Hibernate
+-- ddl-auto=update after this file was last updated). Treat schema.sql as a
+-- rough starting point, not a source of truth; the entities under
+-- backend/src/main/java/com/ims/model are authoritative.
 CREATE TABLE IF NOT EXISTS items (
   id                      BIGINT       NOT NULL AUTO_INCREMENT,
+  version                 BIGINT       NOT NULL DEFAULT 0,
   name                    VARCHAR(200) NOT NULL,
   code                    VARCHAR(50)  NOT NULL,
   category                VARCHAR(100),

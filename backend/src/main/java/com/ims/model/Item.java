@@ -27,6 +27,18 @@ public class Item {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /* Optimistic-locking token. Hibernate increments this on every UPDATE and
+     * includes it in the WHERE clause (UPDATE items SET ... WHERE id=? AND
+     * version=?). If a client submits a save built from a stale copy of the
+     * item (someone else saved in between), the WHERE clause matches zero
+     * rows and Hibernate throws ObjectOptimisticLockingFailureException,
+     * which GlobalExceptionHandler turns into a 409 ITEM_STALE response
+     * instead of silently overwriting the other user's changes. */
+    @Version
+    @Column(name = "version")
+    @Builder.Default
+    private Long version = 0L;
+
     /* ── Basic Information ── */
     @NotBlank
     @Column(nullable = false, unique = true, length = 200)

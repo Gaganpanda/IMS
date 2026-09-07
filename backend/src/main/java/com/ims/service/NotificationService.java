@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -21,9 +22,25 @@ import java.util.List;
 @Slf4j
 public class NotificationService {
 
-    private final NotificationRepository  notificationRepository;
-    private final UserRepository          userRepository;
-    private final SimpMessagingTemplate   messagingTemplate;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    /*
+     * ── De-duplication guard for the daily reminder scans (ToTReminderService,
+     * FeedbackReminderService) ── Both run once on startup and once daily via
+     * cron; on any day where both firings would qualify (or the scan is
+     * re-triggered), this stops the same exact reminder being created twice.
+     * "Today" is treated as since local midnight.
+     */
+    @Transactional(readOnly = true)
+    public boolean alreadySentToday(Long itemId, Notification.NotificationType type, String message) {
+        if (itemId == null) {
+            return false;
+        }
+        return notificationRepository.existsByItemIdAndTypeAndMessageAndCreatedAtAfter(
+                itemId, type, message, LocalDate.now().atStartOfDay());
+    }
 
     /* ── Get all for current user ── */
     @Transactional(readOnly = true)
@@ -46,8 +63,7 @@ public class NotificationService {
     /* ── Mark one as read ── */
     @Transactional
     public NotificationDTO.Response markAsRead(Long id) {
-        Notification notif = notificationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+        Notification notif = ownedNotification(id);
         notif.setRead(true);
         return toResponse(notificationRepository.save(notif));
     }
@@ -55,8 +71,7 @@ public class NotificationService {
     /* ── Toggle favorite/star ── */
     @Transactional
     public NotificationDTO.Response toggleFavorite(Long id) {
-        Notification notif = notificationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+        Notification notif = ownedNotification(id);
         notif.setFavorite(!notif.isFavorite());
         return toResponse(notificationRepository.save(notif));
     }
@@ -64,8 +79,7 @@ public class NotificationService {
     /* ── Toggle archived state ── */
     @Transactional
     public NotificationDTO.Response toggleArchived(Long id) {
-        Notification notif = notificationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+        Notification notif = ownedNotification(id);
         notif.setArchived(!notif.isArchived());
         return toResponse(notificationRepository.save(notif));
     }
@@ -80,10 +94,8 @@ public class NotificationService {
     /* ── Delete one ── */
     @Transactional
     public void deleteNotification(Long id) {
-        if (!notificationRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Notification", "id", id);
-        }
-        notificationRepository.deleteById(id);
+        Notification notif = ownedNotification(id);
+        notificationRepository.delete(notif);
     }
 
     /* ── Delete all for current user ── */
@@ -91,6 +103,28 @@ public class NotificationService {
     public void deleteAllForCurrentUser() {
         User user = currentUser();
         notificationRepository.deleteAllByUserId(user.getId());
+    }
+
+    /*
+     * ── Fetch a notification and verify it belongs to the current user ──
+     * markAsRead/toggleFavorite/toggleArchived/deleteNotification previously
+     * did a plain findById(id) with no ownership check at all: any signed-in
+     * user could mark, star, archive, or delete *any other user's*
+     * notification just by guessing/incrementing the id in the request —
+     * notifications go to every admin plus the item owner, so ids are dense
+     * and easy to guess. Every single-notification mutation now goes
+     * through this helper instead. A mismatch is reported as "not found"
+     * rather than "forbidden" so a caller can't use the response to probe
+     * which ids exist for other users.
+     */
+    private Notification ownedNotification(Long id) {
+        Notification notif = notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification", "id", id));
+        User user = currentUser();
+        if (notif.getUser() == null || !notif.getUser().getId().equals(user.getId())) {
+            throw new ResourceNotFoundException("Notification", "id", id);
+        }
+        return notif;
     }
 
     /* ── Internal: create + push via WebSocket ── */
@@ -104,7 +138,10 @@ public class NotificationService {
         createNotification(title, message, type, itemId, itemName, null, null, null, null, null);
     }
 
-    /* ── Internal: create + push, also notifying a specific owner (e.g. item creator) ── */
+    /*
+     * ── Internal: create + push, also notifying a specific owner (e.g. item
+     * creator) ──
+     */
     @Transactional
     public void createNotification(
             String title,
@@ -116,8 +153,10 @@ public class NotificationService {
         createNotification(title, message, type, itemId, itemName, ownerUserId, null, null, null, null);
     }
 
-    /* ── Internal: create + push, with a deep-link to the exact variant/
-     * stakeholder/feedback record the notification is about ── */
+    /*
+     * ── Internal: create + push, with a deep-link to the exact variant/
+     * stakeholder/feedback record the notification is about ──
+     */
     @Transactional
     public void createNotification(
             String title,
@@ -129,17 +168,20 @@ public class NotificationService {
             Long variantId,
             Long stakeholderId,
             Long feedbackId) {
-        createNotification(title, message, type, itemId, itemName, ownerUserId, variantId, stakeholderId, feedbackId, null);
+        createNotification(title, message, type, itemId, itemName, ownerUserId, variantId, stakeholderId, feedbackId,
+                null);
     }
 
-    /* Runs in its own, independent transaction (REQUIRES_NEW) and never lets
+    /*
+     * Runs in its own, independent transaction (REQUIRES_NEW) and never lets
      * an exception escape. Notifications are a best-effort side effect of
      * saving an item/variant/trial-stakeholder record — they must never be
      * able to fail (or roll back) the actual save the user is waiting on.
      * Previously a single bad notification insert (e.g. a legacy/undersized
      * DB column) would blow up the caller's @Transactional method and undo
      * everything else in it, which looked like unrelated "trial stakeholder
-     * / dates" failures from the outside. */
+     * / dates" failures from the outside.
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createNotification(
             String title,
@@ -183,10 +225,9 @@ public class NotificationService {
                     // Push real-time via WebSocket to specific user
                     try {
                         messagingTemplate.convertAndSendToUser(
-                            recipient.getUsername(),
-                            "/queue/notifications",
-                            toResponse(saved)
-                        );
+                                recipient.getUsername(),
+                                "/queue/notifications",
+                                toResponse(saved));
                     } catch (Exception e) {
                         log.warn("WebSocket push failed for user '{}': {}", recipient.getUsername(), e.getMessage());
                     }
@@ -202,14 +243,17 @@ public class NotificationService {
         }
     }
 
-    /* ── Resolve: remove any still-unread overdue-feedback notifications for a
+    /*
+     * ── Resolve: remove any still-unread overdue-feedback notifications for a
      * specific sample once feedback has actually been received, so stale
      * "still waiting" reminders don't linger in the bell. Matched by
      * item + sample number rather than feedback row id, since stakeholder/
-     * feedback rows are fully replaced (new ids) on every item/variant save. ── */
+     * feedback rows are fully replaced (new ids) on every item/variant save. ──
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void resolveFeedbackOverdueNotifications(Long itemId, String sampleNo) {
-        if (itemId == null || sampleNo == null || sampleNo.isBlank()) return;
+        if (itemId == null || sampleNo == null || sampleNo.isBlank())
+            return;
         try {
             notificationRepository.deleteByItemIdAndSampleNoAndTypeAndReadFalse(
                     itemId, sampleNo, Notification.NotificationType.FEEDBACK_OVERDUE);
@@ -219,12 +263,15 @@ public class NotificationService {
         }
     }
 
-    /* ── Resolve: same idea, for "sample submission pending" reminders —
+    /*
+     * ── Resolve: same idea, for "sample submission pending" reminders —
      * once a sample is actually submitted, any outstanding pending-sample
-     * reminder for it is stale and should disappear from the bell. ── */
+     * reminder for it is stale and should disappear from the bell. ──
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void resolveSamplePendingNotifications(Long itemId, String sampleNo) {
-        if (itemId == null || sampleNo == null || sampleNo.isBlank()) return;
+        if (itemId == null || sampleNo == null || sampleNo.isBlank())
+            return;
         try {
             notificationRepository.deleteByItemIdAndSampleNoAndTypeAndReadFalse(
                     itemId, sampleNo, Notification.NotificationType.SAMPLE_PENDING);

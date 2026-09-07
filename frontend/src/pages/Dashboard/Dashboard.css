@@ -1,4 +1,4 @@
-  /* The dashboard is sized to exactly fill the space MainLayout hands it
+/* The dashboard is sized to exactly fill the space MainLayout hands it
      (see .layout__main--fit in MainLayout.css) so the page itself never
      grows a scrollbar — individual cards (due dates / activities) scroll
      internally instead if their own content runs long. */
@@ -13,6 +13,11 @@
   /* ── Stat cards ── */
   .dashboard__stats {
     flex: 0 0 auto;
+    /* A flex item's default min-width is its content's max-content size —
+       without this, the whole row (not just an individual card) refuses to
+       shrink below the combined natural width of all 6 cards and pushes
+       past the page at narrower widths/zoom levels. */
+    min-width: 0;
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 12px;
@@ -20,24 +25,45 @@
 
   @media (max-width: 1400px) { .dashboard__stats { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 900px)  { .dashboard__stats { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px)  { .dashboard__stats { grid-template-columns: 1fr; } }
 
   /* ── Section titles ── */
   .dashboard__section-title {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
     font-weight: 700;
     color: var(--color-text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin: 0;
+    /* A little breathing room from the row above/below instead of sitting
+       flush against it, and a short accent bar so it reads as a section
+       label rather than stray text between the cards. */
+    margin: 4px 0 2px;
   }
 
-  /* ── Middle row ── */
+  .dashboard__section-title::before {
+    content: "";
+    width: 3px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--color-primary);
+    flex-shrink: 0;
+  }
+
+  /* ── Middle row ──
+     Equal-width columns — grid items stretch to the row's tallest card by
+     default, so as long as every column shares the same ratio the three
+     cards (donut / due dates / activity) always render the same size. */
   .dashboard__mid {
     flex: 1 1 0;
     min-height: 0;
+    min-width: 0;
     display: grid;
-    grid-template-columns: 1fr 1.15fr 1.15fr;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
     gap: 14px;
   }
 
@@ -54,8 +80,10 @@
   .dashboard__bottom {
     flex: 1 1 0;
     min-height: 0;
+    min-width: 0;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
     gap: 14px;
   }
 

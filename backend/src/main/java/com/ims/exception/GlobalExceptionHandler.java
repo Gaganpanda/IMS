@@ -43,6 +43,22 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    /* ── 409 Delete blocked by related data (see HasDependenciesException) ── */
+    @ExceptionHandler(HasDependenciesException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleHasDependencies(HasDependenciesException ex) {
+        Map<String, Object> counts = new HashMap<>();
+        counts.put("documentCount", ex.getDocumentCount());
+        counts.put("procurementCount", ex.getProcurementCount());
+        counts.put("trialCount", ex.getTrialCount());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.<Map<String, Object>>builder()
+                        .success(false)
+                        .error(ex.getMessage())
+                        .code("HAS_DEPENDENCIES")
+                        .data(counts)
+                        .build());
+    }
+
     /* ── 400 Illegal arguments ── */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
@@ -90,6 +106,27 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /* ── 409 Stale write (application-level version check, see
+     * ItemService#updateItem / StaleDataException) ── */
+    @ExceptionHandler(StaleDataException.class)
+    public ResponseEntity<ApiResponse<Void>> handleStaleData(StaleDataException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage(), "ITEM_STALE"));
+    }
+
+    /* ── 409 Stale write (JPA/Hibernate-level, in case @Version ever catches
+     * a race the application-level check above missed — e.g. two saves
+     * landing in the same instant) ── */
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(
+            org.springframework.orm.ObjectOptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(
+                        "This record was updated by someone else since you loaded it. "
+                                + "Refresh to see the latest version before saving.",
+                        "ITEM_STALE"));
     }
 
     /*

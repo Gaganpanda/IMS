@@ -7,6 +7,23 @@ import store from "./redux/store";
 import AppRoutes from "./routes/AppRoutes";
 import ErrorBoundary from "./components/common/ErrorBoundary/ErrorBoundary";
 import { ThemeProvider } from "./context/ThemeContext";
+
+// Self-hosted fonts (bundled at build time via @fontsource) — previously
+// loaded from fonts.googleapis.com at runtime, which meant the app's
+// typography silently broke (fell back to system fonts) on any network
+// with no internet access, e.g. an offline/air-gapped LAN deployment.
+// Same three families + weights as before, now shipped inside the build.
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
+import "@fontsource/inter/800.css";
+import "@fontsource/space-grotesk/500.css";
+import "@fontsource/space-grotesk/600.css";
+import "@fontsource/space-grotesk/700.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/500.css";
+import "@fontsource/jetbrains-mono/600.css";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(

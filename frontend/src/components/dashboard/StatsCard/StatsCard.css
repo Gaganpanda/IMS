@@ -6,6 +6,12 @@
   border-radius: 16px;
   padding: 14px 18px;
   min-height: 78px;
+  /* Without this, a grid item's default min-width is its content's
+     intrinsic width, so at narrower track widths (smaller screens, browser
+     zoom, sidebar open, etc.) the card refuses to shrink below the length
+     of its label and pushes past its grid cell instead of wrapping —
+     this is what "breaks out of the box" at other sizes. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -34,6 +40,7 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  min-width: 0;
 }
 
 .stats-card__icon {
@@ -64,6 +71,11 @@
   flex-direction: column;
   gap: 2px;
   flex: 1;
+  /* Same fix as above, one level deeper: a flex child's default min-width
+     is "auto" (its content size), so this label column was the actual
+     piece overflowing the card. min-width: 0 lets it shrink and lets the
+     ellipsis rules below take over instead of spilling out. */
+  min-width: 0;
 }
 
 .stats-card__title {
@@ -72,6 +84,9 @@
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stats-card__value {
@@ -80,6 +95,9 @@
   color: var(--color-text-primary);
   line-height: 1.1;
   letter-spacing: -0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stats-card__subtitle {
@@ -87,4 +105,7 @@
   color: var(--color-text-muted);
   font-weight: 500;
   margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

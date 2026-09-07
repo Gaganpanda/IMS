@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
+import toast from "react-hot-toast";
 import {
   updateItemAsync, uploadImageAsync, uploadDocumentAsync, deleteDocumentAsync,
 } from "../../../redux/slices/itemSlice";
 import AddRecordModal from "../../common/AddRecordModal/AddRecordModal";
+import ConfirmPopup from "../../common/ConfirmPopup/ConfirmPopup";
 import TrialStakeholders, { stakeholdersFromApi, stakeholdersToApi } from "../TrialStakeholders/TrialStakeholders";
 import {
   CATEGORIES, DEVELOPMENT_STATUS, TOT_STATUS, TOT_DOCUMENTS,
@@ -16,12 +18,12 @@ import { buildDocDownloadName } from "../../../utils/helpers";
 import "./EditItemForm.css";
 
 const STEPS = [
-  { id: 1, label: "Basic Information",    icon: "basic"       },
-  { id: 2, label: "ToT Details",          icon: "tot"         },
-  { id: 3, label: "IPR Details",          icon: "ipr"         },
-  { id: 4, label: "Trial Stakeholders",   icon: "trials"      },
-  { id: 5, label: "Documentation Status", icon: "docs"        },
-  { id: 6, label: "Procurement Status",   icon: "procurement" },
+  { id: 1, label: "Basic Information",    short: "Basic Info",   icon: "basic"       },
+  { id: 2, label: "ToT Details",          short: "ToT",           icon: "tot"         },
+  { id: 3, label: "IPR Details",          short: "IPR",           icon: "ipr"         },
+  { id: 4, label: "Trial Stakeholders",   short: "Trial",         icon: "trials"      },
+  { id: 5, label: "Documentation Status", short: "Documentation", icon: "docs"        },
+  { id: 6, label: "Procurement Status",   short: "Procurement",   icon: "procurement" },
 ];
 
 const STEP_COLORS = {
@@ -134,7 +136,46 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
     agency: "", totFirmNo: "", noOfItemProcured: "", productionValue: "", orderNo: "", date: "",
   });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm();
+
+  // ── Unsaved-changes / dirty-state tracking ──
+  // This form's data is spread across react-hook-form (register) *and* many
+  // separate useState pieces (totPartners, iprData, stakeholders, documents,
+  // procurements, the pending image file...). Rather than hand-instrument
+  // every single setter to flip a "dirty" flag, take a JSON snapshot of
+  // everything right after the item loads, then compare against a fresh
+  // snapshot on every render — cheap enough for a form this size and much
+  // less error-prone than manually tracking every field.
+  const baselineRef = useRef(null);
+  const latestSnapshotRef = useRef(null);
+  const [staleConflict, setStaleConflict] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const snapshot = () => JSON.stringify({
+    form: watch(), totStatus, totCerts, totPartners, iprData, stakeholders,
+    checkedDocs: [...checkedDocs].sort(), customDocuments, procurements,
+    hasPendingImage: !!imageFile,
+  });
+  const isDirty = baselineRef.current !== null && baselineRef.current !== snapshot();
+
+  // Keep a ref of the latest snapshot current after every render (not just on
+  // load) so the baseline-capture timer below reads fresh state instead of
+  // closing over whatever totPartners/iprData/etc. looked like at the moment
+  // the load effect fired — those setState calls haven't applied yet at that
+  // point, so capturing snapshot() directly inside that effect would grab
+  // stale (pre-load) values and make the form look "dirty" immediately.
+  useEffect(() => { latestSnapshotRef.current = snapshot(); });
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  const requestCancel = () => {
+    if (isDirty) setShowDiscardConfirm(true);
+    else onCancel?.();
+  };
 
   useEffect(() => {
     if (!item) return;
@@ -232,6 +273,19 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
     );
   }, [item, reset]);
 
+  // Capture the "just loaded" baseline for dirty-checking one tick after the
+  // effect above has applied all its setState calls — reading from
+  // latestSnapshotRef (kept current every render, see above) rather than
+  // calling snapshot() directly here, since this effect's own closure still
+  // has the pre-load state at the instant it runs.
+  useEffect(() => {
+    if (!item) return;
+    setStaleConflict(false);
+    const t = setTimeout(() => { baselineRef.current = latestSnapshotRef.current; }, 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id]);
+
   const iprHasErrors = () => ["patent", "trademark", "design", "copyright"].some((key) =>
     (iprData[key].filed && !iprData[key].filingNo) ||
     (iprData[key].granted && !iprData[key].grantNo)
@@ -244,6 +298,11 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
 
   const onSubmit = async (data) => {
     const payload = {
+      // Echo back the version this form was loaded with so the backend can
+      // detect if someone else saved this item in the meantime (see
+      // ItemService#updateItem). Undefined/omitted on legacy callers is
+      // fine — the backend skips the check when it's absent.
+      version:                  item.version,
       name:                     data.name,
       category:                 data.category,
       description:              data.description,
@@ -311,7 +370,18 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
         await dispatch(uploadImageAsync({ id: item.id, file: imageFile }));
       }
       onSuccess?.();
-    } catch (_) {}
+    } catch (err) {
+      if (err?.code === "ITEM_STALE") setStaleConflict(true);
+    }
+  };
+
+  // All react-hook-form `required` fields live on Step 1 (Basic Information).
+  // Since the wizard lets you jump between steps freely, saving from a later
+  // step while step 1 is invalid used to fail silently — the button did
+  // nothing. Send the user back to the problem and say why.
+  const onInvalid = () => {
+    setStep(1);
+    toast.error("Please fill in the required fields in Basic Information.");
   };
 
   const toggleDoc  = (d)      => setCheckedDocs((p) => { const n = new Set(p); n.has(d) ? n.delete(d) : n.add(d); return n; });
@@ -419,28 +489,51 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
       {/* ── Stepper header ── */}
       <div className="eif__stepper-wrap">
         <div className="eif__stepper-meta">
-          <span className="eif__eyebrow">Editing Item &middot; Step {step} of {STEPS.length}</span>
-          <span className="eif__progress-pct">{progressPct}% complete</span>
+          <div className="eif__stepper-meta-left">
+            <span className="eif__eyebrow">
+              Step {step} of {STEPS.length}
+              <span className="eif__eyebrow-current"> &middot; {cur.label}</span>
+            </span>
+            <span className="eif__progress-pct">{progressPct}% complete</span>
+          </div>
+          {/* Always-visible save action — previously "Update Item" only
+             appeared once you'd clicked "Next" all the way to the last
+             step. Same handler/disabled state as the footer's save button
+             so it's safe to use from anywhere in the form. */}
+          <button
+            type="button"
+            className="eif__header-save"
+            disabled={submitting || staleConflict}
+            onClick={handleSubmit(onSubmit, onInvalid)}>
+            {submitting ? <span className="eif__spin" /> : Icons.check}
+            {submitting ? "Saving…" : "Update Item"}
+          </button>
         </div>
+
         <div className="eif__progress-track">
           <div className="eif__progress-fill" style={{ width: `${progressPct}%` }}>
             <span className="eif__progress-sheen" />
           </div>
         </div>
+
         <div className="eif__tabs">
           {STEPS.map((s) => {
             const isDone   = done.has(s.id) && s.id !== step;
             const isActive = s.id === step;
             const isReached = s.id <= step;
+            const hasError = s.id === 1 && Object.keys(errors).length > 0 && s.id !== step;
             return (
               <div key={s.id}
-                className={`eif__tab eif__tab--clickable${isActive ? " eif__tab--active" : ""}${isDone ? " eif__tab--done" : ""}${isReached ? " eif__tab--reached" : ""}`}
+                className={`eif__tab eif__tab--clickable${isActive ? " eif__tab--active" : ""}${isDone ? " eif__tab--done" : ""}${isReached ? " eif__tab--reached" : ""}${hasError ? " eif__tab--error" : ""}`}
+                title={hasError ? `${s.label} — required fields missing` : s.label}
                 onClick={() => setStep(s.id)}>
-                {isDone
-                  ? <span className="eif__tab-dot eif__tab-dot--done">{Icons.check}</span>
-                  : <span className={`eif__tab-dot${isActive ? " eif__tab-dot--active" : ""}`}>{s.id}</span>
+                {hasError
+                  ? <span className="eif__tab-dot eif__tab-dot--error">!</span>
+                  : isDone
+                    ? <span className="eif__tab-dot eif__tab-dot--done">{Icons.check}</span>
+                    : <span className={`eif__tab-dot${isActive ? " eif__tab-dot--active" : ""}`}>{s.id}</span>
                 }
-                <span className="eif__tab-lbl">{s.label}</span>
+                <span className="eif__tab-lbl">{s.short}</span>
               </div>
             );
           })}
@@ -448,6 +541,20 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
       </div>
 
       <div className="eif__card" data-accent={STEP_COLORS[cur.icon]}>
+        {staleConflict && (
+          <div className="eif__conflict-banner" role="alert">
+            <span className="eif__conflict-banner-icon">{Icons.close}</span>
+            <div className="eif__conflict-banner-text">
+              <strong>This item was updated by someone else</strong> while you were editing it.
+              Your changes on this screen have not been saved. Reload to see the latest version
+              before trying again.
+            </div>
+            <button type="button" className="eif__conflict-banner-btn"
+              onClick={() => window.location.reload()}>
+              Reload Latest Data
+            </button>
+          </div>
+        )}
         {/* Card header */}
         <div className="eif__card-head">
           <span className={`eif__card-icon eif__card-icon--${STEP_COLORS[cur.icon]}`}>
@@ -860,7 +967,7 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
             )}
           </div>
           <div className="eif__footer-right">
-            <button type="button" className="eif__nav-btn eif__nav-btn--cancel" onClick={onCancel}>
+            <button type="button" className="eif__nav-btn eif__nav-btn--cancel" onClick={requestCancel}>
               {Icons.close} Cancel
             </button>
             {step < STEPS.length
@@ -868,7 +975,7 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
                   Next {Icons.arrowRight}
                 </button>
               : <button type="button" className="eif__nav-btn eif__nav-btn--save"
-                  disabled={submitting} onClick={handleSubmit(onSubmit)}>
+                  disabled={submitting || staleConflict} onClick={handleSubmit(onSubmit, onInvalid)}>
                   {submitting ? <span className="eif__spin" /> : Icons.check}
                   {submitting ? "Saving…" : "Update Item"}
                 </button>
@@ -876,6 +983,17 @@ export default function EditItemForm({ item, onCancel, onSuccess }) {
           </div>
         </div>
       </div>
+
+      <ConfirmPopup
+        open={showDiscardConfirm}
+        onClose={() => setShowDiscardConfirm(false)}
+        onConfirm={() => { setShowDiscardConfirm(false); onCancel?.(); }}
+        title="Discard your changes?"
+        message="You have unsaved changes on this item. If you leave now, they'll be lost."
+        confirmLabel="Discard Changes"
+        cancelLabel="Continue Editing"
+        variant="warning"
+      />
 
       {/* ── Modals ── */}
       <AddRecordModal open={showPartnerModal} title={editingPartnerId ? "Edit ToT Partner" : "Add ToT Partner"}

@@ -36,6 +36,16 @@
   --color-text-muted:     #93939f;
   --color-text-on-accent: #ffffff;
 
+  /* ── Tooltip ── deliberately NOT the same as --color-text-primary: that
+     variable flips between themes (near-black in light mode, near-white in
+     dark mode), so a tooltip bubble built from it plus a hardcoded white
+     label would render near-white text on a near-white bubble in dark mode
+     — readable in light mode only, invisible in dark mode. Tooltips get
+     their own pair of colors that stay a fixed high-contrast dark bubble
+     with light text in both themes. */
+  --color-tooltip-bg:   #1e1b2e;
+  --color-tooltip-text: #ffffff;
+
   /* ── Status — muted, desaturated; used only for real status meaning ── */
   --color-success:      #1a7f43;
   --color-success-bg:   rgba(26, 127, 67, 0.08);
@@ -89,7 +99,12 @@
   --transition-base: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ── Fonts ── */
-  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  /* Was "Plus Jakarta Sans" — that family was never actually loaded (not in
+     the old Google Fonts link, not in the bundled @fontsource imports), so
+     every heading silently fell back to Inter. Space Grotesk is the font
+     that's actually being loaded — this just makes the variable point at
+     the font that was meant to be the display face all along. */
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
   --font-body:    "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono:    "JetBrains Mono", ui-monospace, monospace;
 
@@ -136,6 +151,12 @@
   --color-text-secondary: #a8a8ac;
   --color-text-muted:     #7a7a80;
   --color-text-on-accent: #ffffff;
+
+  /* ── Tooltip ── kept the same fixed dark bubble as light mode (see :root)
+     rather than following --color-text-primary, which is near-white here
+     and would otherwise wash the white tooltip text out to invisible. */
+  --color-tooltip-bg:   #2a2740;
+  --color-tooltip-text: #ffffff;
 
   /* ── Status (kept legible but slightly less saturated) ── */
   --color-success:      #4ade80;

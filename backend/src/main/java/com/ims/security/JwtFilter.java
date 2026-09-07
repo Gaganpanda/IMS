@@ -50,13 +50,27 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            if (jwtUtil.isTokenValid(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+            // FIX: a syntactically valid, unexpired JWT can still reference a user
+            // that no longer exists (deleted after the token was issued) or has been
+            // deactivated in a way the UserDetailsService rejects. Previously
+            // loadUserByUsername's UsernameNotFoundException propagated straight out
+            // of this filter, past GlobalExceptionHandler (filters run before
+            // controller dispatch, so @RestControllerAdvice never sees it), producing
+            // a raw 500 for every request the client made with that stale token
+            // instead of a clean "unauthenticated" fallthrough. Swallow it here and
+            // just proceed unauthenticated — downstream endpoints will correctly
+            // reject with 401/403 via Spring Security.
+            try {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                if (jwtUtil.isTokenValid(jwt, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (Exception e) {
+                log.debug("JWT referenced a user that could not be loaded ('{}'): {}", username, e.getMessage());
             }
         }
 

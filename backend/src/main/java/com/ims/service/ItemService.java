@@ -1,4 +1,5 @@
 package com.ims.service;
+
 import java.util.ArrayList;
 import com.ims.dto.IPRDetailDTO;
 import com.ims.dto.ItemDTO;
@@ -8,6 +9,7 @@ import com.ims.dto.ProcurementDetailDTO;
 import com.ims.dto.ToTPartnerDTO;
 import com.ims.dto.TrialFeedbackDTO;
 import com.ims.dto.TrialStakeholderDTO;
+import com.ims.exception.HasDependenciesException;
 import com.ims.exception.ResourceNotFoundException;
 import com.ims.model.Item;
 import com.ims.model.ItemDocument;
@@ -85,11 +87,15 @@ public class ItemService {
         private void evictAfterCommit(String cacheName, Object key) {
                 Runnable evict = () -> {
                         Cache cache = cacheManager.getCache(cacheName);
-                        if (cache != null) cache.evict(key);
+                        if (cache != null)
+                                cache.evict(key);
                 };
                 if (TransactionSynchronizationManager.isSynchronizationActive()) {
                         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                                @Override public void afterCommit() { evict.run(); }
+                                @Override
+                                public void afterCommit() {
+                                        evict.run();
+                                }
                         });
                 } else {
                         evict.run();
@@ -99,18 +105,25 @@ public class ItemService {
         private void clearAfterCommit(String cacheName) {
                 Runnable clear = () -> {
                         Cache cache = cacheManager.getCache(cacheName);
-                        if (cache != null) cache.clear();
+                        if (cache != null)
+                                cache.clear();
                 };
                 if (TransactionSynchronizationManager.isSynchronizationActive()) {
                         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                                @Override public void afterCommit() { clear.run(); }
+                                @Override
+                                public void afterCommit() {
+                                        clear.run();
+                                }
                         });
                 } else {
                         clear.run();
                 }
         }
 
-        /** Common pattern: evict this item's detail cache plus the list/dashboard caches. */
+        /**
+         * Common pattern: evict this item's detail cache plus the list/dashboard
+         * caches.
+         */
         private void evictItemCaches(Long id) {
                 evictAfterCommit("item-detail", id);
                 clearAfterCommit("items");
@@ -162,7 +175,8 @@ public class ItemService {
                         case "Not Started" -> TrialStakeholder.Status.NOT_STARTED;
                         case "In Progress" -> TrialStakeholder.Status.IN_PROGRESS;
                         case "Completed" -> TrialStakeholder.Status.COMPLETED;
-                        case "On Hold" -> TrialStakeholder.Status.ON_HOLD;
+                        case "Pending" -> TrialStakeholder.Status.PENDING;
+                        case "On Hold" -> TrialStakeholder.Status.ON_HOLD; // legacy alias, kept for old links/bookmarks
                         default -> null;
                 };
         }
@@ -329,10 +343,12 @@ public class ItemService {
                 }
         }
 
-        /** Snapshot of sampleNo → feedbackReceivedDate before a stakeholder list
-         *  is wiped and rebuilt, so we can tell "feedback just came in on this
-         *  save" apart from "feedback has been sitting here for a while" and
-         *  avoid re-notifying every time the form is re-saved. */
+        /**
+         * Snapshot of sampleNo → feedbackReceivedDate before a stakeholder list
+         * is wiped and rebuilt, so we can tell "feedback just came in on this
+         * save" apart from "feedback has been sitting here for a while" and
+         * avoid re-notifying every time the form is re-saved.
+         */
         private java.util.Map<String, LocalDate> previousReceivedBySample(List<TrialStakeholder> previous) {
                 java.util.Map<String, LocalDate> map = new java.util.HashMap<>();
                 previous.forEach(s -> trialFeedbackRepository.findByTrialStakeholderId(s.getId()).forEach(f -> {
@@ -343,23 +359,28 @@ public class ItemService {
                 return map;
         }
 
-        /** Resolves any overdue reminder for samples that now have feedback, and
-         *  fires a "Feedback received" notification the first time a sample's
-         *  feedbackReceivedDate transitions from unset to set. */
+        /**
+         * Resolves any overdue reminder for samples that now have feedback, and
+         * fires a "Feedback received" notification the first time a sample's
+         * feedbackReceivedDate transitions from unset to set.
+         */
         private void notifyNewlyReceivedFeedback(
                         Item item,
                         List<TrialStakeholderDTO> stakeholders,
                         java.util.Map<String, LocalDate> previouslyReceivedBySample,
                         Long variantId) {
-                if (stakeholders == null) return;
+                if (stakeholders == null)
+                        return;
                 Long ownerId = item.getCreatedBy() != null ? item.getCreatedBy().getId() : null;
 
                 stakeholders.forEach(s -> {
                         List<TrialFeedbackDTO> feedbacks = s.getFeedbacks();
-                        if (feedbacks == null) return;
+                        if (feedbacks == null)
+                                return;
                         feedbacks.forEach(f -> {
                                 String sampleNo = f.getSampleNo();
-                                if (sampleNo == null || sampleNo.isBlank()) return;
+                                if (sampleNo == null || sampleNo.isBlank())
+                                        return;
 
                                 // A sample that now has a submission date is no longer
                                 // "pending" — clear any stale reminder for it regardless
@@ -368,7 +389,8 @@ public class ItemService {
                                         notificationService.resolveSamplePendingNotifications(item.getId(), sampleNo);
                                 }
 
-                                if (f.getFeedbackReceivedDate() == null) return;
+                                if (f.getFeedbackReceivedDate() == null)
+                                        return;
 
                                 notificationService.resolveFeedbackOverdueNotifications(item.getId(), sampleNo);
 
@@ -378,7 +400,9 @@ public class ItemService {
                                         notificationService.createNotification(
                                                         "Feedback received",
                                                         item.getName() + ": Feedback received from "
-                                                                        + (s.getStakeholderName() != null ? s.getStakeholderName() : "stakeholder")
+                                                                        + (s.getStakeholderName() != null
+                                                                                        ? s.getStakeholderName()
+                                                                                        : "stakeholder")
                                                                         + " for Sample " + sampleNo + ".",
                                                         Notification.NotificationType.FEEDBACK_RECEIVED,
                                                         item.getId(), item.getName(), ownerId,
@@ -388,9 +412,11 @@ public class ItemService {
                 });
         }
 
-        /* Builds a (not-yet-parented) TrialStakeholder from its DTO, including
+        /*
+         * Builds a (not-yet-parented) TrialStakeholder from its DTO, including
          * every one of its feedback/trial rounds. Shared by the item-level and
-         * variant-level save paths. */
+         * variant-level save paths.
+         */
         private TrialStakeholder buildStakeholder(TrialStakeholderDTO dto) {
                 TrialStakeholder t = new TrialStakeholder();
                 t.setStakeholderName(dto.getStakeholderName());
@@ -418,37 +444,45 @@ public class ItemService {
                                 // otherwise re-derive immediately so the warning icon is correct
                                 // the instant a sample is saved as submitted, without waiting for
                                 // the next scheduled reminder run.
-                                f.setFeedbackOverdue(isOverdue(f.getSampleSubmissionDate(), f.getFeedbackReceivedDate()));
+                                f.setFeedbackOverdue(
+                                                isOverdue(f.getSampleSubmissionDate(), f.getFeedbackReceivedDate()));
                                 // Same idea for a trial that was requested but the sample was
                                 // never actually submitted — re-derive on every save.
-                                f.setSamplePending(isSamplePending(f.getRequestTrialDate(), f.getSampleSubmissionDate()));
+                                f.setSamplePending(
+                                                isSamplePending(f.getRequestTrialDate(), f.getSampleSubmissionDate()));
                                 t.getFeedbacks().add(f);
                         });
                 }
                 return t;
         }
 
-        /** A feedback round is overdue once a sample has been submitted, 7+ days
-         *  have passed, and no feedback has been received yet. */
+        /**
+         * A feedback round is overdue once a sample has been submitted, 7+ days
+         * have passed, and no feedback has been received yet.
+         */
         private boolean isOverdue(LocalDate sampleSubmissionDate, LocalDate feedbackReceivedDate) {
                 if (sampleSubmissionDate == null || feedbackReceivedDate != null)
                         return false;
                 return java.time.temporal.ChronoUnit.DAYS.between(sampleSubmissionDate, LocalDate.now()) >= 7;
         }
 
-        /** A trial round has a pending sample once it's been requested, 7+ days
-         *  have passed, and the sample still hasn't been submitted. */
+        /**
+         * A trial round has a pending sample once it's been requested, 7+ days
+         * have passed, and the sample still hasn't been submitted.
+         */
         private boolean isSamplePending(LocalDate requestTrialDate, LocalDate sampleSubmissionDate) {
                 if (requestTrialDate == null || sampleSubmissionDate != null)
                         return false;
                 return java.time.temporal.ChronoUnit.DAYS.between(requestTrialDate, LocalDate.now()) >= 7;
         }
 
-        /* Deep-copies a stakeholder entity (and every one of its feedback rounds)
+        /*
+         * Deep-copies a stakeholder entity (and every one of its feedback rounds)
          * onto a brand-new, independent set of rows parented under `targetVariant`
          * — used when converting an item to variants, or duplicating an existing
          * variant. The overdue flag is re-derived fresh rather than copied, since
-         * it's a point-in-time computed fact, not authored data. */
+         * it's a point-in-time computed fact, not authored data.
+         */
         private TrialStakeholder deepCopyStakeholderEntity(TrialStakeholder source, ItemVariant targetVariant) {
                 TrialStakeholder t = new TrialStakeholder();
                 t.setItemVariant(targetVariant);
@@ -456,7 +490,8 @@ public class ItemService {
                 t.setContactPersonName(source.getContactPersonName());
                 t.setStakeholderAddress(source.getStakeholderAddress());
                 t.setStakeholderPhone(source.getStakeholderPhone());
-                t.setTrialStatus(source.getTrialStatus() != null ? source.getTrialStatus() : TrialStakeholder.Status.NOT_STARTED);
+                t.setTrialStatus(source.getTrialStatus() != null ? source.getTrialStatus()
+                                : TrialStakeholder.Status.NOT_STARTED);
                 if (source.getFeedbacks() != null) {
                         source.getFeedbacks().forEach(fs -> {
                                 TrialFeedback f = new TrialFeedback();
@@ -469,8 +504,10 @@ public class ItemService {
                                 f.setCorrection(fs.getCorrection());
                                 f.setFurtherAction(fs.getFurtherAction());
                                 f.setStatus(fs.getStatus());
-                                f.setFeedbackOverdue(isOverdue(f.getSampleSubmissionDate(), f.getFeedbackReceivedDate()));
-                                f.setSamplePending(isSamplePending(f.getRequestTrialDate(), f.getSampleSubmissionDate()));
+                                f.setFeedbackOverdue(
+                                                isOverdue(f.getSampleSubmissionDate(), f.getFeedbackReceivedDate()));
+                                f.setSamplePending(
+                                                isSamplePending(f.getRequestTrialDate(), f.getSampleSubmissionDate()));
                                 t.getFeedbacks().add(f);
                         });
                 }
@@ -498,13 +535,18 @@ public class ItemService {
                 if (statuses.stream().allMatch(s -> s == TrialStakeholder.Status.COMPLETED)) {
                         return Item.TrialsStatus.COMPLETED;
                 }
-                if (statuses.stream().anyMatch(s -> s == TrialStakeholder.Status.ON_HOLD)) {
+                // ON_HOLD is the retired name for this stakeholder status — legacy rows
+                // still carrying it are treated the same as PENDING here.
+                if (statuses.stream().anyMatch(
+                                s -> s == TrialStakeholder.Status.PENDING
+                                                || s == TrialStakeholder.Status.ON_HOLD)) {
                         return Item.TrialsStatus.ON_HOLD;
                 }
                 // TESTING is a retired stakeholder status — any legacy stakeholder still
                 // carrying it counts toward "In Progress" here, same as IN_PROGRESS itself.
                 if (statuses.stream().anyMatch(
-                                s -> s == TrialStakeholder.Status.IN_PROGRESS || s == TrialStakeholder.Status.TESTING)) {
+                                s -> s == TrialStakeholder.Status.IN_PROGRESS
+                                                || s == TrialStakeholder.Status.TESTING)) {
                         return Item.TrialsStatus.IN_PROGRESS;
                 }
                 // All NOT_STARTED
@@ -537,14 +579,19 @@ public class ItemService {
                 });
         }
 
-        /* Copies every scalar (non-collection) field from the DTO onto the variant
+        /*
+         * Copies every scalar (non-collection) field from the DTO onto the variant
          * entity. Used by convertToVariant (seeding Variant 1 from the item),
-         * createVariant in "blank"/"copy" mode, and updateVariant. */
+         * createVariant in "blank"/"copy" mode, and updateVariant.
+         */
         private void applyVariantScalarFields(ItemVariant v, ItemVariantDTO dto) {
-                if (dto.getCategory() != null) v.setCategory(dto.getCategory());
+                if (dto.getCategory() != null)
+                        v.setCategory(dto.getCategory());
                 v.setDescription(dto.getDescription());
-                if (dto.getInventor() != null) v.setInventor(dto.getInventor());
-                if (dto.getProductDevCompletionDate() != null) v.setProductDevCompletionDate(dto.getProductDevCompletionDate());
+                if (dto.getInventor() != null)
+                        v.setInventor(dto.getInventor());
+                if (dto.getProductDevCompletionDate() != null)
+                        v.setProductDevCompletionDate(dto.getProductDevCompletionDate());
                 // imageUrl is intentionally not copied here — it's a single
                 // item-level asset now (see uploadImage/uploadVariantImage),
                 // not a per-variant field.
@@ -567,7 +614,8 @@ public class ItemService {
                 v.setTotDocumentNo(dto.getTotDocumentNo());
                 v.setFilledDate(dto.getFilledDate());
                 v.getTotDocumentsFiled().clear();
-                if (dto.getTotDocumentsFiled() != null) v.getTotDocumentsFiled().addAll(dto.getTotDocumentsFiled());
+                if (dto.getTotDocumentsFiled() != null)
+                        v.getTotDocumentsFiled().addAll(dto.getTotDocumentsFiled());
 
                 v.setSampleRequestDate(dto.getSampleRequestDate());
                 v.setSampleSubmissionDate(dto.getSampleSubmissionDate());
@@ -575,7 +623,8 @@ public class ItemService {
                 v.setIprTypesLabel(dto.getIprStatusLabel());
 
                 v.getDocumentation().clear();
-                if (dto.getDocumentation() != null) v.getDocumentation().addAll(dto.getDocumentation());
+                if (dto.getDocumentation() != null)
+                        v.getDocumentation().addAll(dto.getDocumentation());
 
                 v.setCrbfCount(dto.getCrbfCount());
                 v.setSsbCount(dto.getSsbCount());
@@ -594,14 +643,16 @@ public class ItemService {
                 List<TrialStakeholder> previous = trialStakeholderRepository.findByItemVariantId(variant.getId());
                 java.util.Map<String, LocalDate> previouslyReceivedBySample = previousReceivedBySample(previous);
                 trialStakeholderRepository.deleteAll(previous);
-                if (stakeholders == null) return;
+                if (stakeholders == null)
+                        return;
                 stakeholders.forEach(dto -> {
                         TrialStakeholder t = buildStakeholder(dto);
                         t.setItemVariant(variant);
                         trialStakeholderRepository.save(t);
                 });
                 if (variant.getItem() != null) {
-                        notifyNewlyReceivedFeedback(variant.getItem(), stakeholders, previouslyReceivedBySample, variant.getId());
+                        notifyNewlyReceivedFeedback(variant.getItem(), stakeholders, previouslyReceivedBySample,
+                                        variant.getId());
                 }
                 if (!stakeholders.isEmpty()) {
                         variant.setTrialsStatus(deriveTrialsStatus(stakeholders));
@@ -612,7 +663,8 @@ public class ItemService {
         private void saveVariantTotPartners(ItemVariant variant, List<ToTPartnerDTO> partners) {
                 totPartnerRepository.deleteAll(
                                 totPartnerRepository.findByItemVariantId(variant.getId()));
-                if (partners == null) return;
+                if (partners == null)
+                        return;
                 partners.forEach(dto -> {
                         ToTPartner p = new ToTPartner();
                         p.setItemVariant(variant);
@@ -628,7 +680,8 @@ public class ItemService {
         private void saveVariantProcurementDetails(ItemVariant variant, List<ProcurementDetailDTO> details) {
                 procurementDetailRepository.deleteAll(
                                 procurementDetailRepository.findByItemVariantId(variant.getId()));
-                if (details == null) return;
+                if (details == null)
+                        return;
                 details.forEach(dto -> {
                         ProcurementDetail p = new ProcurementDetail();
                         p.setItemVariant(variant);
@@ -643,7 +696,8 @@ public class ItemService {
         }
 
         private void saveVariantIprDetail(ItemVariant variant, IPRDetailDTO dto) {
-                if (dto == null) return;
+                if (dto == null)
+                        return;
 
                 IPRDetail ipr = iprDetailRepository.findByItemVariantId(variant.getId()).orElse(new IPRDetail());
                 ipr.setItemVariant(variant);
@@ -683,10 +737,14 @@ public class ItemService {
                 iprDetailRepository.save(ipr);
 
                 List<String> types = new java.util.ArrayList<>();
-                if (Boolean.TRUE.equals(dto.getPatentFiled()) || Boolean.TRUE.equals(dto.getPatentGranted())) types.add("Patent");
-                if (Boolean.TRUE.equals(dto.getTrademarkFiled()) || Boolean.TRUE.equals(dto.getTrademarkGranted())) types.add("Trademark");
-                if (Boolean.TRUE.equals(dto.getDesignFiled()) || Boolean.TRUE.equals(dto.getDesignGranted())) types.add("Design");
-                if (Boolean.TRUE.equals(dto.getCopyrightFiled()) || Boolean.TRUE.equals(dto.getCopyrightGranted())) types.add("Copyright");
+                if (Boolean.TRUE.equals(dto.getPatentFiled()) || Boolean.TRUE.equals(dto.getPatentGranted()))
+                        types.add("Patent");
+                if (Boolean.TRUE.equals(dto.getTrademarkFiled()) || Boolean.TRUE.equals(dto.getTrademarkGranted()))
+                        types.add("Trademark");
+                if (Boolean.TRUE.equals(dto.getDesignFiled()) || Boolean.TRUE.equals(dto.getDesignGranted()))
+                        types.add("Design");
+                if (Boolean.TRUE.equals(dto.getCopyrightFiled()) || Boolean.TRUE.equals(dto.getCopyrightGranted()))
+                        types.add("Copyright");
                 variant.setIprTypesLabel(types.isEmpty() ? null : String.join(", ", types));
 
                 boolean anyGranted = Boolean.TRUE.equals(dto.getPatentGranted())
@@ -702,10 +760,14 @@ public class ItemService {
                                 && !Boolean.TRUE.equals(dto.getDesignFiled())
                                 && !Boolean.TRUE.equals(dto.getCopyrightFiled());
 
-                if (anyGranted) variant.setIprStatus(Item.IPRStatus.GRANTED);
-                else if (trademarkOnly) variant.setIprStatus(Item.IPRStatus.TRADEMARK);
-                else if (anyFiled) variant.setIprStatus(Item.IPRStatus.PATENT_FILED);
-                else variant.setIprStatus(Item.IPRStatus.NOT_FILED);
+                if (anyGranted)
+                        variant.setIprStatus(Item.IPRStatus.GRANTED);
+                else if (trademarkOnly)
+                        variant.setIprStatus(Item.IPRStatus.TRADEMARK);
+                else if (anyFiled)
+                        variant.setIprStatus(Item.IPRStatus.PATENT_FILED);
+                else
+                        variant.setIprStatus(Item.IPRStatus.NOT_FILED);
 
                 itemVariantRepository.save(variant);
         }
@@ -843,6 +905,7 @@ public class ItemService {
         public ItemDTO.Response uploadImage(Long id, MultipartFile file) throws IOException {
                 Item item = findById(id);
                 assertAccess(item);
+                validateUpload(file, ALLOWED_IMAGE_EXT, "an image");
 
                 String ext = getExtension(file.getOriginalFilename());
                 String filename = UUID.randomUUID() + "." + ext;
@@ -858,11 +921,42 @@ public class ItemService {
                 return toResponse(saved);
         }
 
+        /*
+         * ── DELETE IMAGE ──
+         * The image is a single item-level asset shared by the item and every
+         * one of its variants (see uploadVariantImage above) — there is no
+         * such thing as removing it "for just this variant". Deletes the file
+         * from disk (best-effort — a missing file on disk isn't fatal) and
+         * clears imageUrl so every variant's edit screen reflects the removal
+         * too.
+         */
+        @Transactional
+        public ItemDTO.Response deleteImage(Long id) {
+                Item item = findById(id);
+                assertAccess(item);
+
+                String existingUrl = item.getImageUrl();
+                if (existingUrl != null && existingUrl.startsWith("/uploads/")) {
+                        String storedName = existingUrl.substring("/uploads/".length());
+                        try {
+                                Files.deleteIfExists(Paths.get(uploadDir).resolve(storedName));
+                        } catch (IOException e) {
+                                log.warn("Could not delete stored image file for item {}: {}", id, e.getMessage());
+                        }
+                }
+
+                item.setImageUrl(null);
+                Item saved = itemRepository.save(item);
+                evictAfterCommit("item-detail", id);
+                return toResponse(saved);
+        }
+
         /* ── UPLOAD DOCUMENT ── */
         @Transactional
         public ItemDTO.Response uploadDocument(Long id, String docName, MultipartFile file) throws IOException {
                 Item item = findById(id);
                 assertAccess(item);
+                validateUpload(file, ALLOWED_DOCUMENT_EXT, "a document");
 
                 String ext = getExtension(file.getOriginalFilename());
                 String storedName = UUID.randomUUID() + "." + ext;
@@ -884,11 +978,13 @@ public class ItemService {
                 return toResponse(findById(id));
         }
 
-        /* ── CONVERT ITEM TO VARIANTS ──
+        /*
+         * ── CONVERT ITEM TO VARIANTS ──
          * Turns an item that has no variants yet into one with a first variant,
          * moving (not duplicating) its existing scalar fields and child records
          * across. Nothing is lost — the item becomes a container and Variant 1
-         * carries everything the item used to hold directly. */
+         * carries everything the item used to hold directly.
+         */
         @Transactional
         public ItemDTO.Response convertToVariant(Long id, ItemVariantDTO.ConvertRequest req) {
                 Item item = findById(id);
@@ -917,13 +1013,15 @@ public class ItemService {
                 v.setTotStatus(item.getTotStatus());
                 v.setTotDocumentNo(item.getTotDocumentNo());
                 v.setFilledDate(item.getFilledDate());
-                if (item.getTotDocumentsFiled() != null) v.getTotDocumentsFiled().addAll(item.getTotDocumentsFiled());
+                if (item.getTotDocumentsFiled() != null)
+                        v.getTotDocumentsFiled().addAll(item.getTotDocumentsFiled());
                 v.setTrialsStatus(item.getTrialsStatus());
                 v.setSampleRequestDate(item.getSampleRequestDate());
                 v.setSampleSubmissionDate(item.getSampleSubmissionDate());
                 v.setIprStatus(item.getIprStatus());
                 v.setIprTypesLabel(item.getIprTypesLabel());
-                if (item.getDocumentation() != null) v.getDocumentation().addAll(item.getDocumentation());
+                if (item.getDocumentation() != null)
+                        v.getDocumentation().addAll(item.getDocumentation());
                 v.setCrbfCount(item.getCrbfCount());
                 v.setSsbCount(item.getSsbCount());
                 v.setWeight(item.getWeight());
@@ -969,14 +1067,16 @@ public class ItemService {
                 return toResponse(findById(id));
         }
 
-        /* ── CREATE VARIANT (blank or copied from an existing variant) ──
+        /*
+         * ── CREATE VARIANT (blank or copied from an existing variant) ──
          * Adds a new variant directly under the item. The item's own Basic
          * Info/ToT/IPR/Trial Stakeholders/Documentation/Procurement data is
          * left completely untouched — a variant is purely an addition, never
          * a forced conversion of the base item into "Variant 1". This is
          * intentional: earlier this required convertToVariant to run first,
          * which silently turned the item's own data into an auto-generated
-         * "Variant 1" the user never asked for. That requirement is gone. */
+         * "Variant 1" the user never asked for. That requirement is gone.
+         */
         @Transactional
         public ItemDTO.Response createVariant(Long id, ItemVariantDTO.CreateRequest req) {
                 Item item = findById(id);
@@ -998,12 +1098,15 @@ public class ItemService {
                                 deepCopyItemDataToVariant(item, saved);
                         } else {
                                 if (req.getCopyFromVariantId() == null) {
-                                        throw new IllegalArgumentException("copyFromVariantId is required when mode is 'copy'");
+                                        throw new IllegalArgumentException(
+                                                        "copyFromVariantId is required when mode is 'copy'");
                                 }
                                 ItemVariant source = itemVariantRepository.findById(req.getCopyFromVariantId())
-                                                .orElseThrow(() -> new ResourceNotFoundException("Variant", "id", req.getCopyFromVariantId()));
+                                                .orElseThrow(() -> new ResourceNotFoundException("Variant", "id",
+                                                                req.getCopyFromVariantId()));
                                 if (source.getItem() == null || !source.getItem().getId().equals(id)) {
-                                        throw new IllegalArgumentException("Source variant does not belong to this item");
+                                        throw new IllegalArgumentException(
+                                                        "Source variant does not belong to this item");
                                 }
                                 deepCopyVariantData(source, saved);
                         }
@@ -1012,13 +1115,23 @@ public class ItemService {
                 // the user fills in every tab from scratch, completely independent of
                 // every other variant.
 
+                notificationService.createNotification(
+                                "Variant added",
+                                saved.getName() + " has been added as a new variant of " + item.getName() + ".",
+                                Notification.NotificationType.ITEM_ADDED,
+                                item.getId(), item.getName(),
+                                item.getCreatedBy() != null ? item.getCreatedBy().getId() : null,
+                                saved.getId(), null, null);
+
                 evictItemCaches(id);
                 return toResponse(findById(id));
         }
 
-        /* Deep-copies every scalar field and child record from `source` onto
+        /*
+         * Deep-copies every scalar field and child record from `source` onto
          * `target` as brand-new, independent rows — nothing is shared, so later
-         * edits to either variant never affect the other. */
+         * edits to either variant never affect the other.
+         */
         private void deepCopyVariantData(ItemVariant source, ItemVariant target) {
                 target.setCategory(source.getCategory());
                 target.setDescription(source.getDescription());
@@ -1032,14 +1145,16 @@ public class ItemService {
                 target.setTotDocumentNo(source.getTotDocumentNo());
                 target.setFilledDate(source.getFilledDate());
                 target.getTotDocumentsFiled().clear();
-                if (source.getTotDocumentsFiled() != null) target.getTotDocumentsFiled().addAll(source.getTotDocumentsFiled());
+                if (source.getTotDocumentsFiled() != null)
+                        target.getTotDocumentsFiled().addAll(source.getTotDocumentsFiled());
                 target.setTrialsStatus(source.getTrialsStatus());
                 target.setSampleRequestDate(source.getSampleRequestDate());
                 target.setSampleSubmissionDate(source.getSampleSubmissionDate());
                 target.setIprStatus(source.getIprStatus());
                 target.setIprTypesLabel(source.getIprTypesLabel());
                 target.getDocumentation().clear();
-                if (source.getDocumentation() != null) target.getDocumentation().addAll(source.getDocumentation());
+                if (source.getDocumentation() != null)
+                        target.getDocumentation().addAll(source.getDocumentation());
                 target.setCrbfCount(source.getCrbfCount());
                 target.setSsbCount(source.getSsbCount());
                 target.setWeight(source.getWeight());
@@ -1116,11 +1231,13 @@ public class ItemService {
                 // the user re-uploads whichever ones apply to it.
         }
 
-        /* Deep-copies every scalar field and child record from the base `Item`
+        /*
+         * Deep-copies every scalar field and child record from the base `Item`
          * itself onto `target` — used when the item has no other variants yet,
          * so the user can start their first variant from the item's own data
          * instead of a forced/implicit "base variant". Mirrors
-         * deepCopyVariantData(ItemVariant, ItemVariant) field-for-field. */
+         * deepCopyVariantData(ItemVariant, ItemVariant) field-for-field.
+         */
         private void deepCopyItemDataToVariant(Item source, ItemVariant target) {
                 target.setCategory(source.getCategory());
                 target.setDescription(source.getDescription());
@@ -1134,14 +1251,16 @@ public class ItemService {
                 target.setTotDocumentNo(source.getTotDocumentNo());
                 target.setFilledDate(source.getFilledDate());
                 target.getTotDocumentsFiled().clear();
-                if (source.getTotDocumentsFiled() != null) target.getTotDocumentsFiled().addAll(source.getTotDocumentsFiled());
+                if (source.getTotDocumentsFiled() != null)
+                        target.getTotDocumentsFiled().addAll(source.getTotDocumentsFiled());
                 target.setTrialsStatus(source.getTrialsStatus());
                 target.setSampleRequestDate(source.getSampleRequestDate());
                 target.setSampleSubmissionDate(source.getSampleSubmissionDate());
                 target.setIprStatus(source.getIprStatus());
                 target.setIprTypesLabel(source.getIprTypesLabel());
                 target.getDocumentation().clear();
-                if (source.getDocumentation() != null) target.getDocumentation().addAll(source.getDocumentation());
+                if (source.getDocumentation() != null)
+                        target.getDocumentation().addAll(source.getDocumentation());
                 target.setCrbfCount(source.getCrbfCount());
                 target.setSsbCount(source.getSsbCount());
                 target.setWeight(source.getWeight());
@@ -1250,13 +1369,15 @@ public class ItemService {
                 return toResponse(findById(id));
         }
 
-        /* ── UPLOAD VARIANT IMAGE ──
+        /*
+         * ── UPLOAD VARIANT IMAGE ──
          * Image is a single item-level asset shared by the item and every one
          * of its variants — there is no independent per-variant picture.
          * Kept as an endpoint for backward compatibility (older clients may
          * still call it from a variant's edit screen), but it now updates the
          * item's own image, the same as uploadImage(id, file) above, so the
-         * result is never stale/variant-only data that toResponse() ignores. */
+         * result is never stale/variant-only data that toResponse() ignores.
+         */
         @Transactional
         public ItemDTO.Response uploadVariantImage(Long id, Long variantId, MultipartFile file) throws IOException {
                 Item item = findById(id);
@@ -1264,6 +1385,7 @@ public class ItemService {
                 // Validated so a bad variantId still 404s the way callers expect,
                 // even though the upload itself now targets the item.
                 findVariantOrThrow(item, variantId);
+                validateUpload(file, ALLOWED_IMAGE_EXT, "an image");
 
                 String ext = getExtension(file.getOriginalFilename());
                 String filename = UUID.randomUUID() + "." + ext;
@@ -1279,17 +1401,53 @@ public class ItemService {
                 return toResponse(findById(id));
         }
 
-        /* ── DELETE VARIANT ── */
+        /*
+         * ── DELETE VARIANT ──
+         * Blocked (409 HAS_DEPENDENCIES) when the variant has related
+         * documents, procurement records, or trial records attached —
+         * cascading those away silently would destroy history the user
+         * likely still wants. The frontend offers "Archive instead?" in
+         * that case (see archiveVariant below).
+         */
         @Transactional
         public ItemDTO.Response deleteVariant(Long id, Long variantId) {
                 Item item = findById(id);
                 assertAccess(item);
 
                 ItemVariant v = findVariantOrThrow(item, variantId);
+
+                int documentCount = v.getUploadedDocuments() != null ? v.getUploadedDocuments().size() : 0;
+                int procurementCount = v.getProcurementDetails() != null ? v.getProcurementDetails().size() : 0;
+                int trialCount = v.getTrialStakeholders() != null ? v.getTrialStakeholders().size() : 0;
+
+                if (documentCount > 0 || procurementCount > 0 || trialCount > 0) {
+                        throw new HasDependenciesException(
+                                        "This variant has related records attached and can't be deleted.",
+                                        documentCount, procurementCount, trialCount);
+                }
+
                 // cascade = ALL + orphanRemoval on ItemVariant's own child collections
-                // takes care of removing its ToT partners, trial stakeholders,
-                // procurement details, documents and IPR record along with it.
+                // takes care of removing its ToT partners and IPR record along with it.
                 itemVariantRepository.delete(v);
+
+                evictItemCaches(id);
+                return toResponse(findById(id));
+        }
+
+        /*
+         * ── ARCHIVE VARIANT ──
+         * Soft-delete fallback for a variant that deleteVariant() blocked —
+         * hides it from active use (frontend filters on `archived`) while
+         * keeping every related document/procurement/trial record intact.
+         */
+        @Transactional
+        public ItemDTO.Response archiveVariant(Long id, Long variantId) {
+                Item item = findById(id);
+                assertAccess(item);
+
+                ItemVariant v = findVariantOrThrow(item, variantId);
+                v.setArchived(true);
+                itemVariantRepository.save(v);
 
                 evictItemCaches(id);
                 return toResponse(findById(id));
@@ -1417,10 +1575,12 @@ public class ItemService {
                 item.setWarranty(r.getWarranty());
         }
 
-        /* Maps a variant to its DTO. A variant is meant to be fully independent
+        /*
+         * Maps a variant to its DTO. A variant is meant to be fully independent
          * once created via convert/create-variant — but for legacy variants
          * saved before this DTO existed, an unset field/collection still falls
-         * back to the parent item's own value so nothing regresses to blank. */
+         * back to the parent item's own value so nothing regresses to blank.
+         */
         private ItemVariantDTO toVariantDTO(ItemVariant v, Item item) {
                 List<ToTPartnerDTO> totPartners = totPartnerRepository.findByItemVariantId(v.getId())
                                 .stream()
@@ -1440,7 +1600,8 @@ public class ItemService {
                                 .map(this::toStakeholderDTO)
                                 .toList();
 
-                List<ProcurementDetailDTO> procurementDetails = procurementDetailRepository.findByItemVariantId(v.getId())
+                List<ProcurementDetailDTO> procurementDetails = procurementDetailRepository
+                                .findByItemVariantId(v.getId())
                                 .stream()
                                 .map(p -> ProcurementDetailDTO.builder()
                                                 .id(p.getId())
@@ -1478,29 +1639,38 @@ public class ItemService {
                                 .description(v.getDescription())
                                 .inventor(v.getInventor() != null ? v.getInventor() : item.getInventor())
                                 .productDevCompletionDate(v.getProductDevCompletionDate() != null
-                                                ? v.getProductDevCompletionDate() : item.getProductDevCompletionDate())
+                                                ? v.getProductDevCompletionDate()
+                                                : item.getProductDevCompletionDate())
                                 .imageUrl(item.getImageUrl())
                                 .developmentStatus(formatEnum(
-                                                v.getDevelopmentStatus() != null ? v.getDevelopmentStatus() : item.getDevelopmentStatus()))
+                                                v.getDevelopmentStatus() != null ? v.getDevelopmentStatus()
+                                                                : item.getDevelopmentStatus()))
                                 .developmentDate(v.getDevelopmentDate() != null
                                                 ? v.getDevelopmentDate().toString()
-                                                : (item.getDevelopmentDate() != null ? item.getDevelopmentDate().toString() : null))
+                                                : (item.getDevelopmentDate() != null
+                                                                ? item.getDevelopmentDate().toString()
+                                                                : null))
                                 .remarks(v.getRemarks())
-                                .totStatus(formatEnum(v.getTotStatus() != null ? v.getTotStatus() : item.getTotStatus()))
+                                .totStatus(formatEnum(
+                                                v.getTotStatus() != null ? v.getTotStatus() : item.getTotStatus()))
                                 .totDocumentNo(v.getTotDocumentNo())
                                 .filledDate(v.getFilledDate())
-                                .totDocumentsFiled(v.getTotDocumentsFiled() == null ? new ArrayList<>() : new ArrayList<>(v.getTotDocumentsFiled()))
+                                .totDocumentsFiled(v.getTotDocumentsFiled() == null ? new ArrayList<>()
+                                                : new ArrayList<>(v.getTotDocumentsFiled()))
                                 .totPartners(totPartners)
                                 .hasOverdueTot(hasOverdueTot(totPartners))
                                 .totOverdueMessage(totOverdueMessage(totPartners))
-                                .trialsStatus(formatEnum(v.getTrialsStatus() != null ? v.getTrialsStatus() : item.getTrialsStatus()))
+                                .trialsStatus(formatEnum(v.getTrialsStatus() != null ? v.getTrialsStatus()
+                                                : item.getTrialsStatus()))
                                 .sampleRequestDate(v.getSampleRequestDate())
                                 .sampleSubmissionDate(v.getSampleSubmissionDate())
                                 .trialStakeholders(trialStakeholders)
-                                .iprStatus(formatEnum(v.getIprStatus() != null ? v.getIprStatus() : item.getIprStatus()))
+                                .iprStatus(formatEnum(
+                                                v.getIprStatus() != null ? v.getIprStatus() : item.getIprStatus()))
                                 .iprStatusLabel(v.getIprTypesLabel())
                                 .iprDetail(iprDetail)
-                                .documentation(v.getDocumentation() == null ? new ArrayList<>() : new ArrayList<>(v.getDocumentation()))
+                                .documentation(v.getDocumentation() == null ? new ArrayList<>()
+                                                : new ArrayList<>(v.getDocumentation()))
                                 .uploadedDocuments(uploadedDocuments)
                                 .crbfCount(v.getCrbfCount())
                                 .ssbCount(v.getSsbCount())
@@ -1512,7 +1682,8 @@ public class ItemService {
                                 .unitCost(v.getUnitCost() != null ? v.getUnitCost() : item.getUnitCost())
                                 .vendor(v.getVendor() != null ? v.getVendor() : item.getVendor())
                                 .warranty(v.getWarranty() != null ? v.getWarranty() : item.getWarranty())
-                                .hasOverdueFeedback(trialStakeholders.stream().anyMatch(TrialStakeholderDTO::isHasOverdueFeedback))
+                                .hasOverdueFeedback(trialStakeholders.stream()
+                                                .anyMatch(TrialStakeholderDTO::isHasOverdueFeedback))
                                 .build();
         }
 
@@ -1584,52 +1755,67 @@ public class ItemService {
                                 .build();
         }
 
-        /** True if any trial-feedback round anywhere on this item (its own
-         *  stakeholders, or any variant's) is currently overdue — drives the ⚠
-         *  warning icon on the item card/table. */
+        /**
+         * True if any trial-feedback round anywhere on this item (its own
+         * stakeholders, or any variant's) is currently overdue — drives the ⚠
+         * warning icon on the item card/table.
+         */
         private boolean itemHasOverdueFeedback(Long itemId) {
                 boolean onItem = trialStakeholderRepository.findByItemId(itemId).stream()
                                 .anyMatch(s -> trialFeedbackRepository.findByTrialStakeholderId(s.getId())
                                                 .stream().anyMatch(TrialFeedback::isFeedbackOverdue));
-                if (onItem) return true;
+                if (onItem)
+                        return true;
                 return itemVariantRepository.findByItemId(itemId).stream()
                                 .anyMatch(v -> trialStakeholderRepository.findByItemVariantId(v.getId()).stream()
-                                                .anyMatch(s -> trialFeedbackRepository.findByTrialStakeholderId(s.getId())
+                                                .anyMatch(s -> trialFeedbackRepository
+                                                                .findByTrialStakeholderId(s.getId())
                                                                 .stream().anyMatch(TrialFeedback::isFeedbackOverdue)));
         }
 
-        /** True once a ToT partner's validity date has passed with no renewal
-         *  recorded — drives the ⚠ warning icon for expired ToT validity. */
+        /**
+         * True once a ToT partner's validity date has passed with no renewal
+         * recorded — drives the ⚠ warning icon for expired ToT validity.
+         */
         private boolean hasOverdueTot(List<ToTPartnerDTO> totPartners) {
-                if (totPartners == null) return false;
+                if (totPartners == null)
+                        return false;
                 LocalDate today = LocalDate.now();
                 return totPartners.stream()
-                                .anyMatch(p -> p.getTotValidityDate() != null && p.getTotValidityDate().isBefore(today));
+                                .anyMatch(p -> p.getTotValidityDate() != null
+                                                && p.getTotValidityDate().isBefore(today));
         }
 
         /** Human-readable reason shown on hover for the ToT-overdue warning icon. */
         private String totOverdueMessage(List<ToTPartnerDTO> totPartners) {
-                if (totPartners == null) return null;
+                if (totPartners == null)
+                        return null;
                 LocalDate today = LocalDate.now();
                 return totPartners.stream()
                                 .filter(p -> p.getTotValidityDate() != null && p.getTotValidityDate().isBefore(today))
                                 .map(p -> "ToT validity with "
-                                                + (p.getTotFirm() != null && !p.getTotFirm().isBlank() ? p.getTotFirm() : "partner")
+                                                + (p.getTotFirm() != null && !p.getTotFirm().isBlank() ? p.getTotFirm()
+                                                                : "partner")
                                                 + " expired on " + p.getTotValidityDate() + " — renewal pending.")
                                 .findFirst().orElse(null);
         }
 
-        /** True when the item's own ToT partners, or any variant's, have an
-         *  expired validity date — used for the item-card/table icon, which
-         *  (unlike the detail view) doesn't have the full totPartners list handy. */
+        /**
+         * True when the item's own ToT partners, or any variant's, have an
+         * expired validity date — used for the item-card/table icon, which
+         * (unlike the detail view) doesn't have the full totPartners list handy.
+         */
         private boolean itemHasOverdueTot(Long itemId) {
                 LocalDate today = LocalDate.now();
                 boolean onItem = totPartnerRepository.findByItemId(itemId).stream()
-                                .anyMatch(p -> p.getTotValidityDate() != null && p.getTotValidityDate().isBefore(today));
-                if (onItem) return true;
+                                .anyMatch(p -> p.getTotValidityDate() != null
+                                                && p.getTotValidityDate().isBefore(today));
+                if (onItem)
+                        return true;
                 return itemVariantRepository.findByItemId(itemId).stream()
                                 .anyMatch(v -> totPartnerRepository.findByItemVariantId(v.getId()).stream()
-                                                .anyMatch(p -> p.getTotValidityDate() != null && p.getTotValidityDate().isBefore(today)));
+                                                .anyMatch(p -> p.getTotValidityDate() != null
+                                                                && p.getTotValidityDate().isBefore(today)));
         }
 
         private ItemDTO.Response toResponse(Item item) {
@@ -1732,11 +1918,10 @@ public class ItemService {
                                 .totDocumentNo(item.getTotDocumentNo())
                                 .filledDate(item.getFilledDate())
                                 .totDocumentsFiled(
-                                item.getTotDocumentsFiled() == null
-                                        ? new ArrayList<>()
-                                        : new ArrayList<>(item.getTotDocumentsFiled())
-                                )
-                                                                .trialsStatus(formatEnum(item.getTrialsStatus()))
+                                                item.getTotDocumentsFiled() == null
+                                                                ? new ArrayList<>()
+                                                                : new ArrayList<>(item.getTotDocumentsFiled()))
+                                .trialsStatus(formatEnum(item.getTrialsStatus()))
                                 .sampleRequestDate(item.getSampleRequestDate())
                                 .sampleSubmissionDate(item.getSampleSubmissionDate())
                                 .trialStakeholders(trialStakeholders)
@@ -1745,10 +1930,9 @@ public class ItemService {
                                                 ? item.getIprTypesLabel()
                                                 : formatEnum(item.getIprStatus()))
                                 .documentation(
-                                item.getDocumentation() == null
-                                        ? new ArrayList<>()
-                                        : new ArrayList<>(item.getDocumentation())
-                                )
+                                                item.getDocumentation() == null
+                                                                ? new ArrayList<>()
+                                                                : new ArrayList<>(item.getDocumentation()))
                                 .uploadedDocuments(uploadedDocuments)
                                 .variants(variants)
                                 .hasVariants(!variants.isEmpty())
@@ -1850,7 +2034,8 @@ public class ItemService {
                         case "IN_PROGRESS" -> "In Progress";
                         case "TESTING" -> "Testing";
                         case "COMPLETED" -> "Completed";
-                        case "ON_HOLD" -> "Pending";
+                        case "PENDING" -> "Pending";
+                        case "ON_HOLD" -> "Pending"; // retired name, same status as PENDING
                         default -> e.name();
                 };
         }
@@ -1887,5 +2072,35 @@ public class ItemService {
                         return "jpg";
                 int dot = filename.lastIndexOf('.');
                 return dot >= 0 ? filename.substring(dot + 1).toLowerCase() : "jpg";
+        }
+
+        /*
+         * ── UPLOAD VALIDATION ──
+         * None of the three upload endpoints (item image, variant image,
+         * document) validated the file at all beyond Spring's global 5MB size
+         * cap — any extension was accepted and written straight into
+         * /uploads/**, which WebConfig serves back as static files. That's an
+         * unrestricted-file-upload hole: an .html or .svg uploaded as a
+         * "document" would be served from our own origin and execute in the
+         * browser (stored XSS), and nothing stopped a 0-byte or corrupt file
+         * from silently overwriting a real one. Every upload path now runs
+         * through this check first.
+         */
+        private static final java.util.Set<String> ALLOWED_IMAGE_EXT = java.util.Set.of(
+                        "jpg", "jpeg", "png", "webp", "gif");
+        private static final java.util.Set<String> ALLOWED_DOCUMENT_EXT = java.util.Set.of(
+                        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+                        "jpg", "jpeg", "png", "webp", "csv", "txt");
+
+        private void validateUpload(MultipartFile file, java.util.Set<String> allowedExt, String kind) {
+                if (file == null || file.isEmpty()) {
+                        throw new IllegalArgumentException("Please choose a file to upload.");
+                }
+                String ext = getExtension(file.getOriginalFilename());
+                if (!allowedExt.contains(ext)) {
+                        throw new IllegalArgumentException(
+                                        "Unsupported file type ." + ext + " for " + kind + ". Allowed types: "
+                                                        + String.join(", ", allowedExt));
+                }
         }
 }

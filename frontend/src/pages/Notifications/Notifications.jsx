@@ -558,9 +558,18 @@ export default function Notifications() {
         </div>
 
         {loading ? (
-          <div className="notif-page__loading">
-            <span className="notif-page__spinner" />
-            Loading notifications…
+          <div className="notif-page__skeleton" aria-busy="true" aria-label="Loading notifications">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="notif-page__skeleton-row">
+                <span className="notif-page__skeleton-bar" />
+                <span className="notif-page__skeleton-icon shimmer" />
+                <div className="notif-page__skeleton-body">
+                  <span className="notif-page__skeleton-line shimmer" style={{ width: "38%" }} />
+                  <span className="notif-page__skeleton-line shimmer" style={{ width: "72%" }} />
+                </div>
+                <span className="notif-page__skeleton-time shimmer" />
+              </div>
+            ))}
           </div>
         ) : filtered.length === 0 ? (
           <div className="notif-page__empty">

@@ -1,78 +1,102 @@
 /* ══════════════════════════════
    STEPPER HEADER (eyebrow + progress bar + connected steps)
 ══════════════════════════════ */
+/* Sized to match Add Item's / Edit Variant's stepper exactly (same
+   .aif__stepper-wrap dimensions) so all three wizards read as one
+   consistent component instead of three different sizes. */
 .eif__stepper-wrap {
   background: var(--glass-bg);
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  padding: 16px 22px 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  margin-bottom: 20px;
+  border-radius: 12px;
+  padding: 14px 18px 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  margin-bottom: 16px;
 }
 
 .eif__stepper-meta {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 9px;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.eif__stepper-meta-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
 }
 
 .eif__eyebrow {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
-  color: var(--color-text-secondary);
+  color: var(--color-text-muted);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .eif__progress-pct {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   color: var(--color-primary);
   font-variant-numeric: tabular-nums;
   background: var(--color-primary-light);
-  padding: 3px 10px;
+  padding: 2px 9px;
   border-radius: 999px;
   letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
+/* The "always save from anywhere" header action — same visual weight as
+   the footer's primary save button so it doesn't read as a second,
+   competing call to action, just a shortcut to the same one. */
+.eif__header-save {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  height: 32px; padding: 0 16px;
+  font-size: 12.5px; font-weight: 700; border-radius: var(--radius-md);
+  border: none; cursor: pointer; font-family: inherit;
+  background: var(--gradient-brand); color: var(--color-text-on-accent);
+  box-shadow: 0 1px 2px rgba(91,61,240,0.3);
+  transition: filter 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.eif__header-save svg { width: 13px; height: 13px; }
+.eif__header-save:hover:not(:disabled) { filter: brightness(1.06); box-shadow: var(--glow-primary); transform: translateY(-1px); }
+.eif__header-save:active:not(:disabled) { transform: scale(0.97); }
+.eif__header-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* Slim overall-progress bar — a second, always-visible read on how far
+   through the form you are, independent of which step you're currently
+   looking at (the per-step dots below only show step position, not the
+   %, at a glance). Was referenced in EditVariantForm's markup with no
+   CSS at all (invisible, zero-height div) — now actually styled and
+   shared identically across all three item/variant wizards. */
 .eif__progress-track {
-  height: 8px;
-  border-radius: 4px;
+  height: 5px;
+  border-radius: 999px;
   background: var(--color-surface-alt);
   overflow: hidden;
-  margin-bottom: 20px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-.eif__progress-fill {
+  margin-bottom: 16px;
   position: relative;
+}
+.eif__progress-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 999px;
   background: var(--gradient-brand);
-  box-shadow: var(--glow-primary);
-  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
   overflow: hidden;
 }
-
 .eif__progress-sheen {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    100deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.35) 42%,
-    rgba(255, 255, 255, 0.5) 50%,
-    rgba(255, 255, 255, 0.35) 58%,
-    transparent 80%
-  );
-  background-size: 200% 100%;
-  animation: eifSheenSweep 2.6s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+  animation: eif-sheen 2.2s ease-in-out infinite;
 }
-
-@keyframes eifSheenSweep {
-  0%   { background-position: 150% 0; }
-  100% { background-position: -50% 0; }
+@keyframes eif-sheen {
+  0%   { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
 }
 
 /* ══════════════════════════════
@@ -89,17 +113,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   flex: 1 1 0;
   min-width: 0;
-  padding: 2px 4px 0;
+  padding: 0 2px;
   color: var(--color-text-muted);
 }
 
 .eif__tab::before {
   content: "";
   position: absolute;
-  top: 15px;
+  top: 12px;
   left: -50%;
   width: 100%;
   height: 2px;
@@ -110,9 +134,11 @@
 .eif__tab:first-child::before { content: none; }
 .eif__tab--reached::before { background: var(--color-primary); }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .eif__tab-lbl { display: none; }
-  .eif__stepper-wrap { padding: 14px 14px 12px; }
+  .eif__stepper-wrap { padding: 12px 14px 13px; }
+  .eif__stepper-meta { flex-wrap: wrap; }
+  .eif__header-save { order: 3; width: 100%; justify-content: center; }
 }
 .eif__tab--clickable { cursor: pointer; }
 .eif__tab--clickable:hover .eif__tab-lbl { color: var(--color-text-secondary); }
@@ -124,29 +150,26 @@
 .eif__tab-dot {
   position: relative;
   z-index: 1;
-  width: 30px; height: 30px; border-radius: 50%;
+  width: 24px; height: 24px; border-radius: 50%;
   background: var(--color-surface); color: var(--color-text-muted);
-  border: 2px solid var(--color-border);
-  font-size: 12.5px; font-weight: 700;
+  border: 1.5px solid var(--color-border);
+  font-size: 10.5px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
 }
 .eif__tab-dot--active {
   background: var(--gradient-brand); border-color: transparent; color: var(--color-text-on-accent);
-  box-shadow: 0 0 0 4px var(--color-primary-light);
-  animation: eifDotPulse 2.4s ease-in-out infinite;
-}
-
-@keyframes eifDotPulse {
-  0%, 100% { box-shadow: 0 0 0 4px var(--color-primary-light); }
-  50%      { box-shadow: 0 0 0 7px var(--color-primary-light); }
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 .eif__tab-dot--done   { background: var(--gradient-brand); border-color: transparent; color: var(--color-text-on-accent); }
-.eif__tab-dot--done svg { width: 13px; height: 13px; stroke: var(--color-text-on-accent); stroke-width: 3; }
+.eif__tab-dot--done svg { width: 10px; height: 10px; stroke: var(--color-text-on-accent); stroke-width: 3; }
+.eif__tab-dot--error  { background: var(--color-danger); border-color: transparent; color: var(--color-text-on-accent); font-weight: 800; }
+.eif__tab--error .eif__tab-lbl { color: var(--color-danger); }
 
 .eif__tab-lbl {
-  font-size: 11.5px; font-weight: 600; line-height: 1.3; text-align: center;
-  max-width: 92px; transition: color 0.15s;
+  font-size: 10px; font-weight: 600; line-height: 1.2; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%; transition: color 0.15s;
 }
 .eif__tab--active .eif__tab-lbl { color: var(--color-primary); font-weight: 700; }
 .eif__tab--done   .eif__tab-lbl { color: var(--color-text-secondary); }
@@ -170,6 +193,47 @@
   width: 100%;
   overflow: hidden;
 }
+
+/* ══════════════════════════════
+   CONCURRENT-EDIT CONFLICT BANNER
+   ══════════════════════════════ */
+.eif__conflict-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border-radius: 10px;
+  border: 1px solid var(--color-danger);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+.eif__conflict-banner-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-top: 2px;
+}
+.eif__conflict-banner-icon svg { width: 18px; height: 18px; }
+.eif__conflict-banner-text {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-primary, inherit);
+}
+.eif__conflict-banner-btn {
+  flex-shrink: 0;
+  border: 1px solid var(--color-danger);
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.eif__conflict-banner-btn:hover { background: var(--color-danger); color: #fff; }
 
 .eif__card::before {
   content: "";

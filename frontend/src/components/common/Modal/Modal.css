@@ -6,7 +6,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 500;
+  /* Must outrank every other overlay in the app (custom modals like
+   * VariantSelectModal at 1000, the kebab DropdownMenu at 1200/1201,
+   * AddRecordModal at 9999) — this is the shared confirmation/dialog
+   * component, and it's routinely opened *on top of* one of those while
+   * they're still open (e.g. "Delete" inside VariantSelectModal). If this
+   * z-index isn't the highest in the app, the confirmation renders behind
+   * whatever opened it instead of as a dialog on top of it. */
+  z-index: 10000;
   padding: 16px;
   animation: backdrop-in 0.18s ease;
 }

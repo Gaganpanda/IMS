@@ -15,6 +15,7 @@ export default function StatusBadge({ status, label, size = "md" }) {
 
   return (
     <span className={`status-badge status-badge--${size} status-badge--${variant}`}>
+      <span className="status-badge__dot" />
       {label || status}
     </span>
   );

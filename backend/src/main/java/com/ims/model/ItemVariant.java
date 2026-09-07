@@ -19,6 +19,14 @@ public class ItemVariant {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /* Optimistic-locking token — same purpose as Item#version. Variants are
+     * edited independently of their parent item, so they need their own
+     * conflict check. */
+    @Version
+    @Column(name = "version")
+    @Builder.Default
+    private Long version = 0L;
+
     @Column(nullable = false, length = 200)
     private String name;
 
@@ -144,4 +152,14 @@ public class ItemVariant {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id")
     private Item item;
+
+    /* Soft-delete flag. Variants with related documents/procurement/trial
+     * records are archived instead of hard-deleted (see
+     * ItemService#deleteVariant) so those related records don't silently
+     * lose their parent. Archived variants are kept in place — callers that
+     * want to hide them from a picker/table should filter on this flag
+     * client-side or query-side rather than the records being removed. */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean archived = false;
 }

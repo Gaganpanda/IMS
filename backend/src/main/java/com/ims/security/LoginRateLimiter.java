@@ -2,6 +2,7 @@ package com.ims.security;
 
 import com.ims.exception.TooManyRequestsException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -48,6 +49,34 @@ public class LoginRateLimiter {
     /** Called after a successful login so a legitimate user isn't penalised for earlier retries. */
     public void reset(String clientIp) {
         attemptsByIp.remove(clientIp);
+    }
+
+    /*
+     * FIX: this map previously had no eviction path at all — every distinct IP
+     * that ever hit /auth/login (including one-off failed attempts, scanners,
+     * and anyone on a dynamic/shared IP) stayed in memory for the lifetime of
+     * the JVM. On a public-facing deployment that's slow, unbounded heap growth
+     * that only shows up weeks/months into production as GC pressure or an
+     * eventual OutOfMemoryError — exactly the kind of "works fine in testing,
+     * takes the site down later" bug that's hard to catch before real traffic.
+     * Runs hourly and drops any window whose 5-minute period has long since
+     * closed, independent of the request-time cleanup in checkAllowed().
+     */
+    @Scheduled(fixedRate = 60 * 60 * 1000)
+    public void evictStaleWindows() {
+        Instant cutoff = Instant.now().minusSeconds(windowSeconds * 2);
+        int before = attemptsByIp.size();
+        attemptsByIp.entrySet().removeIf(e -> e.getValue().windowStart.isBefore(cutoff));
+        int removed = before - attemptsByIp.size();
+        if (removed > 0) {
+            org.slf4j.LoggerFactory.getLogger(LoginRateLimiter.class)
+                    .debug("Evicted {} stale rate-limit window(s); {} remaining", removed, attemptsByIp.size());
+        }
+    }
+
+    /** Exposed for monitoring/tests only. */
+    public int trackedIpCount() {
+        return attemptsByIp.size();
     }
 
     private static final class Window {

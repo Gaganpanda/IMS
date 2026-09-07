@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
+import toast from "react-hot-toast";
 import {
   createItemAsync,
   uploadImageAsync,
@@ -20,13 +21,22 @@ import {
 import "./AddItemForm.css";
 
 const STEPS = [
-  { id: 1, label: "Basic Information", icon: "basic" },
-  { id: 2, label: "ToT Details", icon: "tot" },
-  { id: 3, label: "IPR Details", icon: "ipr" },
-  { id: 4, label: "Trial Stakeholders", icon: "trials" },
-  { id: 5, label: "Documentation Status", icon: "docs" },
-  { id: 6, label: "Procurement Status", icon: "procurement" },
+  { id: 1, label: "Basic Information", short: "Basic Info", icon: "basic" },
+  { id: 2, label: "ToT Details", short: "ToT", icon: "tot" },
+  { id: 3, label: "IPR Details", short: "IPR", icon: "ipr" },
+  { id: 4, label: "Trial Stakeholders", short: "Trial", icon: "trials" },
+  { id: 5, label: "Documentation Status", short: "Documentation", icon: "docs" },
+  { id: 6, label: "Procurement Status", short: "Procurement", icon: "procurement" },
 ];
+
+const STEP_SUBTITLES = {
+  1: "Core product and development details",
+  2: "Technology transfer status and partner records",
+  3: "Patent, trademark, design and copyright filings",
+  4: "Organisations and stakeholders involved in trials",
+  5: "Track required documents and their upload status",
+  6: "Firms and organisations procuring this item",
+};
 
 const STEP_COLORS = {
   basic: "blue",
@@ -448,7 +458,20 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         }
       }
       onSuccess?.();
-    } catch (_) {}
+    } catch (_) {
+      // Errors are already surfaced via toast inside createItemAsync/uploadImageAsync;
+      // swallow here so we don't also throw an unhandled promise rejection.
+    }
+  };
+
+  // All react-hook-form `required` fields live on Step 1 (Basic Information).
+  // Because the wizard lets people skip ahead without validating each step,
+  // clicking "Create Item" from step 4/5/6 while step 1 is incomplete used to
+  // fail validation silently — the button just did nothing. Jump the user
+  // back to the step with the problem and tell them why.
+  const onInvalid = () => {
+    setStep(1);
+    toast.error("Please fill in the required fields in Basic Information.");
   };
 
   const toggleDoc = (d) =>
@@ -575,29 +598,57 @@ export default function AddItemForm({ onCancel, onSuccess }) {
 
   return (
     <>
-      {/* ── Stepper header ── */}
+      {/* ── Compact workflow navigation ── */}
       <div className="aif__stepper-wrap">
         <div className="aif__stepper-meta">
-          <span className="aif__eyebrow">New Item &middot; Step {step} of {STEPS.length}</span>
-          <span className="aif__progress-pct">{progressPct}% complete</span>
+          <div className="aif__stepper-meta-left">
+            <span className="aif__eyebrow">
+              Step {step} of {STEPS.length}
+              <span className="aif__eyebrow-current">
+                {" "}&middot; {cur.label}
+              </span>
+            </span>
+            <span className="aif__progress-pct">{progressPct}% complete</span>
+          </div>
+          {/* Always-visible save action — previously the only way to save
+             was clicking "Next" through every step to reach the last one.
+             Mirrors the footer's save button 1:1 (same handler, same
+             disabled/loading state) so saving works from any step. */}
+          <button
+            type="button"
+            className="aif__header-save"
+            disabled={submitting}
+            onClick={handleSubmit(onSubmit, onInvalid)}>
+            {submitting ? <span className="aif__spin" /> : Icons.check}
+            {submitting ? "Saving…" : "Create Item"}
+          </button>
         </div>
+
         <div className="aif__progress-track">
           <div className="aif__progress-fill" style={{ width: `${progressPct}%` }}>
             <span className="aif__progress-sheen" />
           </div>
         </div>
+
+        {/* Desktop: segmented step rail */}
         <div className="aif__tabs">
           {STEPS.map((s) => {
             const isDone = done.has(s.id) && s.id !== step;
             const isActive = s.id === step;
             const isReached = s.id <= step;
+            // Every required react-hook-form field lives on step 1 — flag the
+            // tab so a validation failure (see onInvalid) is visible even
+            // before the user is sent back to it.
+            const hasError = s.id === 1 && Object.keys(errors).length > 0 && s.id !== step;
             return (
               <div
                 key={s.id}
-                className={`aif__tab aif__tab--clickable${isActive ? " aif__tab--active" : ""}${isDone ? " aif__tab--done" : ""}${isReached ? " aif__tab--reached" : ""}`}
-                title={s.label}
+                className={`aif__tab aif__tab--clickable${isActive ? " aif__tab--active" : ""}${isDone ? " aif__tab--done" : ""}${isReached ? " aif__tab--reached" : ""}${hasError ? " aif__tab--error" : ""}`}
+                title={hasError ? `${s.label} — required fields missing` : s.label}
                 onClick={() => setStep(s.id)}>
-                {isDone ? (
+                {hasError ? (
+                  <span className="aif__tab-dot aif__tab-dot--error">!</span>
+                ) : isDone ? (
                   <span className="aif__tab-dot aif__tab-dot--done">
                     {Icons.check}
                   </span>
@@ -607,10 +658,28 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                     {s.id}
                   </span>
                 )}
-                <span className="aif__tab-lbl">{s.label}</span>
+                <span className="aif__tab-lbl">{s.short}</span>
               </div>
             );
           })}
+        </div>
+
+        {/* Mobile: compact progress-only indicator */}
+        <div className="aif__mobile-progress">
+          <div className="aif__mobile-progress-track">
+            <div
+              className="aif__mobile-progress-fill"
+              style={{ width: `${((step - 1) / (STEPS.length - 1)) * 100}%` }}
+            />
+          </div>
+          <div className="aif__mobile-progress-dots">
+            {STEPS.map((s) => (
+              <span
+                key={s.id}
+                className={`aif__mobile-dot${s.id === step ? " aif__mobile-dot--active" : ""}${done.has(s.id) && s.id !== step ? " aif__mobile-dot--done" : ""}`}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -621,7 +690,10 @@ export default function AddItemForm({ onCancel, onSuccess }) {
             className={`aif__card-icon aif__card-icon--${STEP_COLORS[cur.icon]}`}>
             {Icons[cur.icon]}
           </span>
-          <span className="aif__card-title">{cur.label}</span>
+          <span className="aif__card-head-text">
+            <span className="aif__card-title">{cur.label}</span>
+            <span className="aif__card-subtitle">{STEP_SUBTITLES[cur.id]}</span>
+          </span>
         </div>
 
         {/* ── STEP 1: Basic Information ── */}
@@ -846,6 +918,19 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                   {Icons.plus} Add Partner
                 </button>
               </div>
+              {totPartners.length === 0 ? (
+                <div className="aif__empty-panel">
+                  <span className="aif__empty-panel-icon">{Icons.tot}</span>
+                  <strong>No ToT partners yet</strong>
+                  <p>Add your first technology transfer partner to continue.</p>
+                  <button
+                    type="button"
+                    className="aif__add-link aif__add-link--empty"
+                    onClick={openAddPartner}>
+                    {Icons.plus} Add Partner
+                  </button>
+                </div>
+              ) : (
               <div className="aif__tbl-wrap">
                 <table className="aif__tbl">
                   <thead>
@@ -859,20 +944,7 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {totPartners.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          style={{
-                            textAlign: "center",
-                            padding: "20px 0",
-                            color: "var(--color-text-muted)",
-                            fontSize: 12.5,
-                          }}>
-                          No partners added yet
-                        </td>
-                      </tr>
-                    ) : (
+                    {
                       totPartners.map((p) => (
                         <tr key={p.id}>
                           <td>{p.totFirm}</td>
@@ -902,10 +974,11 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                           </td>
                         </tr>
                       ))
-                    )}
+                    }
                   </tbody>
                 </table>
               </div>
+              )}
             </div>
           </div>
         )}
@@ -1113,7 +1186,12 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         {step === 5 && (
           <div className="aif__step-body">
             <div className="aif__tbl-head-row">
-              <span className="aif__section-label">Documentation Status</span>
+              <span className="aif__section-label">
+                Documentation Status
+                <span className="aif__count-pill">
+                  {checkedDocs.size}/{DOCUMENTATION_ITEMS.length + customDocuments.length}
+                </span>
+              </span>
               <button
                 type="button"
                 className="aif__add-link"
@@ -1215,6 +1293,22 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                 {Icons.plus} Add Firm / Organisation
               </button>
             </div>
+            {procurements.length === 0 ? (
+              <div className="aif__empty-panel">
+                <span className="aif__empty-panel-icon">{Icons.procurement}</span>
+                <strong>No procurement records</strong>
+                <p>
+                  Add a procurement organization to track procurement
+                  activity for this item.
+                </p>
+                <button
+                  type="button"
+                  className="aif__add-link aif__add-link--empty"
+                  onClick={openAddFirm}>
+                  {Icons.plus} Add Firm / Organisation
+                </button>
+              </div>
+            ) : (
             <div className="aif__tbl-wrap">
               <table className="aif__tbl">
                 <thead>
@@ -1229,20 +1323,7 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {procurements.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        style={{
-                          textAlign: "center",
-                          padding: "20px 0",
-                          color: "var(--color-text-muted)",
-                          fontSize: 12.5,
-                        }}>
-                        No procurement entries yet
-                      </td>
-                    </tr>
-                  ) : (
+                  {
                     procurements.map((p) => (
                       <tr key={p.id}>
                         <td>{p.agency}</td>
@@ -1271,10 +1352,11 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                         </td>
                       </tr>
                     ))
-                  )}
+                  }
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         )}
 
@@ -1309,7 +1391,7 @@ export default function AddItemForm({ onCancel, onSuccess }) {
                 type="button"
                 className="aif__nav-btn aif__nav-btn--save"
                 disabled={submitting}
-                onClick={handleSubmit(onSubmit)}>
+                onClick={handleSubmit(onSubmit, onInvalid)}>
                 {submitting ? <span className="aif__spin" /> : Icons.check}
                 {submitting ? "Saving…" : "Create Item"}
               </button>

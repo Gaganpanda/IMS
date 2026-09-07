@@ -19,6 +19,12 @@ public class ItemDTO {
     @Builder
     public static class Request {
 
+        /* Version of the item this request was built from. Sent by the client
+         * on every update so the server can detect if someone else saved the
+         * item in the meantime (see Item#version). Null/absent on create,
+         * where there's nothing to conflict with. */
+        private Long version;
+
         private List<ToTPartnerDTO> totPartners;
 
         private IPRDetailDTO iprDetail;
@@ -97,6 +103,9 @@ public class ItemDTO {
     @Builder
     public static class Response {
         private Long   id;
+        /* Current optimistic-locking version. The edit form must echo this
+         * back unchanged in Request#version on save. */
+        private Long   version;
         private String name;
         private String category;
         private String description;

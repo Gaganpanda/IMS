@@ -9,6 +9,8 @@ import com.ims.repository.ItemVariantRepository;
 import com.ims.repository.ToTPartnerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,12 +23,14 @@ import java.time.temporal.ChronoUnit;
  * (Transfer of Technology) validity renewal — for both base Items and their
  * variants, since either level can carry its own dates.
  *
- * Rules (identical for dev-completion and ToT-validity):
- *  - 7 days before the date, send a single "coming up" reminder.
- *  - On the day itself, send a "due today" / "expired" reminder.
- *  - For ToT validity specifically, once it has passed, keep sending a
- *    "renewal pending" reminder every 7 days after that until the record is
- *    updated with a new validity date.
+ * Rules:
+ * - Product Development Completion: a single "coming up" reminder 7 days
+ * before the date, a "due today" reminder on the day itself, then a
+ * "still overdue" reminder every 7 days after that until marked Developed.
+ * - ToT validity: a daily countdown reminder for each of the final 7 days
+ * before expiry (7, 6, 5, 4, 3, 2, 1 days out), an "expires today" reminder
+ * on the day itself, then a "renewal pending" reminder every 7 days after
+ * that until the record is updated with a new validity date.
  *
  * This runs once a day. Since the check is purely date-arithmetic (exact day
  * counts), each qualifying day only fires once even though the job runs daily.
@@ -41,7 +45,38 @@ public class ToTReminderService {
     private final ItemVariantRepository itemVariantRepository;
     private final NotificationService notificationService;
 
-    /* Runs every day at 08:00 server time — Product Development Completion reminders */
+    /*
+     * Also run once right after the app finishes starting up — otherwise a
+     * date that's already overdue (or already inside its 7-day window)
+     * before the server ever boots would sit silently until the next 08:00
+     * cron tick, which made reminders feel like they "weren't coming" for
+     * anything that predates this deployment/restart.
+     *
+     * @Transactional here (not just on the two methods below) is required,
+     * not decorative: this method calls sendDevCompletionReminders() /
+     * sendToTValidityReminders() directly (self-invocation), which bypasses
+     * Spring's proxy and silently skips their own @Transactional entirely.
+     * Without a transaction spanning the whole method, the Hibernate
+     * session used to fetch each Item/ToTPartner closes before their lazy
+     * fields (e.g. Item.createdBy) are read, throwing
+     * LazyInitializationException. Annotating this method keeps one
+     * transaction — and one open session — active for the full scan.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void runOnStartup() {
+        try {
+            sendDevCompletionReminders();
+            sendToTValidityReminders();
+        } catch (Exception e) {
+            log.error("Startup reminder scan failed: {}", e.getMessage());
+        }
+    }
+
+    /*
+     * Runs every day at 08:00 server time — Product Development Completion
+     * reminders
+     */
     @Scheduled(cron = "0 0 8 * * *")
     @Transactional(readOnly = true)
     public void sendDevCompletionReminders() {
@@ -49,7 +84,7 @@ public class ToTReminderService {
 
         itemRepository.findAll().forEach(item -> {
             LocalDate dueDate = item.getProductDevCompletionDate();
-            if (dueDate == null) {
+            if (dueDate == null || item.getDevelopmentStatus() == Item.DevelopmentStatus.DEVELOPED) {
                 return;
             }
 
@@ -63,7 +98,8 @@ public class ToTReminderService {
         itemVariantRepository.findAllWithProductDevCompletionDate().forEach(variant -> {
             LocalDate dueDate = variant.getProductDevCompletionDate();
             Item parent = variant.getItem();
-            if (dueDate == null || parent == null) {
+            if (dueDate == null || parent == null
+                    || variant.getDevelopmentStatus() == Item.DevelopmentStatus.DEVELOPED) {
                 return;
             }
 
@@ -74,22 +110,41 @@ public class ToTReminderService {
     }
 
     private void notifyDevCompletion(LocalDate today, LocalDate dueDate, String label,
-                                      Long itemId, String itemName, Long ownerId) {
+            Long itemId, String itemName, Long ownerId) {
         long daysUntilDue = ChronoUnit.DAYS.between(today, dueDate);
 
         if (daysUntilDue == 7) {
+            String message = label + ": Product Development Completion is due on "
+                    + dueDate + " (in 7 days).";
+            if (notificationService.alreadySentToday(itemId, Notification.NotificationType.DEV_COMPLETION, message))
+                return;
             notificationService.createNotification(
-                    "Product development due soon",
-                    label + ": Product Development Completion is due on "
-                            + dueDate + " (in 7 days).",
+                    "Product development due soon", message,
                     Notification.NotificationType.DEV_COMPLETION,
                     itemId, itemName, ownerId);
         } else if (daysUntilDue == 0) {
+            String message = label + ": Product Development Completion is due today (" + dueDate + ").";
+            if (notificationService.alreadySentToday(itemId, Notification.NotificationType.DEV_COMPLETION, message))
+                return;
             notificationService.createNotification(
-                    "Product development due today",
-                    label + ": Product Development Completion is due today (" + dueDate + ").",
+                    "Product development due today", message,
                     Notification.NotificationType.DEV_COMPLETION,
                     itemId, itemName, ownerId);
+        } else if (daysUntilDue < 0) {
+            // Past due and still not marked Developed — keep reminding every
+            // 7 days after the deadline instead of going silent forever,
+            // same cadence as the ToT-validity "renewal pending" reminder.
+            long daysOverdue = -daysUntilDue;
+            if (daysOverdue % 7 == 0) {
+                String message = label + ": Product Development Completion was due on " + dueDate
+                        + " and the item is still not marked Developed.";
+                if (notificationService.alreadySentToday(itemId, Notification.NotificationType.DEV_COMPLETION, message))
+                    return;
+                notificationService.createNotification(
+                        "Product development overdue", message,
+                        Notification.NotificationType.DEV_COMPLETION,
+                        itemId, itemName, ownerId);
+            }
         }
     }
 
@@ -123,22 +178,37 @@ public class ToTReminderService {
                     ? item.getName() + " — " + partner.getItemVariant().getName()
                     : item.getName();
 
-            if (daysUntilExpiry == 7) {
-                // Exactly one week before expiry
+            if (daysUntilExpiry >= 1 && daysUntilExpiry <= 7) {
+                // Daily countdown for the final week: 7, 6, 5, 4, 3, 2, 1 days out —
+                // each day gets its own reminder instead of a single "one week out"
+                // notice, so the urgency actually ramps up as the date gets closer.
+                String dayWord = daysUntilExpiry == 1 ? "day" : "days";
+                String message = label + ": ToT validity with " + firmLabel
+                        + " expires on " + validityDate + " (in " + daysUntilExpiry + " " + dayWord + ").";
+                if (notificationService.alreadySentToday(item.getId(), Notification.NotificationType.TOT_VALIDITY,
+                        message))
+                    return;
+                String title = daysUntilExpiry == 1
+                        ? "ToT validity expires tomorrow"
+                        : "ToT validity expiring in " + daysUntilExpiry + " " + dayWord;
                 notificationService.createNotification(
-                        "ToT validity expiring soon",
-                        label + ": ToT validity with " + firmLabel
-                                + " expires on " + validityDate + " (in 7 days).",
+                        title, message,
                         Notification.NotificationType.TOT_VALIDITY,
                         item.getId(), item.getName(), ownerId);
             } else if (daysUntilExpiry <= 0) {
                 // On the expiry day itself, and then every 7 days after that
                 long daysSinceExpiry = -daysUntilExpiry;
                 if (daysSinceExpiry % 7 == 0) {
+                    String message = daysSinceExpiry == 0
+                            ? label + ": ToT validity with " + firmLabel + " expires today (" + validityDate
+                                    + "). Renewal is pending."
+                            : label + ": ToT validity with " + firmLabel + " expired on " + validityDate
+                                    + " (" + daysSinceExpiry + " days ago). Renewal is still pending.";
+                    if (notificationService.alreadySentToday(item.getId(), Notification.NotificationType.TOT_VALIDITY,
+                            message))
+                        return;
                     notificationService.createNotification(
-                            "ToT renewal pending",
-                            label + ": ToT validity with " + firmLabel
-                                    + " expired on " + validityDate + ". Renewal is pending.",
+                            "ToT renewal pending", message,
                             Notification.NotificationType.TOT_VALIDITY,
                             item.getId(), item.getName(), ownerId);
                 }
@@ -146,8 +216,10 @@ public class ToTReminderService {
         });
     }
 
-    /* A ToTPartner belongs to exactly one of item / itemVariant — resolve
-     * whichever base Item actually owns it either way. */
+    /*
+     * A ToTPartner belongs to exactly one of item / itemVariant — resolve
+     * whichever base Item actually owns it either way.
+     */
     private Item resolveItem(ToTPartner partner) {
         if (partner.getItem() != null) {
             return partner.getItem();

@@ -91,6 +91,21 @@ export const uploadImageAsync = createAsyncThunk(
   }
 );
 
+export const deleteImageAsync = createAsyncThunk(
+  "items/deleteImage",
+  async (id, { rejectWithValue }) => {
+    try {
+      const res = await itemApi.deleteImage(id);
+      toast.success("Image removed");
+      return res.data.data;
+    } catch (err) {
+      const message = err.response?.data?.error || "Failed to remove image";
+      toast.error(message);
+      return rejectWithValue(message);
+    }
+  }
+);
+
 export const uploadVariantImageAsync = createAsyncThunk(
   "items/uploadVariantImage",
   async ({ id, variantId, file }, { rejectWithValue }) => {
@@ -217,7 +232,30 @@ export const deleteVariantAsync = createAsyncThunk(
       toast.success("Variant deleted.");
       return res.data.data;
     } catch (err) {
+      const code = err.response?.data?.code;
       const message = err.response?.data?.error || "Failed to delete variant";
+      // HAS_DEPENDENCIES is handled inline by the caller (an "archive
+      // instead?" prompt) rather than a toast — see axiosInstance's 409
+      // handling, which already skips the blanket toast for this code.
+      if (code !== "HAS_DEPENDENCIES") {
+        toast.error(message);
+      }
+      // Reject with the full shape (code/message/counts) so callers using
+      // .unwrap() can branch on err.code, not just a plain string.
+      return rejectWithValue({ code, message, counts: err.response?.data?.data });
+    }
+  }
+);
+
+export const archiveVariantAsync = createAsyncThunk(
+  "items/archiveVariant",
+  async ({ id, variantId }, { rejectWithValue }) => {
+    try {
+      const res = await itemApi.archiveVariant(id, variantId);
+      toast.success("Variant archived.");
+      return res.data.data;
+    } catch (err) {
+      const message = err.response?.data?.error || "Failed to archive variant";
       toast.error(message);
       return rejectWithValue(message);
     }
@@ -324,6 +362,14 @@ const itemSlice = createSlice({
         if (idx !== -1) state.list[idx] = { ...state.list[idx], imageUrl: action.payload.imageUrl };
       });
 
+    /* deleteImage */
+    builder
+      .addCase(deleteImageAsync.fulfilled, (state, action) => {
+        if (state.selectedItem?.id === action.payload.id) state.selectedItem = action.payload;
+        const idx = state.list.findIndex((i) => i.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = { ...state.list[idx], imageUrl: action.payload.imageUrl };
+      });
+
     /* delete */
     builder
       .addCase(deleteItemAsync.pending,   (state)         => { state.deleting = true; })
@@ -363,6 +409,11 @@ const itemSlice = createSlice({
         if (idx !== -1) state.list[idx] = action.payload;
       })
       .addCase(deleteVariantAsync.fulfilled, (state, action) => {
+        if (state.selectedItem?.id === action.payload.id) state.selectedItem = action.payload;
+        const idx = state.list.findIndex((i) => i.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(archiveVariantAsync.fulfilled, (state, action) => {
         if (state.selectedItem?.id === action.payload.id) state.selectedItem = action.payload;
         const idx = state.list.findIndex((i) => i.id === action.payload.id);
         if (idx !== -1) state.list[idx] = action.payload;

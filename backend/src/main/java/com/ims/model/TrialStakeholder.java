@@ -62,13 +62,14 @@ public class TrialStakeholder {
     @JoinColumn(name = "variant_id")
     private ItemVariant itemVariant;
 
-    /* NOTE: TESTING is kept as a legacy enum constant only so stakeholder
-     * rows written before this status was retired can still be read back
-     * without throwing — it is no longer offered anywhere as a choice,
-     * and fromString() below coerces any incoming "Testing" text to
-     * IN_PROGRESS so no new row can ever be written with it. */
+    /* NOTE: TESTING and ON_HOLD are kept as legacy enum constants only so
+     * stakeholder rows written before these were retired can still be read
+     * back without throwing — neither is offered anywhere as a choice
+     * anymore. fromString() below coerces any incoming "Testing" text to
+     * IN_PROGRESS, and any incoming "On Hold" text to PENDING (its current
+     * name), so no new row can ever be written with the retired values. */
     public enum Status {
-        NOT_STARTED, IN_PROGRESS, TESTING, COMPLETED, ON_HOLD;
+        NOT_STARTED, IN_PROGRESS, TESTING, PENDING, COMPLETED, ON_HOLD;
 
         @com.fasterxml.jackson.annotation.JsonCreator
         public static Status fromString(String value) {
@@ -78,8 +79,8 @@ public class TrialStakeholder {
                 case "In Progress" -> IN_PROGRESS;
                 case "Testing"     -> IN_PROGRESS; // retired status, folded into In Progress
                 case "Completed"   -> COMPLETED;
-                case "Pending"     -> ON_HOLD;
-                case "On Hold"     -> ON_HOLD;
+                case "Pending"     -> PENDING;
+                case "On Hold"     -> PENDING; // retired label, folded into Pending
                 default -> {
                     try { yield valueOf(value.toUpperCase().replace(" ", "_")); }
                     catch (Exception e) { yield null; }

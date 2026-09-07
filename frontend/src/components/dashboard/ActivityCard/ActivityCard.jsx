@@ -78,19 +78,32 @@ export default function ActivityCard() {
         <ActivityList items={visible} />
       </div>
 
-      {/* Decorative wave, same structure/technique as the dev-status donut
-          chart's wave (Charts.jsx) — two tiles drawn side by side in a
-          double-width viewBox, each layer wrapped in a <g>. CSS slides the
-          group left by exactly one tile width and loops; since the tiles
-          are identical, the loop point is invisible. Purely cosmetic. */}
-            {/* Decorative wave — static, same structure as the original
-          chart-card__wave in the dev-status chart. Purely cosmetic. */}
+      {/* Decorative wave — same technique + gradient/opacity recipe as the
+          dev-status donut chart's wave (Charts.jsx .chart-card__wave), just
+          tinted green instead of primary, so the two cards read as a
+          matched pair instead of one being a faint, barely-visible smudge
+          next to a bold one. */}
       <div className="activity-card__wave" aria-hidden="true">
         <svg viewBox="0 0 400 80" preserveAspectRatio="none" width="100%" height="100%">
-          <path d="M0,40 C60,10 120,10 180,35 C240,60 300,60 360,30 C380,20 390,18 400,20 L400,80 L0,80 Z" fill="#22c55e" opacity="0.06" />
-          <path d="M0,55 C70,30 130,55 200,45 C270,35 330,15 400,45 L400,80 L0,80 Z" fill="#4ade80"opacity="0.09" />
+          <defs>
+            <linearGradient id="activityWaveGradBack" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#22c55e" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#22c55e" stopOpacity="0.05" />
+            </linearGradient>
+            <linearGradient id="activityWaveGradFront" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#22c55e" stopOpacity="0.38" />
+              <stop offset="100%" stopColor="#22c55e" stopOpacity="0.10" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M0,40 C60,10 120,10 180,35 C240,60 300,60 360,30 C380,20 390,18 400,20 L400,80 L0,80 Z"
+            fill="url(#activityWaveGradBack)"
+          />
+          <path
+            d="M0,55 C70,30 130,55 200,45 C270,35 330,15 400,45 L400,80 L0,80 Z"
+            fill="url(#activityWaveGradFront)"
+          />
         </svg>
-        
       </div>
 
       <Modal open={showAll} onClose={() => setShowAll(false)} title="Recent Activities" size="lg">

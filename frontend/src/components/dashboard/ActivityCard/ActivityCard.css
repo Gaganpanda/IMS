@@ -43,11 +43,22 @@
   min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
+  /* margin-bottom (not padding) is what actually keeps this clear of the
+     wave: margin shrinks the box itself, leaving a real reserved strip
+     below it that scrolled content can never enter. Padding would only
+     add scrollable space *after* the content without moving the visible
+     viewport, so the last item would still butt up against — and get
+     visually washed out by — the wave exactly as before. */
+  margin-bottom: 70px;
 }
 
-.activity-card__list--modal {
+/* Compound selector so this reliably beats the plain .activity-card__list
+   rule (and its responsive overrides below) regardless of source order —
+   the modal view never has a wave, so it never needs the reserved strip. */
+.activity-card__list.activity-card__list--modal {
   max-height: 60vh;
   flex: none;
+  margin-bottom: 0;
 }
 
 .activity-card__list::-webkit-scrollbar { width: 6px; }
@@ -147,6 +158,9 @@
 }
 
 /* Decorative wave — static, sits behind the list/header, no animation */
+/* Fixed height — kept in sync with .chart-card__wave (Charts.css) so the
+   dev-status donut card and this card show the same size wave at every
+   breakpoint. */
 .activity-card__wave {
   position: absolute;
   left: 0;
@@ -158,6 +172,17 @@
 }
 .activity-card__wave svg {
   display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .activity-card__wave { height: 54px; }
+  .activity-card__list { margin-bottom: 54px; }
+}
+@media (max-width: 480px) {
+  .activity-card__wave { height: 40px; }
+  .activity-card__list { margin-bottom: 40px; }
 }
 
 /* Keep header/list above the wave */

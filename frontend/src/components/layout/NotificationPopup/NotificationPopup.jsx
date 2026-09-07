@@ -87,7 +87,17 @@ export default function NotificationPopup() {
       <div ref={panelRef} className="notif-popup">
         {/* Header */}
         <div className="notif-popup__header">
-          <h2 className="notif-popup__title">Notifications</h2>
+          <div className="notif-popup__header-group">
+            <div className={`notif-popup__header-icon${unreadCount > 0 ? " notif-popup__header-icon--active" : ""}`}>
+              <Icon name="bell" size={17} strokeWidth={2} />
+            </div>
+            <div>
+              <h2 className="notif-popup__title">Notifications</h2>
+              <span className="notif-popup__subtitle">
+                {unreadCount > 0 ? `${unreadCount} unread` : "You're all caught up"}
+              </span>
+            </div>
+          </div>
           <button
             className="notif-popup__close"
             onClick={() => dispatch(closeNotificationPopup())}

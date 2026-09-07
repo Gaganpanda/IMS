@@ -12,8 +12,11 @@
   width: max-content;
   padding: 8px 11px;
   border-radius: 8px;
-  background: var(--color-text-primary, #1e1b2e);
-  color: #fff;
+  /* Fixed dark-bubble/light-text pair (see index.css) — NOT
+     --color-text-primary, which flips between themes and used to leave
+     white text sitting on a near-white bubble in dark mode. */
+  background: var(--color-tooltip-bg, #1e1b2e);
+  color: var(--color-tooltip-text, #ffffff);
   font-size: 12px;
   font-weight: 500;
   line-height: 1.45;
@@ -40,7 +43,7 @@
   transform: translateX(-50%) rotate(45deg);
   width: 8px;
   height: 8px;
-  background: var(--color-text-primary, #1e1b2e);
+  background: var(--color-tooltip-bg, #1e1b2e);
 }
 
 .tooltip__bubble--top::after { top: 100%; margin-top: -4px; }

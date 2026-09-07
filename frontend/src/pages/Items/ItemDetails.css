@@ -1,32 +1,82 @@
+/* ══════════════════════════════════════════════════════════════
+   ITEM DETAILS — enterprise console redesign
+   Same structural classes throughout (JSX untouched besides a
+   handful of additive hooks), reskinned with layered depth,
+   colour-coded sections, a segmented-control tab bar and a
+   restrained, staggered entrance choreography.
+   ══════════════════════════════════════════════════════════════ */
+
 .idet {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 /* ── Breadcrumb ── */
 .idet__breadcrumb {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-size: 13px;
 }
 .idet__breadcrumb-link {
   color: var(--color-text-secondary);
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   transition: color 0.15s;
+  position: relative;
+}
+.idet__breadcrumb-link::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 100%;
+  bottom: -2px;
+  height: 1.5px;
+  background: var(--color-primary);
+  transition: right 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .idet__breadcrumb-link:hover { color: var(--color-primary); }
-.idet__breadcrumb-cur { color: var(--color-text-primary); font-weight: 600; }
+.idet__breadcrumb-link:hover::after { right: 0; }
+.idet__breadcrumb-cur { color: var(--color-text-primary); font-weight: 700; }
 
 /* ── Hero card ── */
 .idet__hero {
+  position: relative;
   overflow: hidden;
   padding: 0;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+
+/* Colour-coded 3px accent rule along the top of the hero, echoing the
+   brand gradient used on the primary CTA elsewhere in the app. */
+.idet__hero::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradient-brand);
+  z-index: 2;
+}
+
+/* Soft ambient glow anchored behind the product image — a single
+   quiet decorative touch rather than scattered ornament. */
+.idet__hero-decor {
+  position: absolute;
+  top: -60px;
+  left: -60px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-primary-light) 0%, transparent 72%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .idet__variant-banner {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -48,8 +98,9 @@
   border-radius: 7px;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s, transform 0.15s;
 }
-.idet__variant-banner button:hover { background: var(--color-purple-bg); }
+.idet__variant-banner button:hover { background: var(--color-purple-bg); transform: translateY(-1px); }
 
 .idet__hero-variant-tag {
   font-weight: 600;
@@ -57,16 +108,19 @@
 }
 
 .idet__hero-body {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: flex-start;
-  gap: 20px;
-  padding: 22px 24px 18px;
+  gap: 22px;
+  padding: 26px 28px 20px;
 }
 
 .idet__hero-img {
-  width: 150px;
-  height: 150px;
-  border-radius: 12px;
+  position: relative;
+  width: 152px;
+  height: 152px;
+  border-radius: var(--radius-lg);
   background-color: #ffffff;
   border: 1px solid var(--color-border);
   display: flex;
@@ -74,13 +128,29 @@
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.idet__hero-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+.idet__hero-img:hover {
+  box-shadow: var(--shadow-md), var(--glow-primary);
+  transform: translateY(-2px);
 }
 .idet__hero-img img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   background-color: #ffffff;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.idet__hero-img:hover img { transform: scale(1.05); }
 
 [data-theme="dark"] .idet__hero-img {
   background-color: var(--color-surface-alt);
@@ -96,14 +166,14 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .idet__hero-name {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 20px;
+  font-size: 23px;
   font-weight: 800;
   color: var(--color-text-primary);
   letter-spacing: -0.03em;
@@ -113,8 +183,8 @@
 .idet__hero-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
 }
 
@@ -123,11 +193,22 @@
   font-weight: 700;
   color: var(--color-primary);
   background: var(--color-primary-light);
-  padding: 3px 9px;
+  padding: 4px 10px;
   border-radius: 99px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
-.idet__hero-sep { color: var(--color-border); }
-.idet__hero-cat { font-size: 13px; color: var(--color-text-secondary); font-weight: 500; }
+.idet__hero-sep { color: var(--color-border-strong); }
+.idet__hero-cat {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-light);
+  padding: 4px 10px;
+  border-radius: 99px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
 
 .idet__hero-priority { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; }
 .idet__hero-priority--high   { background: var(--color-danger-bg); color: var(--color-danger); }
@@ -145,71 +226,94 @@
 .idet__hero-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 /* Gradient/colour come from the shared .btn--primary class already applied
- * alongside this one in JSX — this rule previously tried to redeclare the
- * gradient itself via the invalid `background-color: linear-gradient(...)`
- * (gradients only work on `background`/`background-image`), which browsers
- * silently ignore. Left as layout-only now so it can't fight .btn--primary's
- * actual background. */
+ * alongside this one in JSX. A restrained diagonal shine sweeps across on
+ * hover — one deliberate flourish on the page's primary action. */
 .idet__action-btn {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 7px;
-  height: 36px;
-  padding: 0 16px;
+  height: 38px;
+  padding: 0 18px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  border-radius: var(--radius-md);
 }
+.idet__action-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.55s ease;
+}
+.idet__action-btn:hover::after { left: 130%; }
 
 .idet__delete-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 36px;
-  padding: 0 14px;
+  height: 38px;
+  padding: 0 15px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   background: var(--color-danger-bg);
   color: var(--color-danger);
-  border: 1.5px solid var(--color-danger-bg);
-  border-radius: 9px;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
 }
-.idet__delete-btn:hover { background: var(--color-danger-bg); }
+.idet__delete-btn:hover { background: var(--color-danger-bg); border-color: color-mix(in srgb, var(--color-danger) 35%, transparent); transform: translateY(-1px); }
 
-/* ── Tabs ── */
+/* ── Tabs — segmented control ── */
 .idet__tabs {
+  position: relative;
+  z-index: 1;
   display: flex;
-  padding: 0 24px;
-  border-top: 1px solid var(--color-surface-alt);
+  gap: 2px;
+  margin: 0 28px 20px;
+  padding: 4px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
   overflow-x: auto;
 }
 .idet__tabs::-webkit-scrollbar { display: none; }
 
 .idet__tab {
-  padding: 11px 16px;
-  font-size: 13px;
-  font-weight: 600;
+  position: relative;
+  padding: 9px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
   color: var(--color-text-muted);
   background: none;
   border: none;
-  border-bottom: 2.5px solid transparent;
+  border-radius: var(--radius-md);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s;
+  transition: color 0.2s ease, background 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
   font-family: inherit;
-  margin-bottom: -1px;
 }
-.idet__tab:hover { color: var(--color-text-secondary); }
-.idet__tab--active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+.idet__tab:hover { color: var(--color-text-primary); background: color-mix(in srgb, var(--color-surface) 60%, transparent); }
+.idet__tab--active {
+  color: var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+[data-theme="dark"] .idet__tab--active { color: var(--color-primary-dark); }
 
 /* ── Panel ── */
-.idet__panel { display: flex; flex-direction: column; gap: 16px; }
+.idet__panel { display: flex; flex-direction: column; gap: 18px; }
 
 /* ── Overview grid ── */
 .idet__overview-grid {
@@ -230,48 +334,75 @@
 
 /* ── Section card ── */
 .idet__section {
+  position: relative;
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--color-border);
-  border-radius: 14px;
-  padding: 18px 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
 
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
 }
+.idet__section:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-strong);
+}
+
+/* Faint colour-matched wash in the corner, tying each card to its
+   icon's accent without competing with the content. */
+.idet__section::before {
+  content: "";
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+.idet__section--blue::before   { background: radial-gradient(circle, var(--color-primary-light) 0%, transparent 72%); }
+.idet__section--orange::before { background: radial-gradient(circle, var(--color-warning-bg) 0%, transparent 72%); }
+.idet__section--purple::before { background: radial-gradient(circle, var(--color-purple-bg) 0%, transparent 72%); }
+.idet__section--teal::before   { background: radial-gradient(circle, var(--color-info-bg) 0%, transparent 72%); }
+.idet__section--green::before  { background: radial-gradient(circle, var(--color-success-bg) 0%, transparent 72%); }
+.idet__section--red::before    { background: radial-gradient(circle, var(--color-danger-bg) 0%, transparent 72%); }
+.idet__section > * { position: relative; z-index: 1; }
+
 .idet__section-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-bottom: 12px;
-  border-bottom: 1.5px solid var(--color-surface-alt);
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .idet__section-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.idet__section-icon svg { width: 16px; height: 16px; stroke: currentColor; }
-.idet__section-icon--blue   { background: var(--color-primary-light); color: var(--color-primary); }
-.idet__section-icon--orange { background: var(--color-warning-bg); color: var(--color-warning); }
-.idet__section-icon--purple { background: var(--color-purple-bg); color: var(--color-accent); }
-.idet__section-icon--teal   { background: var(--color-info-bg); color: var(--color-info); }
-.idet__section-icon--green  { background: var(--color-success-bg); color: var(--color-success); }
-.idet__section-icon--red    { background: var(--color-danger-bg); color: var(--color-danger); }
+.idet__section:hover .idet__section-icon { transform: scale(1.07) rotate(-2deg); }
+.idet__section-icon svg { width: 17px; height: 17px; stroke: currentColor; }
+.idet__section-icon--blue   { background: var(--color-primary-light); color: var(--color-primary); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 12%, transparent) inset; }
+.idet__section-icon--orange { background: var(--color-warning-bg); color: var(--color-warning); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-warning) 14%, transparent) inset; }
+.idet__section-icon--purple { background: var(--color-purple-bg); color: var(--color-accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 14%, transparent) inset; }
+.idet__section-icon--teal   { background: var(--color-info-bg); color: var(--color-info); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-info) 14%, transparent) inset; }
+.idet__section-icon--green  { background: var(--color-success-bg); color: var(--color-success); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 14%, transparent) inset; }
+.idet__section-icon--red    { background: var(--color-danger-bg); color: var(--color-danger); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 14%, transparent) inset; }
 
-.idet__section-title { font-size: 13.5px; font-weight: 700; color: var(--color-text-primary); }
+.idet__section-title { font-size: 14px; font-weight: 800; color: var(--color-text-primary); letter-spacing: -0.01em; }
 
 /* ── Fields ── */
 .idet__fields {
@@ -280,16 +411,29 @@
   gap: 10px 12px;
 }
 
+/* Row layout (label left, value filling the rest) instead of the old
+   stacked label-over-value block. A section with only one or two fields
+   (e.g. a lone "ToT Status" field) stretches to the full grid row via
+   auto-fit — stacked, that left a tiny label+badge marooned in a large
+   near-empty box. Laid out as a row, the value has somewhere to go and
+   the field reads as intentional at any width instead of looking cramped
+   and empty. */
 .idet__field {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
   min-width: 0;
-  padding: 10px 14px;
+  padding: 12px 16px;
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border-light);
-  border-radius: 9px;
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.idet__field:hover {
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
 }
 
 .idet__field-label {
@@ -297,8 +441,8 @@
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  width: auto;
+  letter-spacing: 0.06em;
+  width: 128px;
   flex-shrink: 0;
   padding-top: 0;
 }
@@ -308,11 +452,12 @@
   font-weight: 600;
   color: var(--color-text-primary);
   flex: 1;
+  min-width: 0;
   line-height: 1.45;
   word-break: break-word;
 }
 
-.idet__field--full { grid-column: 1 / -1; flex-direction: column; gap: 6px; }
+.idet__field--full { grid-column: 1 / -1; flex-direction: column; align-items: flex-start; gap: 6px; }
 .idet__field--full .idet__field-label { width: auto; padding-top: 0; }
 
 .idet__tot-pending {
@@ -320,11 +465,11 @@
   align-items: center;
   gap: 6px;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-danger);
   background: var(--color-danger-bg);
-  padding: 6px 10px;
-  border-radius: 6px;
+  padding: 7px 11px;
+  border-radius: var(--radius-sm);
   width: fit-content;
 }
 .idet__tot-pending svg { width: 13px; height: 13px; flex-shrink: 0; }
@@ -344,13 +489,16 @@
   letter-spacing: 0.02em;
   color: var(--color-primary-dark);
   background: var(--color-primary-light);
-  padding: 5px 10px;
+  padding: 5px 11px;
   border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, transparent);
+  transition: transform 0.15s ease;
 }
+.idet__doc-chip:hover { transform: translateY(-1px); }
 .idet__doc-chip svg { width: 11px; height: 11px; flex-shrink: 0; }
 
 /* ── Description ── */
-.idet__desc-block { display: flex; flex-direction: column; gap: 5px; border-top: 1px solid var(--color-surface-alt); padding-top: 12px; }
+.idet__desc-block { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--color-border-light); padding-top: 14px; }
 .idet__desc { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; margin: 0; }
 
 /* ── Status rows ── */
@@ -378,7 +526,16 @@
 .idet__activity-time { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
 
 /* ── Empty ── */
-.idet__empty { font-size: 13px; color: var(--color-text-muted); text-align: center; padding: 20px 0; margin: 0; }
+.idet__empty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 28px 16px;
+  margin: 0;
+  background: var(--color-surface-alt);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
 .idet__overdue-icon { color: var(--color-danger); font-size: 13px; }
 .idet__tot-expired-icon { margin-left: 6px; }
 
@@ -392,18 +549,6 @@
 }
 .idet__cert-check { display: flex; align-items: center; color: var(--color-success); }
 .idet__cert-check svg { width: 12px; height: 12px; stroke: var(--color-success); stroke-width: 3; }
-
-/* ── IPR check indicator ── */
-.idet__ipr-check {
-  width: 16px; height: 16px; border-radius: 4px;
-  border: 1.5px solid var(--color-border); background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.idet__ipr-check--on { background: var(--color-primary); border-color: var(--color-primary); }
-.idet__ipr-check--on svg { width: 9px; height: 9px; stroke: var(--color-text-on-accent); stroke-width: 3; }
-.idet__ipr-lbl { font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); }
 
 /* ── Table (legacy — kept in case any old markup still references it) ── */
 .idet__tbl-wrap { border: 1px solid var(--color-border); border-radius: 10px; overflow-x: auto; }
@@ -419,9 +564,8 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Display cards — replaces raw <table> markup on the ToT Partners,
-   Trial Stakeholders and Procurement tabs with an animated,
-   scannable "profile card" layout instead of a pasted-in grid.
+   Display cards — animated "profile card" layout for ToT Partners,
+   Trial Stakeholders and Procurement.
    ══════════════════════════════════════════════════════════════ */
 
 /* ── ToT Partner / Procurement cards ── */
@@ -433,17 +577,18 @@
 
 .idet__partner-card {
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: var(--radius-lg);
+  padding: 18px;
   background: var(--color-surface);
-  transition: border-color var(--transition-fast, 0.15s), box-shadow var(--transition-fast, 0.15s), transform var(--transition-fast, 0.15s);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 .idet__partner-card:hover {
-  border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-3px);
 }
-.idet__partner-card--expired { border-color: var(--color-danger-bg); background: var(--color-danger-bg); }
+.idet__partner-card--expired { border-color: color-mix(in srgb, var(--color-danger) 30%, transparent); background: var(--color-danger-bg); }
+.idet__partner-card--expired:hover { border-color: var(--color-danger); }
 
 .idet__partner-card-head {
   display: flex;
@@ -455,8 +600,8 @@
 }
 
 .idet__partner-avatar {
-  width: 34px; height: 34px;
-  border-radius: 9px;
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
   background: var(--color-primary-light);
   color: var(--color-primary);
   display: flex; align-items: center; justify-content: center;
@@ -482,7 +627,8 @@
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px 18px;
 }
-.idet__partner-grid-fields .idet__field { flex-direction: column; align-items: flex-start; gap: 4px; }
+.idet__partner-grid-fields .idet__field { flex-direction: column; align-items: flex-start; gap: 4px; background: transparent; border: none; padding: 0; }
+.idet__partner-grid-fields .idet__field:hover { transform: none; }
 .idet__partner-grid-fields .idet__field-label { width: auto; padding-top: 0; }
 
 .idet__validity-expired { color: var(--color-danger); font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
@@ -498,25 +644,25 @@
 
 .idet__stakeholder-card {
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   overflow: hidden;
-  transition: box-shadow var(--transition-fast, 0.15s), border-color var(--transition-fast, 0.15s);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
-.idet__stakeholder-card:hover { box-shadow: var(--shadow-sm); border-color: var(--color-border-strong); }
+.idet__stakeholder-card:hover { box-shadow: var(--shadow-md); border-color: var(--color-border-strong); transform: translateY(-2px); }
 
 .idet__stakeholder-head {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   background: var(--color-surface-alt);
   border-bottom: 1px solid var(--color-border-light);
 }
 
 .idet__stakeholder-avatar {
-  width: 38px; height: 38px;
-  border-radius: 10px;
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
   background: var(--gradient-brand);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
@@ -528,7 +674,7 @@
 .idet__stakeholder-head-info { flex: 1; min-width: 0; }
 
 .idet__stakeholder-name-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.idet__stakeholder-name { font-size: 14px; font-weight: 700; color: var(--color-text-primary); }
+.idet__stakeholder-name { font-size: 14.5px; font-weight: 700; color: var(--color-text-primary); }
 
 .idet__stakeholder-contact {
   display: flex;
@@ -540,7 +686,7 @@
 }
 .idet__stakeholder-contact span:not(:last-child)::after { content: "·"; margin-left: 10px; color: var(--color-border-strong); }
 
-.idet__feedback-timeline { padding: 16px; display: flex; flex-direction: column; }
+.idet__feedback-timeline { padding: 18px; display: flex; flex-direction: column; }
 
 .idet__feedback-item { display: flex; gap: 12px; }
 
@@ -587,10 +733,11 @@
 }
 .idet__feedback-sample {
   font-size: 11.5px;
-  font-weight: 600;
-  color: var(--color-text-muted);
+  font-weight: 700;
+  color: var(--color-text-secondary);
   background: var(--color-surface-alt);
-  padding: 2px 8px;
+  border: 1px solid var(--color-border-light);
+  padding: 2px 9px;
   border-radius: 99px;
 }
 
@@ -609,8 +756,9 @@
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 10px;
   background: var(--color-surface-alt);
-  border-radius: 9px;
-  padding: 10px 12px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
 }
 .idet__feedback-note span {
   display: block;
@@ -629,12 +777,12 @@
   word-break: break-word;
 }
 
-.idet__empty--inset { padding: 14px 16px; margin: 0; }
+.idet__empty--inset { padding: 16px 18px; margin: 0; border: none; border-radius: 0; background: transparent; }
 
 /* ── Variants: card grid ── */
 .idet__variant-count {
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-muted);
 }
 
@@ -646,14 +794,14 @@
   align-items: center;
   text-align: center;
   gap: 6px;
-  padding: 40px 24px;
+  padding: 44px 24px;
   border: 1.5px dashed var(--color-border-strong);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface-alt);
 }
 .idet__variant-empty-icon {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -661,6 +809,7 @@
   background: var(--color-primary-light);
   color: var(--color-primary);
   margin-bottom: 6px;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
 .idet__variant-empty-icon svg { width: 20px; height: 20px; }
 .idet__variant-empty p {
@@ -687,23 +836,36 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 16px;
+  padding: 17px;
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.idet__variant-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradient-brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
 }
 .idet__variant-card:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
+.idet__variant-card:hover::before { transform: scaleX(1); }
 .idet__variant-card--active {
   border-color: var(--color-primary);
   background: var(--color-primary-light);
   box-shadow: var(--glow-primary);
 }
+.idet__variant-card--active::before { transform: scaleX(1); }
 
 .idet__variant-card-top {
   display: flex;
@@ -766,67 +928,212 @@
   font-weight: 700;
   color: var(--color-primary);
 }
-.idet__variant-card--active .idet__variant-card-foot { border-top-color: rgba(91,61,240,0.18); }
+.idet__variant-card--active .idet__variant-card-foot { border-top-color: color-mix(in srgb, var(--color-primary) 18%, transparent); }
 .idet__variant-card-foot svg { width: 13px; height: 13px; transition: transform 0.15s; }
 .idet__variant-card:hover .idet__variant-card-foot svg { transform: translateX(3px); }
 
-/* ── Docs ── */
-.idet__doc-list { display: flex; flex-direction: column; border: 1px solid var(--color-border); border-radius: 10px; overflow: hidden; }
-.idet__doc-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 11px 16px; border-bottom: 1px solid var(--color-surface-alt);
+/* ── Docs ──
+   Fixed-width cards in a wrapping grid instead of full-bleed rows — a
+   single document (the common case for a fresh item) now renders as one
+   compact, precisely-sized tile instead of a bar stretched across the
+   entire panel width. */
+.idet__doc-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
 }
-.idet__doc-row:last-child { border-bottom: none; }
-.idet__doc-check {
-  width: 18px; height: 18px; border-radius: 5px;
-  background: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+.idet__doc-summary-count {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
-.idet__doc-check svg { width: 10px; height: 10px; stroke: var(--color-text-on-accent); stroke-width: 3; }
-.idet__doc-name { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); flex: 1; }
-
-.idet__doc-upload-btn {
-  display: flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; border-radius: 8px;
-  border: 1.5px solid var(--color-border); background: var(--color-surface);
-  color: var(--color-text-secondary); cursor: pointer; flex-shrink: 0;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+.idet__doc-summary-label {
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  font-weight: 600;
 }
-.idet__doc-upload-btn svg { width: 14px; height: 14px; }
-.idet__doc-upload-btn:hover { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
-.idet__doc-upload-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ── IPR sections (per-type blocks) ── */
-.idet__ipr-sections { display: flex; flex-direction: column; gap: 14px; }
+.idet__doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
+  gap: 14px;
+  justify-content: flex-start;
+}
 
-.idet__ipr-block {
-  border: 1px solid var(--color-surface-alt);
-  border-radius: 10px;
-  padding: 14px 16px;
+.idet__doc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.idet__doc-card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+.idet__doc-card--attached {
+  border-color: color-mix(in srgb, var(--color-success) 22%, var(--color-border-light));
+  background: color-mix(in srgb, var(--color-success) 3%, var(--color-surface));
+}
+
+.idet__doc-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.idet__doc-card-top-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.idet__doc-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+}
+.idet__doc-card-icon svg { width: 16px; height: 16px; }
+.idet__doc-card-icon--on {
+  background: var(--gradient-brand);
+  color: #fff;
+  box-shadow: var(--glow-primary);
 }
 
-.idet__ipr-block-title {
+.idet__doc-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.idet__doc-card-status svg { width: 9px; height: 9px; stroke-width: 3.5; }
+.idet__doc-card-status--done    { background: var(--color-success-bg); color: var(--color-success); }
+.idet__doc-card-status--pending { background: var(--color-warning-bg); color: var(--color-warning); }
+
+.idet__doc-card-name {
   font-size: 13px;
   font-weight: 700;
   color: var(--color-text-primary);
-  margin-bottom: 12px;
-  padding-bottom: 8px;
+  line-height: 1.4;
+  min-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.idet__doc-card-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid transparent;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-top: auto;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.idet__doc-card-upload svg { width: 13px; height: 13px; flex-shrink: 0; }
+.idet__doc-card-upload:hover:not(:disabled) { background: var(--color-primary); color: #fff; transform: translateY(-1px); }
+.idet__doc-card-upload:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── IPR record cards ──
+   A responsive 2-up grid (auto-fit, capped at a sane max width) instead of
+   a single full-width stack — each IPR type reads as a self-contained
+   record card sized to its content, so the field grid inside it no longer
+   has to spread five cells across the full page width with huge gaps. */
+.idet__ipr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.idet__ipr-block {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  background: var(--color-surface-alt);
+  transition: border-color 0.15s ease;
+}
+.idet__ipr-block:hover { border-color: var(--color-border-strong); }
+
+.idet__ipr-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.idet__ipr-block-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .idet__ipr-status-row {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px dashed var(--color-border);
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Proper status badges (matching the language used everywhere else in the
+   app) instead of a bare checkbox + label pair, which read more like a
+   form control left behind on a read-only detail page. */
+.idet__ipr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 5px 11px;
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.idet__ipr-pill svg { width: 9px; height: 9px; stroke-width: 3.6; flex-shrink: 0; }
+.idet__ipr-pill--on {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
 }
 
 .idet__ipr-block-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px 18px;
 }
 
 .idet__ipr-cell {
@@ -837,27 +1144,6 @@
 }
 .idet__ipr-cell .idet__field-label { width: auto; }
 .idet__ipr-cell .idet__field-value { word-break: break-word; }
-
-.idet__ipr-check-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.idet__ipr-check {
-  width: 16px; height: 16px;
-  border-radius: 4px;
-  border: 1.5px solid var(--color-border);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.idet__ipr-check--on { background: var(--color-primary); border-color: var(--color-primary); }
-.idet__ipr-check--on svg { width: 9px; height: 9px; }
-.idet__ipr-lbl { font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); }
 
 /* ── Boolean badges (Yes/No) for ToT partners ── */
 .idet__bool-badge {
@@ -871,19 +1157,8 @@
 .idet__bool-badge--yes { background: var(--color-success-bg); color: var(--color-success); }
 .idet__bool-badge--no  { background: var(--color-surface-alt); color: var(--color-text-secondary); }
 
-/* ══════════════════════════════
-   UPLOADED FILES (Documentation tab)
-══════════════════════════════ */
-/* ── Documentation tab actions moved into per-row menu (see .idet__doc-menu*) ── */
-
 /* ══════════════════════════════════════════════════════════════
    RESPONSIVE — tablet & mobile
-   The page previously only reflowed its top-level overview grid;
-   the hero, tabs, field rows and section cards stayed at fixed
-   desktop widths (one section even forced a 600px min-width),
-   which is what made things overflow/break on narrower screens.
-   Everything below fixes that so the layout adapts smoothly from
-   large desktop down to small phones instead of just clipping.
    ══════════════════════════════════════════════════════════════ */
 
 @media (max-width: 900px) {
@@ -917,21 +1192,25 @@
   .idet__variant-banner { flex-direction: column; align-items: flex-start; padding: 10px 16px; }
   .idet__variant-banner button { align-self: flex-start; }
 
-  .idet__tabs { padding: 0 12px; }
-  .idet__tab { padding: 10px 12px; font-size: 12.5px; }
+  .idet__tabs { margin: 0 12px 16px; padding: 3px; }
+  .idet__tab { padding: 8px 12px; font-size: 12px; }
 
   .idet__section { padding: 16px 14px; border-radius: 12px; }
   .idet__section-title { font-size: 13px; }
 
   .idet__field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
     padding: 9px 12px;
   }
   .idet__field-label { width: auto; padding-top: 0; }
   .idet__fields { grid-template-columns: 1fr; gap: 8px; }
 
-  .idet__ipr-status-row { gap: 16px; flex-wrap: wrap; }
+  .idet__ipr-grid { grid-template-columns: 1fr; }
+  .idet__ipr-status-row { gap: 8px; flex-wrap: wrap; }
   .idet__ipr-block-grid { grid-template-columns: 1fr; gap: 12px; }
-  .idet__ipr-block { padding: 12px 14px; }
+  .idet__ipr-block { padding: 14px 16px; }
 
   .idet__partner-grid-fields { grid-template-columns: 1fr; gap: 10px; }
   .idet__partner-card { padding: 14px; }
@@ -943,8 +1222,7 @@
   .idet__feedback-dates { flex-direction: column; gap: 4px; }
   .idet__feedback-notes { grid-template-columns: 1fr; }
 
-  .idet__doc-row { padding: 10px 12px; flex-wrap: wrap; }
-  .idet__doc-name { min-width: 140px; }
+  .idet__doc-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 
   .idet__variant-grid { grid-template-columns: 1fr; }
 }
@@ -954,4 +1232,17 @@
   .idet__hero-desc { font-size: 12.5px; }
   .idet__action-btn, .idet__delete-btn { padding: 0 10px; font-size: 12.5px; }
   .idet__stakeholder-avatar, .idet__partner-avatar { width: 32px; height: 32px; font-size: 13px; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .idet__hero-img,
+  .idet__hero-img img,
+  .idet__section-icon,
+  .idet__variant-card,
+  .idet__variant-card::before,
+  .idet__action-btn::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

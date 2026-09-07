@@ -32,6 +32,13 @@
   position: relative;
 }
 
+/* ToT Status Overview has 6 stacked horizontal bars — give it more room
+   than the generic minimum so each bar renders as a clearly visible
+   thick track rather than a thin line. */
+.chart-card__chart-wrap--tot {
+  min-height: 180px;
+}
+
 /* Donut charts (Dev Status / IPR) need a sized box to render their
    ResponsiveContainer into, with the centre label absolutely positioned
    on top of it. */
@@ -86,19 +93,41 @@
 }
 
 /* Decorative wave strip — fills the space left over below the (now
-   compact) donut + legend row. Purely cosmetic, no pointer events. */
+   compact) donut + legend row. Purely cosmetic, no pointer events.
+   Anchored with position:absolute + bottom:0 (same pattern as
+   .activity-card__wave in ActivityCard.css) instead of flex-grow with a
+   max-height cap — the old flex approach left a dead gap between the wave
+   and the card's bottom edge whenever the card grew taller than the
+   donut/legend + wave's capped height (e.g. wide desktop rows), because a
+   height-capped flex child doesn't get pushed to the end of its
+   container. Absolute positioning guarantees the wave is flush with the
+   bottom edge at every card height and every screen size. */
 .chart-card--dev-status {
   overflow: hidden;
+  position: relative;
+}
+.chart-card--dev-status .chart-card__title,
+.chart-card--dev-status .chart-card__body--split {
+  position: relative;
+  z-index: 1;
 }
 .chart-card__wave {
-  flex: 1 1 auto;
-  min-height: 30px;
-  margin: 4px -18px -18px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70px;
   pointer-events: none;
+  z-index: 0;
 }
 .chart-card__wave svg {
   display: block;
+  width: 100%;
+  height: 100%;
 }
+
+@media (max-width: 900px) { .chart-card__wave { height: 54px; } }
+@media (max-width: 480px) { .chart-card__wave { height: 40px; } }
 
 /* Centre donut label */
 .chart-card__centre-label {
@@ -303,6 +332,119 @@
 .chart-card__legend--grid .chart-card__legend-item { flex: none; }
 @media (max-width: 1400px) {
   .chart-card__legend--grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── IPR Overview: per-type filed → granted progress bars ──
+   Replaces the old grouped-bar layout. Each row is a labelled "bullet"
+   bar: a full-width track sized to Filed, with a Granted-colored fill
+   drawn inside it so the conversion rate reads as the fill's length. */
+.ipr-progress {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 90px;
+  padding: 4px 0;
+}
+
+.ipr-progress__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ipr-progress__label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ipr-progress__type {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.ipr-progress__counts {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+}
+
+.ipr-progress__sep { color: var(--color-text-muted); }
+
+.ipr-progress__count {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.ipr-progress__count:hover { opacity: 0.75; text-decoration: underline; }
+.ipr-progress__count--granted { color: #16a34a; }
+.ipr-progress__count--filed   { color: var(--color-text-muted); font-weight: 600; }
+
+.ipr-progress__track {
+  position: relative;
+  height: 20px;
+  border-radius: 7px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.ipr-progress__track-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 9px;
+  font-size: 10.5px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.ipr-progress__fill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ipr-progress__fill-pct {
+  padding-right: 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.ipr-progress__pct-outside {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.ipr-progress__legend {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border-light);
 }
 
 /* ── Full-width trend chart (Item Growth Trend) ── */

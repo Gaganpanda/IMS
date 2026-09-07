@@ -28,7 +28,6 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             SELECT DISTINCT i FROM Item i
             LEFT JOIN IPRDetail iprD ON iprD.item = i
             LEFT JOIN TrialStakeholder ts ON ts.item = i
-            LEFT JOIN ts.feedbacks tf
             WHERE
                 (:ownerId          IS NULL OR i.createdBy.id        = :ownerId)
             AND (:search           IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%',:search,'%')))
@@ -46,7 +45,7 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
             )
             AND (
                 :trialsFilter IS NULL
-                OR tf.status = :trialsFilter
+                OR ts.trialStatus = :trialsFilter
             )
             """)
     Page<Item> findAllWithFilters(

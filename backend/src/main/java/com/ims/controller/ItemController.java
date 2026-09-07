@@ -37,14 +37,14 @@ public class ItemController {
             @RequestParam(required = false) String totStatus,
             @RequestParam(required = false) String iprStatus,
             @RequestParam(required = false) String trialsStatus,
-            @RequestParam(defaultValue = "0")          int    page,
-            @RequestParam(defaultValue = "6")          int    size,
-            @RequestParam(defaultValue = "updatedAt")  String sortBy,
-            @RequestParam(defaultValue = "desc")       String sortDir) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "6") int size,
+            @RequestParam(defaultValue = "updatedAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
 
         Page<ItemDTO.Summary> result = itemService.getAllItems(
-            search, category, developmentStatus, totStatus,
-            iprStatus, trialsStatus, page, size, sortBy, sortDir);
+                search, category, developmentStatus, totStatus,
+                iprStatus, trialsStatus, page, size, sortBy, sortDir);
 
         return ResponseEntity.ok(ApiResponse.success(result));
     }
@@ -96,6 +96,19 @@ public class ItemController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) throws IOException {
         return ResponseEntity.ok(ApiResponse.success(itemService.uploadImage(id, file)));
+    }
+
+    /*
+     * ── DELETE image ──
+     * The image is shared by the item and every one of its variants, so this
+     * removes it everywhere at once, rather than being scoped to whichever
+     * variant's edit screen the request came from.
+     */
+    @DeleteMapping("/{id}/image")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @Operation(summary = "Remove the item's image (also removes it from every variant, since it's a shared asset)")
+    public ResponseEntity<ApiResponse<ItemDTO.Response>> deleteImage(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(itemService.deleteImage(id)));
     }
 
     /* ── UPLOAD variant image ── */
@@ -180,5 +193,19 @@ public class ItemController {
             @PathVariable Long id,
             @PathVariable Long variantId) {
         return ResponseEntity.ok(ApiResponse.success(itemService.deleteVariant(id, variantId)));
+    }
+
+    /*
+     * ── ARCHIVE variant (soft-delete fallback when deleteVariant is blocked
+     * by related documents/procurement/trial records) ──
+     */
+    @PatchMapping("/{id}/variants/{variantId}/archive")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @Operation(summary = "Archive a variant instead of deleting it, keeping its related records intact")
+    public ResponseEntity<ApiResponse<ItemDTO.Response>> archiveVariant(
+            @PathVariable Long id,
+            @PathVariable Long variantId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Variant archived", itemService.archiveVariant(id, variantId)));
     }
 }

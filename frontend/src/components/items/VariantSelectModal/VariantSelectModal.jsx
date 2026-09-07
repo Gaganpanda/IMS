@@ -2,9 +2,10 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { addVariantAsync, convertToVariantAsync, deleteVariantAsync } from "../../../redux/slices/itemSlice";
+import { addVariantAsync, convertToVariantAsync, deleteVariantAsync, archiveVariantAsync } from "../../../redux/slices/itemSlice";
 import { getImageUrl } from "../../../utils/imageUrl";
 import DropdownMenu from "../../common/DropdownMenu/DropdownMenu";
+import ConfirmPopup from "../../common/ConfirmPopup/ConfirmPopup";
 import "./VariantSelectModal.css";
 
 const ChevronIcon = (
@@ -78,9 +79,18 @@ export default function VariantSelectModal({ item, open, onClose, onSelectVarian
   const [firstForm, setFirstForm] = useState({ name: "", startWith: "copy" });
   const [createForm, setCreateForm] = useState({ name: "", startWith: "blank", copyFromVariantId: "" });
 
+  // Delete confirmation + "has related records, archive instead?" fallback
+  // (see ItemService#deleteVariant / HasDependenciesException on the backend).
+  const [deleteTarget, setDeleteTarget] = useState(null);   // variant pending a plain delete confirm
+  const [dependencyBlock, setDependencyBlock] = useState(null); // { variant, message, counts } once delete is blocked
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+
   if (!open || !item) return null;
 
   const variants = item.variants || [];
+  const activeVariants = variants.filter((v) => !v.archived);
+  const archivedVariants = variants.filter((v) => v.archived);
   const hasVariants = variants.length > 0;
   const image = item.imageUrl ? getImageUrl(item.imageUrl) : null;
   const activeMode = mode ?? "list";
@@ -107,9 +117,34 @@ export default function VariantSelectModal({ item, open, onClose, onSelectVarian
     navigate(`/items/${item.id}/variants/${variantId}/edit`);
   };
 
-  const handleDelete = async (v) => {
+  const handleDelete = (v) => {
     setMenuOpenFor(null);
-    await dispatch(deleteVariantAsync({ id: item.id, variantId: v.id }));
+    setDeleteTarget(v);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    try {
+      await dispatch(deleteVariantAsync({ id: item.id, variantId: deleteTarget.id })).unwrap();
+      setDeleteTarget(null);
+    } catch (err) {
+      if (err?.code === "HAS_DEPENDENCIES") {
+        setDependencyBlock({ variant: deleteTarget, message: err.message, counts: err.counts || {} });
+      }
+      setDeleteTarget(null);
+    }
+    setDeleteBusy(false);
+  };
+
+  const confirmArchive = async () => {
+    if (!dependencyBlock) return;
+    setDeleteBusy(true);
+    try {
+      await dispatch(archiveVariantAsync({ id: item.id, variantId: dependencyBlock.variant.id })).unwrap();
+      setDependencyBlock(null);
+    } catch (_) { /* toast already shown by thunk */ }
+    setDeleteBusy(false);
   };
 
   /* First variant on an item that currently has none — either copies the
@@ -144,6 +179,72 @@ export default function VariantSelectModal({ item, open, onClose, onSelectVarian
       setMode("list");
     } catch (_) { /* toast already shown by thunk */ }
     setSaving(false);
+  };
+
+  // Shared row renderer for both the active-variant list and the collapsed
+  // "Archived variants" section below it — identical markup either way,
+  // just muted styling for archived rows via the `archived` class.
+  const renderVariantRow = (v, i, isArchivedSection = false) => {
+    // Image is a single item-level asset shared by every variant — never
+    // per-variant — so each row uses the item's own image.
+    const thumb = image;
+    return (
+      <div
+        key={v.id || i}
+        className={`vsm__row${isArchivedSection ? " vsm__row--archived" : ""}`}
+        onClick={() => onSelectVariant(v)}>
+        <div className="vsm__row-thumb">
+          {thumb
+            ? <img src={thumb} alt={v.name} />
+            : <div className="vsm__row-thumb-placeholder">{PlaceholderIcon}</div>
+          }
+        </div>
+        <div className="vsm__row-body">
+          <div className="vsm__row-name-line">
+            <span className="vsm__row-name">{v.name}</span>
+            <span className="vsm__row-chip">V{i + 1}</span>
+            {v.archived && <span className="vsm__row-chip vsm__row-chip--archived">Archived</span>}
+          </div>
+          {v.description && <span className="vsm__row-desc">{v.description}</span>}
+          <div className="vsm__row-meta">
+            {v.developmentStatus && <span className="vsm__row-tag">{v.developmentStatus}</span>}
+            {v.size && <span className="vsm__row-tag">Size: {v.size}</span>}
+            {v.color && <span className="vsm__row-tag">{v.color}</span>}
+            {v.unitCost != null && v.unitCost !== "" && <span className="vsm__row-tag">₹{v.unitCost}</span>}
+          </div>
+        </div>
+
+        <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu
+            trigger={MoreVertIcon}
+            open={menuOpenFor === (v.id ?? i)}
+            onOpenChange={(open) => setMenuOpenFor(open ? (v.id ?? i) : null)}
+          >
+            <button type="button" className="ddm__item" onClick={() => goToEdit(v.id)}>
+              {EditIcon} Edit
+            </button>
+            {!v.archived && (
+              <button
+                type="button"
+                className="ddm__item ddm__item--danger"
+                onClick={() => handleDelete(v)}
+              >
+                {TrashIcon} Delete
+              </button>
+            )}
+          </DropdownMenu>
+        </div>
+
+        <button
+          type="button"
+          className="vsm__row-arrow"
+          aria-label={`View ${v.name}`}
+          onClick={(e) => { e.stopPropagation(); onSelectVariant(v); }}
+        >
+          {ChevronIcon}
+        </button>
+      </div>
+    );
   };
 
   // Portaled to <body> — see Modal.jsx for why: a transformed ancestor (e.g.
@@ -330,7 +431,7 @@ export default function VariantSelectModal({ item, open, onClose, onSelectVarian
         {/* ── LIST: existing variants, each fully independent ── */}
         {activeMode === "list" && (
           <div className="vsm__list">
-            {variants.length === 0 ? (
+            {activeVariants.length === 0 && archivedVariants.length === 0 ? (
               <div className="vsm__empty">
                 <span className="vsm__empty-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -345,67 +446,77 @@ export default function VariantSelectModal({ item, open, onClose, onSelectVarian
                   {PlusIcon} Add Variant
                 </button>
               </div>
+            ) : activeVariants.length === 0 ? (
+              <div className="vsm__empty">
+                <span className="vsm__empty-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                  </svg>
+                </span>
+                <span className="vsm__empty-text">
+                  All {archivedVariants.length === 1 ? "variant on this item is" : "variants on this item are"} archived —
+                  none are active right now. Add a new variant, or view the archived{" "}
+                  {archivedVariants.length === 1 ? "one" : "ones"} below.
+                </span>
+                <button type="button" className="vsm__empty-btn" onClick={openCreate}>
+                  {PlusIcon} Add Variant
+                </button>
+              </div>
             ) : (
-              variants.map((v, i) => {
-                // Image is a single item-level asset shared by every variant —
-                // never per-variant — so each row uses the item's own image.
-                const thumb = image;
-                return (
-                  <div key={v.id || i} className="vsm__row" onClick={() => onSelectVariant(v)}>
-                    <div className="vsm__row-thumb">
-                      {thumb
-                        ? <img src={thumb} alt={v.name} />
-                        : <div className="vsm__row-thumb-placeholder">{PlaceholderIcon}</div>
-                      }
-                    </div>
-                    <div className="vsm__row-body">
-                      <div className="vsm__row-name-line">
-                        <span className="vsm__row-name">{v.name}</span>
-                        <span className="vsm__row-chip">V{i + 1}</span>
-                      </div>
-                      {v.description && <span className="vsm__row-desc">{v.description}</span>}
-                      <div className="vsm__row-meta">
-                        {v.developmentStatus && <span className="vsm__row-tag">{v.developmentStatus}</span>}
-                        {v.size && <span className="vsm__row-tag">Size: {v.size}</span>}
-                        {v.color && <span className="vsm__row-tag">{v.color}</span>}
-                        {v.unitCost != null && v.unitCost !== "" && <span className="vsm__row-tag">₹{v.unitCost}</span>}
-                      </div>
-                    </div>
+              activeVariants.map((v, i) => renderVariantRow(v, i))
+            )}
 
-                    <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu
-                        trigger={MoreVertIcon}
-                        open={menuOpenFor === (v.id ?? i)}
-                        onOpenChange={(open) => setMenuOpenFor(open ? (v.id ?? i) : null)}
-                      >
-                        <button type="button" className="ddm__item" onClick={() => goToEdit(v.id)}>
-                          {EditIcon} Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="ddm__item ddm__item--danger"
-                          onClick={() => handleDelete(v)}
-                        >
-                          {TrashIcon} Delete
-                        </button>
-                      </DropdownMenu>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="vsm__row-arrow"
-                      aria-label={`View ${v.name}`}
-                      onClick={(e) => { e.stopPropagation(); onSelectVariant(v); }}
-                    >
-                      {ChevronIcon}
-                    </button>
+            {archivedVariants.length > 0 && (
+              <div className="vsm__archived-section">
+                <button
+                  type="button"
+                  className="vsm__archived-toggle"
+                  onClick={() => setShowArchived((s) => !s)}
+                >
+                  <span className={`vsm__archived-chevron${showArchived ? " open" : ""}`}>
+                    {ChevronIcon}
+                  </span>
+                  Archived variants ({archivedVariants.length})
+                </button>
+                {showArchived && (
+                  <div className="vsm__archived-list">
+                    {archivedVariants.map((v, i) => renderVariantRow(v, i, true))}
                   </div>
-                );
-              })
+                )}
+              </div>
             )}
           </div>
         )}
       </div>
+
+      <ConfirmPopup
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        loading={deleteBusy}
+        title={`Delete "${deleteTarget?.name ?? ""}"?`}
+        message="This permanently removes the variant and its Basic Info, ToT, and IPR details. This can't be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
+
+      <ConfirmPopup
+        open={!!dependencyBlock}
+        onClose={() => setDependencyBlock(null)}
+        onConfirm={confirmArchive}
+        loading={deleteBusy}
+        title="Cannot delete this variant"
+        message={
+          dependencyBlock
+            ? `This variant has ${dependencyBlock.counts.documentCount || 0} document(s), `
+              + `${dependencyBlock.counts.procurementCount || 0} procurement record(s), and `
+              + `${dependencyBlock.counts.trialCount || 0} trial record(s) attached. `
+              + `Archive it instead? Archived variants are hidden from active use but keep their history intact.`
+            : ""
+        }
+        confirmLabel="Archive Variant"
+        variant="warning"
+      />
     </div>,
     document.body
   );

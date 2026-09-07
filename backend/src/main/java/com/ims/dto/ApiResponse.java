@@ -18,6 +18,13 @@ public class ApiResponse<T> {
     private T       data;
     private String  error;
 
+    /* Optional machine-readable error code (e.g. "ITEM_STALE",
+     * "ITEM_NOT_FOUND") so the frontend can branch on the failure reason
+     * instead of pattern-matching the human-readable message string. Omitted
+     * from the JSON body when null (see @JsonInclude above) so existing
+     * consumers that only read `error`/`message` are unaffected. */
+    private String  code;
+
     @Builder.Default
     private LocalDateTime timestamp = LocalDateTime.now();
 
@@ -41,6 +48,14 @@ public class ApiResponse<T> {
         return ApiResponse.<T>builder()
                 .success(false)
                 .error(message)
+                .build();
+    }
+
+    public static <T> ApiResponse<T> error(String message, String code) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .error(message)
+                .code(code)
                 .build();
     }
 }

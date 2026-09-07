@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useSelector } from "react-redux";
 import productLogo from "../../../assets/logo-hexagon.webp";
@@ -19,6 +20,20 @@ export default function Sidebar({
 }) {
   const { user } = useSelector((s) => s.auth);
   const unreadCount = useSelector((s) => s.notifications?.unreadCount ?? 0);
+
+  // Same "vibrate on arrival" treatment as the navbar bell, kept in sync so
+  // a new notification shakes both entry points at once.
+  const prevUnreadRef = useRef(unreadCount);
+  const [justArrived, setJustArrived] = useState(false);
+  useEffect(() => {
+    if (unreadCount > prevUnreadRef.current) {
+      setJustArrived(true);
+      const t = setTimeout(() => setJustArrived(false), 900);
+      prevUnreadRef.current = unreadCount;
+      return () => clearTimeout(t);
+    }
+    prevUnreadRef.current = unreadCount;
+  }, [unreadCount]);
 
   const initials = user?.name
     ? user.name
@@ -76,7 +91,9 @@ export default function Sidebar({
             className={({ isActive }) =>
               `sidebar__nav-item${isActive ? " sidebar__nav-item--active" : ""}`
             }>
-            <span className="sidebar__nav-icon"><Icon name={icon} size={19} /></span>
+            <span className={`sidebar__nav-icon${badge && justArrived ? " sidebar__nav-icon--vibrate" : ""}`}>
+              <Icon name={icon} size={19} />
+            </span>
             <span className="sidebar__nav-label">{label}</span>
             {badge && unreadCount > 0 && (
               <span className="sidebar__badge">

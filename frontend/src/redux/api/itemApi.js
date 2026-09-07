@@ -32,6 +32,7 @@ export const itemApi = {
     axiosInstance.post(`${BASE}/${id}/image`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  deleteImage: (id) => axiosInstance.delete(`${BASE}/${id}/image`),
   uploadDocument: (id, formData) =>
     axiosInstance.post(`${BASE}/${id}/documents`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
@@ -43,6 +44,7 @@ export const itemApi = {
   getVariantDetail: (id, variantId) => axiosInstance.get(`${BASE}/${id}/variants/${variantId}`),
   updateVariant: (id, variantId, data) => axiosInstance.put(`${BASE}/${id}/variants/${variantId}`, data),
   deleteVariant: (id, variantId) => axiosInstance.delete(`${BASE}/${id}/variants/${variantId}`),
+  archiveVariant: (id, variantId) => axiosInstance.patch(`${BASE}/${id}/variants/${variantId}/archive`),
   uploadVariantImage: (id, variantId, formData) =>
     axiosInstance.post(`${BASE}/${id}/variants/${variantId}/image`, formData, {
       headers: { "Content-Type": "multipart/form-data" },

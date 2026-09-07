@@ -304,7 +304,12 @@
   color: var(--color-text-muted);
 }
 
-.notif-page__chip--active { color: #fff; border-color: transparent; }
+/* "All categories" carries no --{color} variant class (it's neutral, not
+ * tied to a notification type), so it never matched one of the background
+ * rules below — only the white `color: #fff` from .chip--active applied,
+ * leaving white text on the default light chip background. Give the
+ * colorless active state its own background so the label stays visible. */
+.notif-page__chip--active { color: #fff; border-color: transparent; background: var(--color-text-secondary); }
 .notif-page__chip--active .notif-page__chip-count { background: rgba(255,255,255,0.25); color: #fff; }
 
 .notif-page__chip--green.notif-page__chip--active   { background: var(--color-success); }
@@ -744,25 +749,87 @@
 .notif-page__empty p { font-size: 14px; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 3px; text-transform: capitalize; }
 .notif-page__empty span { font-size: 12.5px; }
 
-.notif-page__loading {
+/* ── Loading skeleton ──
+   A row of placeholder cards shaped like real notification rows reads as
+   "content is on its way" far better than a spinner floating in empty
+   space — it holds the list's layout so nothing jumps when data lands. */
+.notif-page__skeleton-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 48px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-weight: 500;
+  gap: 16px;
+  min-height: 82px;
+  padding: 16px 20px 16px 0;
+  border-bottom: 1px solid var(--color-border);
 }
-.notif-page__spinner {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid var(--color-border);
-  border-top-color: var(--color-primary);
-  animation: notif-spin 0.7s linear infinite;
+.notif-page__skeleton-row:last-child { border-bottom: none; }
+
+.notif-page__skeleton-bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 0 4px 4px 0;
+  background: var(--color-border-light);
+  flex-shrink: 0;
 }
-@keyframes notif-spin { to { transform: rotate(360deg); } }
+
+.notif-page__skeleton-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: var(--color-surface-alt);
+}
+
+.notif-page__skeleton-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.notif-page__skeleton-line {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+  background: var(--color-surface-alt);
+}
+
+.notif-page__skeleton-time {
+  width: 44px;
+  height: 11px;
+  border-radius: 6px;
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+/* Shared shimmer sweep — a soft light band travels left-to-right across
+   every placeholder block in sync, which is what sells "loading" rather
+   than "static grey boxes". */
+.notif-page__skeleton .shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.notif-page__skeleton .shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-text-primary) 8%, transparent) 50%,
+    transparent 100%
+  );
+  animation: notifSkeletonShimmer 1.6s ease-in-out infinite;
+}
+@keyframes notifSkeletonShimmer {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-page__skeleton .shimmer::after { animation: none; }
+}
 
 .notif-page__footer-count {
   font-size: 12.5px;
@@ -800,10 +867,14 @@
 
 .notif-page__heading-icon--active svg {
   transform-origin: top center;
-  animation: bellRing 2.8s ease-in-out infinite;
+  animation: bellRingIdle 2.8s ease-in-out infinite;
 }
 
-@keyframes bellRing {
+/* Renamed from a second `bellRing` — two @keyframes with the same name is
+   valid CSS but the later one silently wins everywhere, which meant the
+   quick 0.6s hover swing above was actually playing this slow idle-chime
+   timing instead of its own keyframes. Splitting the names fixes both. */
+@keyframes bellRingIdle {
   0%, 72%, 100% {
     transform: rotate(0deg);
   }
@@ -826,5 +897,12 @@
 
   92% {
     transform: rotate(2deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-page__heading-icon--active svg,
+  .notif-page__heading-icon svg:hover {
+    animation: none;
   }
 }
