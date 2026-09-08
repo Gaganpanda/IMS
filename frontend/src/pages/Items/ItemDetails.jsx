@@ -406,7 +406,6 @@ function TrialsTab({ item }) {
                                 <AlertIcon message="Sample was submitted 7+ days ago but no feedback has been received yet." />
                               )}
                             </span>
-                            <StatusBadge status={f.status || "Not Started"} size="sm" />
                             {f.sampleNo !== null && f.sampleNo !== undefined && f.sampleNo !== "" && (
                               <span className="idet__feedback-sample">
                                 {f.sampleNo} {Number(f.sampleNo) === 1 ? "sample" : "samples"} sent

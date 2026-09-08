@@ -9,8 +9,8 @@ import {
   updateVariantAsync,
   uploadImageAsync,
   deleteImageAsync,
-  uploadDocumentAsync,
-  deleteDocumentAsync,
+  uploadVariantDocumentAsync,
+  deleteVariantDocumentAsync,
 } from "../../redux/slices/itemSlice";
 import Loader from "../../components/common/Loader/Loader";
 import Icon from "../../components/common/Icon/Icon";
@@ -327,7 +327,7 @@ const emptyIprType = () => ({
 // The actual multi-step form — kept internal now that EditVariantForm
 // (below) is the page-level component responsible for loading the item +
 // variant from the URL and handing them down as plain props.
-function EditVariantFields({ item, variantId, onCancel, onSuccess }) {
+function EditVariantFields({ item, itemName, variantId, onCancel, onSuccess }) {
   const dispatch = useDispatch();
   const { submitting } = useSelector((s) => s.items);
   const [step, setStep] = useState(1);
@@ -733,7 +733,7 @@ function EditVariantFields({ item, variantId, onCancel, onSuccess }) {
     setDocUploading(true);
     try {
       await dispatch(
-        uploadDocumentAsync({ id: item.id, name: uploadDocName, file: f }),
+        uploadVariantDocumentAsync({ id: item.id, variantId, name: uploadDocName, file: f }),
       ).unwrap();
       setUploadDocName("");
     } catch (_) {}
@@ -744,7 +744,7 @@ function EditVariantFields({ item, variantId, onCancel, onSuccess }) {
   const handleDeleteDoc = async (docId) => {
     setDocDeletingId(docId);
     try {
-      await dispatch(deleteDocumentAsync({ id: item.id, docId })).unwrap();
+      await dispatch(deleteVariantDocumentAsync({ id: item.id, variantId, docId })).unwrap();
     } catch (_) {}
     setDocDeletingId(null);
   };
@@ -976,7 +976,7 @@ function EditVariantFields({ item, variantId, onCancel, onSuccess }) {
                     className={`form-control${errors.description ? " form-control--error" : ""}`}
                     placeholder="Brief item description..."
                     rows={3}
-                    maxLength={1000}
+                    maxLength={200}
                     {...register("description", { required: "Required" })}
                   />
                   {errors.description && (
@@ -1385,7 +1385,7 @@ function EditVariantFields({ item, variantId, onCancel, onSuccess }) {
                                 rel="noreferrer"
                                 download={buildDocDownloadName(
                                   d,
-                                  item?.name,
+                                  itemName,
                                   attached.originalFileName || attached.fileUrl,
                                 )}
                                 onClick={() => setDocMenuOpenFor(null)}>
@@ -1707,17 +1707,23 @@ export default function EditVariantForm() {
   }
 
   // Same merge ItemDetails.jsx uses to build a variant's "effective" view:
-  // the variant's own data everywhere, but the parent item's id/name/full
+  // the variant's own data everywhere, but the parent item's id/full
   // variant list preserved so the surrounding page (breadcrumb, image
-  // upload, document list) still has what it needs. Spreading `variant`
-  // after `item` also means `effectiveItem.version` ends up being the
-  // *variant's* own optimistic-lock version, not the item's — which is
-  // exactly what EditVariantFields' onSubmit needs to send back.
+  // upload) still has what it needs. Spreading `variant` after `item` also
+  // means `effectiveItem.version` ends up being the *variant's* own
+  // optimistic-lock version, not the item's — which is exactly what
+  // EditVariantFields' onSubmit needs to send back.
+  //
+  // FIX: this used to also force `name: selectedItem.name` here, overwriting
+  // the variant's own name with the parent item's name — so the "Item Name"
+  // field on this form showed (and every save silently overwrote the
+  // variant's name to) the parent item's name instead of the variant's own.
+  // The parent item's name is only needed separately, for document download
+  // filenames — passed below as `itemName` instead of baked into `name`.
   const effectiveItem = {
     ...selectedItem,
     ...variant,
     id: selectedItem.id,
-    name: selectedItem.name,
     variants: selectedItem.variants,
   };
 
@@ -1739,6 +1745,7 @@ export default function EditVariantForm() {
 
       <EditVariantFields
         item={effectiveItem}
+        itemName={selectedItem.name}
         variantId={variant.id}
         onCancel={back}
         onSuccess={back}

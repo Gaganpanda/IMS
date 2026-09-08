@@ -537,10 +537,20 @@ public class ItemService {
                 }
                 // ON_HOLD is the retired name for this stakeholder status — legacy rows
                 // still carrying it are treated the same as PENDING here.
+                //
+                // FIX: this used to `return Item.TrialsStatus.ON_HOLD` instead of PENDING —
+                // directly contradicting the comment above, and directly causing the bug
+                // where saving a stakeholder as "Pending" made the item's own trials status
+                // silently become "On Hold" instead. Since the Trials Status filter dropdown
+                // on the Items page never offers "On Hold" as an option (only Not Started /
+                // In Progress / Completed / Pending), any item that landed here became
+                // permanently unfindable through that filter — filtering by "Pending" would
+                // never find it, and neither would any other filter value, because none of
+                // them match "On Hold" either.
                 if (statuses.stream().anyMatch(
                                 s -> s == TrialStakeholder.Status.PENDING
                                                 || s == TrialStakeholder.Status.ON_HOLD)) {
-                        return Item.TrialsStatus.ON_HOLD;
+                        return Item.TrialsStatus.PENDING;
                 }
                 // TESTING is a retired stakeholder status — any legacy stakeholder still
                 // carrying it counts toward "In Progress" here, same as IN_PROGRESS itself.
@@ -974,6 +984,72 @@ public class ItemService {
                 itemDocumentRepository.save(doc);
 
                 // Intentionally no notification for document uploads.
+                evictAfterCommit("item-detail", id);
+                return toResponse(findById(id));
+        }
+
+        /*
+         * ── UPLOAD VARIANT DOCUMENT ──
+         * Mirrors uploadDocument above, but attaches the file to the variant
+         * (itemVariant) instead of the item. Previously there was no
+         * variant-scoped upload endpoint at all, so the frontend's variant
+         * edit screen fell back to calling the item-level endpoint — the
+         * upload itself "succeeded" (200 + toast), but the file was attached
+         * to the base item, not the variant, so it silently never appeared
+         * in the variant's own Documentation tab (toVariantDTO reads
+         * documents via findByItemVariantId, which that upload never
+         * populated). This gives the variant screen a real endpoint to call.
+         */
+        @Transactional
+        public ItemDTO.Response uploadVariantDocument(Long id, Long variantId, String docName, MultipartFile file)
+                        throws IOException {
+                Item item = findById(id);
+                assertAccess(item);
+                ItemVariant variant = findVariantOrThrow(item, variantId);
+                validateUpload(file, ALLOWED_DOCUMENT_EXT, "a document");
+
+                String ext = getExtension(file.getOriginalFilename());
+                String storedName = UUID.randomUUID() + "." + ext;
+                Path uploadPath = Paths.get(uploadDir);
+                Files.createDirectories(uploadPath);
+                Files.copy(file.getInputStream(), uploadPath.resolve(storedName),
+                                StandardCopyOption.REPLACE_EXISTING);
+
+                ItemDocument doc = ItemDocument.builder()
+                                .itemVariant(variant)
+                                .docName(docName != null && !docName.isBlank() ? docName : file.getOriginalFilename())
+                                .storedFileName(storedName)
+                                .originalFileName(file.getOriginalFilename())
+                                .build();
+                itemDocumentRepository.save(doc);
+
+                evictAfterCommit("item-detail", id);
+                return toResponse(findById(id));
+        }
+
+        /* ── DELETE VARIANT DOCUMENT ── */
+        @Transactional
+        public ItemDTO.Response deleteVariantDocument(Long id, Long variantId, Long docId) {
+                Item item = findById(id);
+                assertAccess(item);
+                findVariantOrThrow(item, variantId);
+
+                ItemDocument doc = itemDocumentRepository.findById(docId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Document", "id", docId));
+
+                if (doc.getItemVariant() == null || !doc.getItemVariant().getId().equals(variantId)) {
+                        throw new ResourceNotFoundException("Document", "id", docId);
+                }
+
+                try {
+                        if (doc.getStoredFileName() != null) {
+                                Files.deleteIfExists(Paths.get(uploadDir).resolve(doc.getStoredFileName()));
+                        }
+                } catch (IOException e) {
+                        log.warn("Could not delete stored file for document {}: {}", docId, e.getMessage());
+                }
+
+                itemDocumentRepository.delete(doc);
                 evictAfterCommit("item-detail", id);
                 return toResponse(findById(id));
         }

@@ -197,3 +197,204 @@ dark theme.
 
 ### Verified
 - `npm run build` succeeds cleanly after all changes.
+
+---
+
+## Pass 3 — dashboard fixes, filter bug, notification clarity, offline readiness
+
+### Fixed
+- **Recent Activities card: items rendering on top of / clipped by the
+  decorative wave graphic.** The list's scrollable viewport was sized to
+  fill the *entire* remaining card height, so the last visible item's text
+  landed right on top of the wave and got visually washed out by its color
+  gradient. Fixed by giving `.activity-card__list` a `margin-bottom` equal
+  to the wave's height — this actually shrinks the list's own box, leaving
+  a real reserved strip beneath it that scrolled content can never occupy,
+  instead of just adding invisible scrollable space after the content
+  (which doesn't move anything the user can see). The "View All" modal
+  (no wave) is unaffected via a compound-selector override.
+- **Trials Status filter returning wrong/incomplete results.** The backend
+  query (`ItemRepository.findAllWithFilters`) was filtering on
+  `tf.status` — the status of an individual *feedback round* — instead of
+  `ts.trialStatus`, the stakeholder's actual overall trial status shown in
+  the UI. Since that join was a `LEFT JOIN`, any stakeholder with no
+  feedback rounds yet (or whose rounds carried a different status than
+  their overall one) was silently excluded or mismatched. Now filters on
+  `ts.trialStatus` directly; removed the now-unneeded feedback join.
+- **Sample-pending / feedback-overdue notifications were long and
+  anonymous.** They spelled out the exact request date and a verbose
+  sentence, but never said which item or which stakeholder the reminder
+  was actually about — confusing once more than one trial was in flight.
+  Shortened both to `"{Item} — sample not yet sent to {Stakeholder} (Nd)"`
+  and `"{Item} — feedback from {Stakeholder} is Nd overdue"`.
+- **`--font-display` pointed at a font that was never loaded.** It was set
+  to `"Plus Jakarta Sans"`, which wasn't in the old Google Fonts link or
+  anywhere else — so every heading silently fell back to Inter the whole
+  time, and the "Space Grotesk" font that *was* being loaded was never
+  referenced by name anywhere. Pointed `--font-display` at Space Grotesk.
+
+### Offline readiness (this app is meant to run long-term with no internet)
+- **Fonts were loaded from `fonts.googleapis.com` at runtime.** On a
+  network with no internet access — the expected deployment for this app —
+  that request fails and every page silently falls back to system fonts.
+  Replaced with `@fontsource/inter`, `@fontsource/space-grotesk`, and
+  `@fontsource/jetbrains-mono` (self-hosted, bundled into the build by
+  Vite), imported in `main.jsx`. No external font request at runtime.
+- **No backup/restore process existed** beyond a few stray, undated
+  `.sql` dumps sitting in the repo root (`ims_db.sql`,
+  `ims_db_backup.sql`, `ims_db_3307_backup.sql`) — not a repeatable
+  process, and not something that should be *in* the repo in the first
+  place. Added `scripts/backup.sh` / `scripts/restore.sh`: dump MySQL +
+  archive the uploads folder (or the `backend_uploads` Docker volume) into
+  one timestamped, restorable folder. This is the actual safety net for an
+  offline system with no cloud backup behind it — schedule `backup.sh` via
+  cron and copy its output off the machine periodically (a second machine
+  on the same LAN, a USB drive, etc.). The old stray dumps are left in
+  place but should be deleted once you've run a real backup with the new
+  script.
+- **`.gitignore` only listed `node_modules/` and `dist/`**, despite an
+  earlier pass's notes claiming it also covered `.env`, build output, and
+  IDE files. In particular, the real `.env` — with a real DB password and
+  JWT secret in it — was not ignored, i.e. one `git add .` away from being
+  committed to source control. Rewrote `.gitignore` to actually cover
+  `.env`, `target/`, `*.class`, `uploads/`, loose `*.sql` dumps, and
+  IDE/OS files.
+
+### Before treating this as a permanent production deployment
+Not changed automatically (each is a real decision, not a safe default to
+silently flip) — but worth doing once, before this stops being a dev/test
+install:
+- **Rotate the JWT secret and DB password.** Both currently fall back to
+  an obvious placeholder value baked into `application.properties`
+  (`app.jwt.secret`, `spring.datasource.password`) if the `JWT_SECRET` /
+  `DB_PASSWORD` env vars aren't set. Fine for local dev; set real values
+  in `.env` for anything long-lived.
+- **Turn off demo accounts.** Set `SEED_DEMO_USERS=false` once real
+  accounts exist — `admin`/`admin123` and `user`/`user123` are seeded by
+  default (`app.seed-demo-users`, see `DataInitializer.java`).
+- **Schedule `scripts/backup.sh`** (cron, Task Scheduler, etc.) and verify
+  a `restore.sh` run actually works *before* you need it for real —
+  offline means there's no cloud fallback if the disk fails.
+- MySQL and Redis both need to be running locally already for this to be
+  offline-safe (Docker Compose handles this — see Quick start above); if
+  either is ever pointed at a remote host, that host becomes a hard
+  dependency for every page load.
+
+---
+
+## Pass 4 — variant edit bugs, double-toast errors, variant document uploads
+
+### Fixed
+- **Editing a variant showed the parent item's name, not the variant's own
+  name.** The `EditVariantForm` page wrapper built its data by spreading
+  the variant onto the item, then explicitly overwrote the result's `name`
+  back to the parent item's name (`name: selectedItem.name`) — meant for
+  the breadcrumb, but the edit form's "Item Name" field reads from that
+  same object. This wasn't just a display bug: since the save payload
+  echoes that field back, **every save was silently renaming the variant
+  to match the parent item.** Removed the override; the parent item's name
+  is now passed separately (`itemName`) for the one place that legitimately
+  needs it (document download filenames).
+- **Every failed save/upload showed two stacked error toasts.** The axios
+  response interceptor already shows one generic toast per HTTP error
+  status, but every thunk in `itemSlice.js` *also* called `toast.error()`
+  in its own catch block regardless of status — so any non-400 failure
+  (a 500, a 404, a 409, etc.) was toasted twice; that's what produced the
+  "An unexpected error occurred..." + "Server error..." pair. Consolidated
+  to one toast: the interceptor now handles every case except field-level
+  400 validation errors (`{ data: { field: "msg" } }`), which only the
+  originating thunk can format properly (joining multiple field messages
+  into one readable line) — that's the one case a thunk still toasts.
+- **Uploading a document while editing a variant reported success but the
+  document never showed up.** There was no backend endpoint to upload a
+  document scoped to a variant at all — `ItemDocument` already supports an
+  `itemVariant` relation and the variant detail endpoint already reads
+  documents via `findByItemVariantId`, but the only upload endpoint
+  (`POST /items/{id}/documents`) always attaches to the *item*. The variant
+  edit screen was calling that endpoint, so the upload genuinely succeeded
+  (hence the "uploaded" toast) — just onto the item, not the variant it
+  displays. Added `POST/DELETE /items/{id}/variants/{variantId}/documents`
+  (backend: `uploadVariantDocument`/`deleteVariantDocument` in
+  `ItemService`/`ItemController`; frontend: matching `itemApi` calls,
+  `uploadVariantDocumentAsync`/`deleteVariantDocumentAsync` thunks) and
+  switched `EditVariantForm` to use them.
+- **`deriveTrialsStatus` could set an item's/variant's trials status to
+  `ON_HOLD`** — a value the Trials Status filter dropdown doesn't offer at
+  all (it only exposes Not Started / In Progress / Completed / Pending),
+  so any item that landed there became permanently unreachable through
+  that filter, compounding the trials-filter bug fixed in Pass 3. The
+  surrounding comment already said this case should be "treated the same
+  as Pending" — the code just returned the wrong enum. Fixed to return
+  `PENDING`, matching the stated intent and every other stakeholder-status
+  handling in the same codebase.
+
+### Known follow-up
+- **The reported 500 on saving a second trial stakeholder** wasn't
+  root-caused this pass — static review of the trial-stakeholder save path
+  (item and variant versions), the notification side-effect (which already
+  runs in its own isolated transaction and swallows all exceptions by
+  design), and enum parsing (already exception-safe) didn't turn up the
+  exact throw site, and this environment has no way to actually run the
+  Spring Boot + MySQL stack to reproduce it directly. The backend's generic
+  error handler does log the full stack trace (`log.error("Unexpected
+  error: ", ex)` in `GlobalExceptionHandler`) — the fastest way to close
+  this out is to grab that stack trace from the backend console/log file
+  right after reproducing it.
+
+---
+
+## Pass 5 — root cause of the 500 error, found
+
+Found it — thanks to the user spotting the pattern themselves in
+`fix_trials_status.sql` and pointing at it directly.
+
+### Root cause
+`fix_trials_status.sql` already documented one instance of this: a column
+mapped in Java as `@Enumerated(EnumType.STRING)` (which only ever needs a
+plain `VARCHAR`) had somehow ended up as a **native MySQL `ENUM(...)`** on
+the live database instead — created manually outside the codebase at some
+point, not by Hibernate. `ddl-auto=update` never fixes this direction: it
+adds new columns/tables, but never converts an existing native `ENUM`
+column back to `VARCHAR`. So a manually-created `ENUM` column silently
+drifts out of sync with the Java enum forever, with **no error at all**
+until someone tries to save a value the stray `ENUM` doesn't happen to
+allow — at which point MySQL throws a data-truncated/out-of-range error,
+and the backend's generic exception handler turns that into the same
+unhelpful "An unexpected error occurred" 500 no matter which column or
+value actually caused it.
+
+That's exactly what was happening to `trial_stakeholders.trial_status`:
+selecting "Completed" or "In Progress" for a stakeholder worked fine
+(those happened to be legal values on the stray `ENUM`), but "Pending"
+threw — the live `ENUM` was missing that value (or spelled differently).
+
+### Fixed
+Replaced `fix_trials_status.sql` with a broader migration:
+- Confirmed fixes: `items.trials_status` (from Pass 3's filter bug) and
+  `trial_stakeholders.trial_status` (this bug).
+- Defensive fixes for every other `@Enumerated(EnumType.STRING)` column in
+  the codebase, since they're all the exact same shape and there's no
+  guarantee only these two ever drifted this way: `items.development_status`,
+  `items.ipr_status`, `item_variants.development_status`,
+  `item_variants.tot_status`, `item_variants.trials_status`,
+  `item_variants.ipr_status`, `trial_feedbacks.status`. Converting an
+  already-correct `VARCHAR` column is a harmless no-op, so this is safe to
+  run even on columns that turn out to have been fine all along.
+
+**Run this against your live database** (it doesn't run itself — nothing
+in the app executes loose `.sql` files automatically):
+```
+mysql -u<user> -p ims_db < fix_trials_status.sql
+```
+Then restart the backend so nothing has a stale connection/cached error
+state.
+
+### Worth knowing
+`schema.sql` doesn't define `item_variants`, `trial_stakeholders`, or
+`trial_feedbacks` at all — those tables exist only because Hibernate's
+`ddl-auto=update` (or a manual `CREATE TABLE`) built them from the entity
+classes directly, never through `schema.sql`. That's *why* this class of
+bug can happen silently in the first place: there's no single source of
+truth for the live schema to catch drift against. Not changed as part of
+this pass (schema.sql itself isn't wrong, just incomplete) — but worth
+knowing if a similar mystery 500 shows up again on a different column.

@@ -143,6 +143,37 @@ public class ItemController {
         return ResponseEntity.ok(ApiResponse.success(itemService.deleteDocument(id, docId)));
     }
 
+    /*
+     * ── UPLOAD variant document ──
+     * Previously missing entirely — the variant edit screen had no choice
+     * but to call the item-level /documents endpoint above, which attaches
+     * the file to the item rather than the variant. Since a variant's
+     * Documentation tab only ever reads documents scoped to its own id, an
+     * upload made while editing a variant would report success but never
+     * actually show up there. This is the real variant-scoped endpoint.
+     */
+    @PostMapping(value = "/{id}/variants/{variantId}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @Operation(summary = "Upload a document file for a specific variant")
+    public ResponseEntity<ApiResponse<ItemDTO.Response>> uploadVariantDocument(
+            @PathVariable Long id,
+            @PathVariable Long variantId,
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        return ResponseEntity.ok(ApiResponse.success(itemService.uploadVariantDocument(id, variantId, name, file)));
+    }
+
+    /* ── DELETE variant document ── */
+    @DeleteMapping("/{id}/variants/{variantId}/documents/{docId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @Operation(summary = "Delete an uploaded document from a specific variant")
+    public ResponseEntity<ApiResponse<ItemDTO.Response>> deleteVariantDocument(
+            @PathVariable Long id,
+            @PathVariable Long variantId,
+            @PathVariable Long docId) {
+        return ResponseEntity.ok(ApiResponse.success(itemService.deleteVariantDocument(id, variantId, docId)));
+    }
+
     /* ── CONVERT item to variants (existing details become Variant 1) ── */
     @PostMapping("/{id}/variants/convert")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")

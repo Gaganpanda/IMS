@@ -49,4 +49,13 @@ export const itemApi = {
     axiosInstance.post(`${BASE}/${id}/variants/${variantId}/image`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  // Variant-scoped documents — previously missing, which forced the variant
+  // edit screen to (incorrectly) call the item-level document endpoints
+  // above and attach files to the item instead of the variant.
+  uploadVariantDocument: (id, variantId, formData) =>
+    axiosInstance.post(`${BASE}/${id}/variants/${variantId}/documents`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  deleteVariantDocument: (id, variantId, docId) =>
+    axiosInstance.delete(`${BASE}/${id}/variants/${variantId}/documents/${docId}`),
 };

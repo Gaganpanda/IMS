@@ -55,10 +55,22 @@ axiosInstance.interceptors.response.use(
       if (code !== "ITEM_STALE" && code !== "HAS_DEPENDENCIES") {
         toast.error(message);
       }
-    } else if (status >= 500) {
-      toast.error("Server error. Please try again later.");
-    } else if (status && status !== 400) {
-      // 400 validation errors shown per-form, not globally
+    } else if (status === 400) {
+      // Field-level validation errors come back as { data: { field: "msg" } } —
+      // the thunk that made the call formats and shows those itself (it can
+      // join multiple field messages into one toast; this interceptor only
+      // has the single top-level message). A plain 400 with just a string
+      // message has nothing more specific to show, so toast it here instead
+      // of leaving it unhandled.
+      const hasFieldErrors = error.response?.data?.data && typeof error.response.data.data === "object";
+      if (!hasFieldErrors) toast.error(message);
+    } else if (status) {
+      // Anything else not already handled above (5xx, 429, etc.) — shown
+      // once, here. Thunks no longer toast their own fallback message on
+      // top of this: doing both used to show the same failure as two
+      // stacked toasts (e.g. "An unexpected error occurred..." from the
+      // backend's own message *and* a second "Server error. Please try
+      // again later." from this interceptor).
       toast.error(message);
     }
 

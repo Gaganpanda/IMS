@@ -1,2 +1,33 @@
+# ── Secrets — never commit real credentials ──
+.env
+*.env.local
+
+# ── Frontend ──
 node_modules/
 dist/
+frontend/node_modules/
+frontend/dist/
+
+# ── Backend build output ──
+target/
+backend/target/
+*.class
+
+# ── Logs ──
+*.log
+logs/
+
+# ── Uploaded files (user data — belongs in a backup, not source control) ──
+uploads/
+backend/uploads/
+
+# ── Ad-hoc DB dumps (use scripts/backup.sh + a dedicated backups/ location
+#    outside the repo instead of committing raw .sql snapshots) ──
+*.sql
+!backend/src/main/resources/**/*.sql
+
+# ── IDE / OS ──
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

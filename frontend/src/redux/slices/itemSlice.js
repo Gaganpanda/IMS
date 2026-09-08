@@ -42,11 +42,15 @@ export const createItemAsync = createAsyncThunk(
           .map(([field, msg]) => `${field}: ${msg}`)
           .join(", ");
         const message = fieldErrors || response.message || "Validation failed";
+        // Field-level errors are the one shape the axios interceptor can't
+        // format on its own (it only sees the single top-level message) —
+        // this is the one toast that stays here.
         toast.error(message);
         return rejectWithValue(message);
       }
+      // Everything else is already toasted once by the axios interceptor —
+      // toasting again here used to show every failure twice.
       const message = response?.error || response?.message || "Failed to create item";
-      toast.error(message);
       return rejectWithValue(message);
     }
   }
@@ -71,7 +75,6 @@ export const updateItemAsync = createAsyncThunk(
         return rejectWithValue(message);
       }
       const message = response?.error || response?.message || "Failed to update item";
-      toast.error(message);
       return rejectWithValue(message);
     }
   }
@@ -100,7 +103,6 @@ export const deleteImageAsync = createAsyncThunk(
       return res.data.data;
     } catch (err) {
       const message = err.response?.data?.error || "Failed to remove image";
-      toast.error(message);
       return rejectWithValue(message);
     }
   }
@@ -144,9 +146,8 @@ export const uploadDocumentAsync = createAsyncThunk(
       toast.success("Document uploaded.");
       return res.data.data;
     } catch (err) {
-      const message = err.response?.data?.error || "Failed to upload document";
-      toast.error(message);
-      return rejectWithValue(message);
+      // Already toasted once by the axios interceptor.
+      return rejectWithValue(err.response?.data?.error || "Failed to upload document");
     }
   }
 );
@@ -159,9 +160,41 @@ export const deleteDocumentAsync = createAsyncThunk(
       toast.success("Document deleted.");
       return res.data.data;
     } catch (err) {
-      const message = err.response?.data?.error || "Failed to delete document";
-      toast.error(message);
-      return rejectWithValue(message);
+      return rejectWithValue(err.response?.data?.error || "Failed to delete document");
+    }
+  }
+);
+
+// Variant-scoped documents — see itemApi.uploadVariantDocument for why these
+// exist separately from uploadDocumentAsync/deleteDocumentAsync above: the
+// item-level endpoints attach files to the item, not the variant, so a
+// variant's own Documentation tab (which only reads variant-scoped
+// documents) never showed what was "successfully" uploaded through them.
+export const uploadVariantDocumentAsync = createAsyncThunk(
+  "items/uploadVariantDocument",
+  async ({ id, variantId, name, file }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      if (name) formData.append("name", name);
+      formData.append("file", file);
+      const res = await itemApi.uploadVariantDocument(id, variantId, formData);
+      toast.success("Document uploaded.");
+      return res.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || "Failed to upload document");
+    }
+  }
+);
+
+export const deleteVariantDocumentAsync = createAsyncThunk(
+  "items/deleteVariantDocument",
+  async ({ id, variantId, docId }, { rejectWithValue }) => {
+    try {
+      const res = await itemApi.deleteVariantDocument(id, variantId, docId);
+      toast.success("Document deleted.");
+      return res.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || "Failed to delete document");
     }
   }
 );
@@ -174,9 +207,7 @@ export const convertToVariantAsync = createAsyncThunk(
       toast.success("Converted to variants — existing details became Variant 1.");
       return res.data.data;
     } catch (err) {
-      const message = err.response?.data?.error || "Failed to convert item to variants";
-      toast.error(message);
-      return rejectWithValue(message);
+      return rejectWithValue(err.response?.data?.error || "Failed to convert item to variants");
     }
   }
 );
@@ -189,9 +220,7 @@ export const addVariantAsync = createAsyncThunk(
       toast.success("Variant added.");
       return res.data.data;
     } catch (err) {
-      const message = err.response?.data?.error || "Failed to add variant";
-      toast.error(message);
-      return rejectWithValue(message);
+      return rejectWithValue(err.response?.data?.error || "Failed to add variant");
     }
   }
 );
@@ -217,9 +246,7 @@ export const updateVariantAsync = createAsyncThunk(
       toast.success("Variant updated.");
       return res.data.data;
     } catch (err) {
-      const message = err.response?.data?.error || "Failed to update variant";
-      toast.error(message);
-      return rejectWithValue(message);
+      return rejectWithValue(err.response?.data?.error || "Failed to update variant");
     }
   }
 );
@@ -234,14 +261,11 @@ export const deleteVariantAsync = createAsyncThunk(
     } catch (err) {
       const code = err.response?.data?.code;
       const message = err.response?.data?.error || "Failed to delete variant";
-      // HAS_DEPENDENCIES is handled inline by the caller (an "archive
-      // instead?" prompt) rather than a toast — see axiosInstance's 409
-      // handling, which already skips the blanket toast for this code.
-      if (code !== "HAS_DEPENDENCIES") {
-        toast.error(message);
-      }
       // Reject with the full shape (code/message/counts) so callers using
-      // .unwrap() can branch on err.code, not just a plain string.
+      // .unwrap() can branch on err.code, not just a plain string — e.g.
+      // HAS_DEPENDENCIES gets an inline "archive instead?" prompt rather
+      // than a toast (the axios interceptor already skips its blanket toast
+      // for that code too, so this never double-toasts either way).
       return rejectWithValue({ code, message, counts: err.response?.data?.data });
     }
   }
@@ -256,7 +280,6 @@ export const archiveVariantAsync = createAsyncThunk(
       return res.data.data;
     } catch (err) {
       const message = err.response?.data?.error || "Failed to archive variant";
-      toast.error(message);
       return rejectWithValue(message);
     }
   }
@@ -389,6 +412,16 @@ const itemSlice = createSlice({
         if (idx !== -1) state.list[idx] = action.payload;
       })
       .addCase(deleteDocumentAsync.fulfilled, (state, action) => {
+        if (state.selectedItem?.id === action.payload.id) state.selectedItem = action.payload;
+        const idx = state.list.findIndex((i) => i.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(uploadVariantDocumentAsync.fulfilled, (state, action) => {
+        if (state.selectedItem?.id === action.payload.id) state.selectedItem = action.payload;
+        const idx = state.list.findIndex((i) => i.id === action.payload.id);
+        if (idx !== -1) state.list[idx] = action.payload;
+      })
+      .addCase(deleteVariantDocumentAsync.fulfilled, (state, action) => {
         if (state.selectedItem?.id === action.payload.id) state.selectedItem = action.payload;
         const idx = state.list.findIndex((i) => i.id === action.payload.id);
         if (idx !== -1) state.list[idx] = action.payload;
