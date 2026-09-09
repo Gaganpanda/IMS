@@ -31,4 +31,10 @@ public interface IPRDetailRepository extends JpaRepository<IPRDetail, Long> {
 
     @Query("SELECT COUNT(d) FROM IPRDetail d WHERE (:ownerId IS NULL OR d.item.createdBy.id = :ownerId) AND d.designGranted  = true")
     long countDesignGranted (@Param("ownerId") Long ownerId);
+
+    @Query("SELECT COUNT(d) FROM IPRDetail d WHERE (:ownerId IS NULL OR d.item.createdBy.id = :ownerId) AND d.copyrightFiled  = true")
+    long countCopyrightFiled   (@Param("ownerId") Long ownerId);
+
+    @Query("SELECT COUNT(d) FROM IPRDetail d WHERE (:ownerId IS NULL OR d.item.createdBy.id = :ownerId) AND d.copyrightGranted= true")
+    long countCopyrightGranted (@Param("ownerId") Long ownerId);
 }

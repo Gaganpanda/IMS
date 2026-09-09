@@ -29,6 +29,8 @@ public class DashboardStats implements Serializable {
     private long trademarkGrantedCount;
     private long designFiledCount;
     private long designGrantedCount;
+    private long copyrightFiledCount;
+    private long copyrightGrantedCount;
     private long totalDocuments;
 
     /* ── Percentage breakdowns ── */

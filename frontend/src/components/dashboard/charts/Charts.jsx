@@ -560,6 +560,12 @@ const IPR_TYPES = [
     filed: { name: "Design Filed", field: "designFiledCount" },
     granted: { name: "Design Granted", field: "designGrantedCount" },
   },
+  {
+    key: "copyright",
+    label: "Copyright",
+    filed: { name: "Copyright Filed", field: "copyrightFiledCount" },
+    granted: { name: "Copyright Granted", field: "copyrightGrantedCount" },
+  },
 ];
 
 /* ─── IPR Overview ───

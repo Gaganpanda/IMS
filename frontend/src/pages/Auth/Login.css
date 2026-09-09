@@ -509,6 +509,18 @@
 .field-input--pw { padding-right: 6px; }
 .field-input::placeholder { color: transparent; }
 
+/* FIX: Edge/IE add their own built-in password-reveal ("eye") and clear
+   icons inside any type="password" input, which rendered right on top of
+   our custom .field-eye toggle button — showing two eyes stacked together.
+   These pseudo-elements are Microsoft-only (no-op in Chrome/Firefox/Safari,
+   which don't inject anything here), so hiding them only removes the
+   duplicate in Edge and leaves our own toggle as the single control
+   everywhere. */
+.field-input--pw::-ms-reveal,
+.field-input--pw::-ms-clear {
+  display: none;
+}
+
 .field-label {
   position: absolute;
   left: 42px;

@@ -1,7 +1,8 @@
 package com.ims.repository;
 
-import com.ims.model.Item;
-import com.ims.model.TrialStakeholder;
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,8 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
-import java.util.List;
+import com.ims.model.Item;
+import com.ims.model.TrialStakeholder;
 
 @Repository
 public interface ItemRepository extends JpaRepository<Item, Long> {
@@ -20,14 +21,20 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     /**
      * Main filtered search.
      * - IPR filter joins IPRDetail and checks the exact boolean flag.
-     * - Trials filter joins TrialStakeholder and checks stakeholder-level status
-     * directly
-     * (avoids item.trialsStatus derivation-sync issues entirely).
+     * - Trials filter checks stakeholder-level status via an EXISTS subquery
+     * against TrialStakeholder, matching stakeholders linked either directly
+     * to the item (ts.item) or through one of its variants (tsVariant.item).
+     * The itemVariant side MUST be an explicit LEFT JOIN, not a bare
+     * `ts.itemVariant.item = i` path expression: JPQL silently compiles an
+     * unqualified path navigation like that into an INNER join, which would
+     * drop every stakeholder row where itemVariant is null (i.e. every
+     * item-linked, non-variant stakeholder) before the OR is even
+     * evaluated — that bug is what caused the filter to show only
+     * variant-linked items and silently hide everything else.
      */
     @Query("""
             SELECT DISTINCT i FROM Item i
             LEFT JOIN IPRDetail iprD ON iprD.item = i
-            LEFT JOIN TrialStakeholder ts ON ts.item = i
             WHERE
                 (:ownerId          IS NULL OR i.createdBy.id        = :ownerId)
             AND (:search           IS NULL OR LOWER(i.name) LIKE LOWER(CONCAT('%',:search,'%')))
@@ -42,10 +49,17 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
                 OR (:iprDetailFilter = 'trademarkGranted' AND iprD.trademarkGranted= true)
                 OR (:iprDetailFilter = 'designFiled'      AND iprD.designFiled     = true)
                 OR (:iprDetailFilter = 'designGranted'    AND iprD.designGranted   = true)
+                OR (:iprDetailFilter = 'copyrightFiled'   AND iprD.copyrightFiled  = true)
+                OR (:iprDetailFilter = 'copyrightGranted' AND iprD.copyrightGranted= true)
             )
             AND (
                 :trialsFilter IS NULL
-                OR ts.trialStatus = :trialsFilter
+                OR EXISTS (
+                    SELECT 1 FROM TrialStakeholder ts
+                    LEFT JOIN ts.itemVariant tsVariant
+                    WHERE (ts.item = i OR tsVariant.item = i)
+                    AND ts.trialStatus = :trialsFilter
+                )
             )
             """)
     Page<Item> findAllWithFilters(

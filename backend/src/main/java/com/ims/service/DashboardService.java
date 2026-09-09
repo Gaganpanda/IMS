@@ -83,7 +83,14 @@ public class DashboardService {
         long underDevelopment  = itemRepository.countByOwnerAndDevelopmentStatus(ownerId, Item.DevelopmentStatus.UNDER_DEVELOPMENT);
         long notStarted        = itemRepository.countByOwnerAndDevelopmentStatus(ownerId, Item.DevelopmentStatus.NOT_STARTED);
 
-        long trials = itemRepository.countByOwnerAndTrialsStatus(ownerId, Item.TrialsStatus.IN_PROGRESS);
+        // FIX: previously counted via itemRepository.countByOwnerAndTrialsStatus,
+        // which reads the item.trials_status column — a legacy field that is
+        // never kept in sync with the actual trial_stakeholders data (the Items
+        // page filter and the "Trials Status Overview" chart below both derive
+        // status from trial_stakeholders instead). That mismatch is why this
+        // stat card could show 0 while items clearly had in-progress trial
+        // stakeholders. Now derived the same way, item- or variant-linked.
+        long trials = trialStakeholderRepository.countDistinctItemsByTrialStatusForOwner(ownerId, "IN_PROGRESS");
 
         long iprFiled = itemRepository.countByOwnerAndIprStatusIn(ownerId,
                 List.of(Item.IPRStatus.PATENT_FILED, Item.IPRStatus.GRANTED, Item.IPRStatus.TRADEMARK));
@@ -98,6 +105,8 @@ public class DashboardService {
         long trademarkGrantedCount= iprDetailRepository.countTrademarkGranted(ownerId);
         long designFiledCount     = iprDetailRepository.countDesignFiled(ownerId);
         long designGrantedCount   = iprDetailRepository.countDesignGranted(ownerId);
+        long copyrightFiledCount  = iprDetailRepository.countCopyrightFiled(ownerId);
+        long copyrightGrantedCount= iprDetailRepository.countCopyrightGranted(ownerId);
 
         /* Percentages */
         double developedPct        = percent(developed,        total);
@@ -142,6 +151,8 @@ public class DashboardService {
                 .trademarkGrantedCount(trademarkGrantedCount)
                 .designFiledCount(designFiledCount)
                 .designGrantedCount(designGrantedCount)
+                .copyrightFiledCount(copyrightFiledCount)
+                .copyrightGrantedCount(copyrightGrantedCount)
                 .totalDocuments(total * 7)    // approx: 7 doc types per item
                 .developedPct(developedPct)
                 .inProgressPct(inProgressPct)
