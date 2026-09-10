@@ -4,8 +4,11 @@
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
   border-radius: 16px;
-  padding: 14px 18px;
-  min-height: 78px;
+  /* Fluid padding/min-height (see the note at the top of Dashboard.css) so
+     these cards shrink together with a short viewport / high browser zoom
+     instead of pushing the rest of the dashboard into overflow. */
+  padding: clamp(9px, 1.6vh, 14px) clamp(12px, 2vh, 18px);
+  min-height: clamp(58px, 9vh, 78px);
   /* Without this, a grid item's default min-width is its content's
      intrinsic width, so at narrower track widths (smaller screens, browser
      zoom, sidebar open, etc.) the card refuses to shrink below the length
@@ -39,18 +42,18 @@
 .stats-card__top {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: clamp(8px, 1.3vh, 12px);
   min-width: 0;
 }
 
 .stats-card__icon {
-  width: 38px;
-  height: 38px;
+  width: clamp(28px, 4.2vh, 38px);
+  height: clamp(28px, 4.2vh, 38px);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: clamp(14px, 2vh, 18px);
   flex-shrink: 0;
   background: var(--color-surface-alt);
   color: var(--color-text-secondary);
@@ -79,7 +82,7 @@
 }
 
 .stats-card__title {
-  font-size: 11px;
+  font-size: clamp(9.5px, 1.05vh, 11px);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -90,7 +93,7 @@
 }
 
 .stats-card__value {
-  font-size: 26px;
+  font-size: clamp(18px, 2.8vh, 26px);
   font-weight: 800;
   color: var(--color-text-primary);
   line-height: 1.1;
@@ -101,7 +104,7 @@
 }
 
 .stats-card__subtitle {
-  font-size: 11.5px;
+  font-size: clamp(9.5px, 1.1vh, 11.5px);
   color: var(--color-text-muted);
   font-weight: 500;
   margin-top: 1px;

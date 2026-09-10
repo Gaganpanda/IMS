@@ -36,3 +36,4 @@
 .status-badge--info    { background: var(--color-primary-light); color: var(--color-primary); border-color: color-mix(in srgb, var(--color-primary) 22%, transparent); }
 .status-badge--purple  { background: var(--color-purple-bg); color: var(--color-purple); border-color: color-mix(in srgb, var(--color-purple) 22%, transparent); }
 .status-badge--neutral { background: var(--color-surface-alt); color: var(--color-text-secondary); border-color: var(--color-border-light); }
+.status-badge--teal    { background: var(--color-teal-bg);    color: var(--color-teal);    border-color: color-mix(in srgb, var(--color-teal) 22%, transparent); }

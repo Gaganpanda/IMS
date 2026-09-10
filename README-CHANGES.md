@@ -398,3 +398,69 @@ bug can happen silently in the first place: there's no single source of
 truth for the live schema to catch drift against. Not changed as part of
 this pass (schema.sql itself isn't wrong, just incomplete) — but worth
 knowing if a similar mystery 500 shows up again on a different column.
+
+---
+
+## Pass 6 — notifications page cleanup & styling polish
+
+### Fixed
+- **Dead notification component tree.** `components/notifications/NotificationBell`,
+  `NotificationList`, and `NotificationItem` (6 files) were never imported
+  anywhere — the navbar bell and the `/notifications` page each grew their
+  own inline implementation instead, leaving this trio as pure orphaned
+  code that only added confusion about which "bell" or "list" was actually
+  live. Removed.
+- **No-op hover style** on `.notif-page__item:hover` — it set
+  `box-shadow: inset 0 0 0 9999px transparent`, a fully transparent shadow
+  that painted nothing. Removed the dead declaration.
+- **Notification rows overflowed on narrow screens.** The per-item action
+  cluster (time, "View item", archive, delete) shared one non-wrapping flex
+  row with the icon and message, so on phone-width screens it pushed past
+  the card edge instead of wrapping. Added a `max-width: 560px` breakpoint
+  that stacks the actions onto their own row, right-aligned, and keeps the
+  "View item" button always visible there instead of hover-only.
+- Header action buttons now stretch full-width on small screens for a
+  more app-like touch target instead of shrink-wrapping.
+
+---
+
+## Pass 7 — ToT filter data bug, IPR bar clipping, activity/notification polish
+
+### Fixed
+- **"To Be Filed" (and "Filed") ToT Status filter returning no/incomplete
+  results for items that clearly show that exact status everywhere else in
+  the app.** `ToTStatusConverter` normalizes legacy `tot_status` values
+  (`NOT_APPLICABLE`, `TO_BE_FILLED`, `FILLED_TNF`, `FILLED_TAC` — left over
+  from an older 4-value version of the enum) to `FILED` / `TO_BE_FILED`
+  whenever a row is *read*, which is why item lists/details/dashboard counts
+  already show the right label. The filter dropdown never went through that
+  normalization: `ItemRepository.findAllWithFilters` compares the raw
+  column directly against the selected status, so a row still holding one
+  of the legacy literal strings never equals `'TO_BE_FILED'` at the SQL
+  level even though it's conceptually the same status. Added
+  `fix_tot_status.sql` to normalize every existing `items`/`item_variants`
+  row to the two canonical values — **run this against your live database**
+  the same way `fix_trials_status.sql` is run (see that section above);
+  nothing in the app executes loose `.sql` files automatically. Future
+  writes are unaffected since the app only ever persists the canonical
+  enum names.
+- **IPR Overview progress bar clipped the trailing character of its %
+  label** (most visible at 100%, e.g. "Copyright"). The fill bar's own
+  right corner used the same border-radius as its track, so at full width
+  the rounded corner carved into the last few px of content width — right
+  where the right-aligned "100%" label sits — clipping it. Fill now keeps
+  square right corners (the track's `overflow:hidden` + matching radius
+  still masks it into a correctly rounded pill visually) and the label
+  gets a touch more right padding.
+- **Recent Activities entries felt oversized**, leaving only a few visible
+  before scrolling. Tightened row padding, icon size, message line-height,
+  and font-size for a more compact list without losing the 2-line clamp
+  (message text is still fully readable via the `title` tooltip / "View
+  All" modal).
+- **Notifications page's "urgent" red highlight was a rotating conic-
+  gradient border that visibly traveled around the row edge** — meant to
+  read as a status cue, it actually read as distracting/flashing motion.
+  Replaced with a calm, static red left-edge accent plus a gentle,
+  non-moving background pulse (previous pulse keyframes were also
+  self-canceling — 0%/100% used a 0px-wide shadow and 50% used a
+  fully-transparent one, so neither state was ever actually visible).

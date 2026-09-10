@@ -157,7 +157,7 @@ export default function NotificationPopup() {
                 <NotificationIcon type={n.type} />
                 <div className="notif-popup__item-body">
                   <div className="notif-popup__item-title">{n.title}</div>
-                  <div className="notif-popup__item-msg">{n.message}</div>
+                  <div className="notif-popup__item-msg" title={n.message}>{n.message}</div>
                   <div className="notif-popup__item-time">{timeAgo(n.createdAt)}</div>
                 </div>
                 {!n.read && <span className="notif-popup__item-dot" />}

@@ -633,53 +633,55 @@ export function IprOverviewChart({ stats }) {
         </div>
       ) : (
         <>
-          <div className="ipr-progress">
-            {data.map((d) => (
-              <div key={d.type} className="ipr-progress__row">
-                <div className="ipr-progress__label-row">
-                  <span className="ipr-progress__type">{d.type}</span>
-                  <span className="ipr-progress__counts">
-                    <button
-                      type="button"
-                      className="ipr-progress__count ipr-progress__count--granted"
-                      onClick={() => openIprStatus(d.grantedName)}
-                      title={`View ${d.grantedName} items`}>
-                      {d.granted} granted
-                    </button>
-                    <span className="ipr-progress__sep">/</span>
-                    <button
-                      type="button"
-                      className="ipr-progress__count ipr-progress__count--filed"
-                      onClick={() => openIprStatus(d.filedName)}
-                      title={`View ${d.filedName} items`}>
-                      {d.filed} filed
-                    </button>
-                  </span>
-                </div>
-                <div
-                  className="ipr-progress__track"
-                  onClick={() => openIprStatus(d.filedName)}
-                  title={`${d.type}: ${d.pct}% granted`}
-                  role="button">
-                  {d.filed === 0 ? (
-                    <span className="ipr-progress__track-empty">No filings yet</span>
-                  ) : (
-                    <span
-                      className="ipr-progress__fill"
-                      style={{ width: `${Math.max(d.pct, d.granted > 0 ? 6 : 0)}%` }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openIprStatus(d.grantedName);
-                      }}>
-                      {d.pct >= 18 && <span className="ipr-progress__fill-pct">{d.pct}%</span>}
+          <div className="chart-card__scroll-body">
+            <div className="ipr-progress">
+              {data.map((d) => (
+                <div key={d.type} className="ipr-progress__row">
+                  <div className="ipr-progress__label-row">
+                    <span className="ipr-progress__type">{d.type}</span>
+                    <span className="ipr-progress__counts">
+                      <button
+                        type="button"
+                        className="ipr-progress__count ipr-progress__count--granted"
+                        onClick={() => openIprStatus(d.grantedName)}
+                        title={`View ${d.grantedName} items`}>
+                        {d.granted} granted
+                      </button>
+                      <span className="ipr-progress__sep">/</span>
+                      <button
+                        type="button"
+                        className="ipr-progress__count ipr-progress__count--filed"
+                        onClick={() => openIprStatus(d.filedName)}
+                        title={`View ${d.filedName} items`}>
+                        {d.filed} filed
+                      </button>
                     </span>
-                  )}
-                  {d.pct < 18 && d.filed > 0 && (
-                    <span className="ipr-progress__pct-outside">{d.pct}%</span>
-                  )}
+                  </div>
+                  <div
+                    className="ipr-progress__track"
+                    onClick={() => openIprStatus(d.filedName)}
+                    title={`${d.type}: ${d.pct}% granted`}
+                    role="button">
+                    {d.filed === 0 ? (
+                      <span className="ipr-progress__track-empty">No filings yet</span>
+                    ) : (
+                      <span
+                        className="ipr-progress__fill"
+                        style={{ width: `${Math.max(d.pct, d.granted > 0 ? 6 : 0)}%` }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openIprStatus(d.grantedName);
+                        }}>
+                        {d.pct >= 18 && <span className="ipr-progress__fill-pct">{d.pct}%</span>}
+                      </span>
+                    )}
+                    {d.pct < 18 && d.filed > 0 && (
+                      <span className="ipr-progress__pct-outside">{d.pct}%</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
           <div className="chart-card__legend chart-card__legend--wrap chart-card__legend--inline ipr-progress__legend">
             <span className="chart-card__legend-item">

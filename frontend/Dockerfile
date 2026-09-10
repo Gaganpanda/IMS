@@ -7,8 +7,7 @@ RUN npm ci
 
 COPY . .
 
-# Baked in at build time so the SPA knows where the API lives.
-# Defaults to same-origin "/api" since nginx below reverse-proxies it.
+# API base URL (defaults to nginx reverse proxy)
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
@@ -22,7 +21,8 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:80 >/dev/null 2>&1 || exit 1
+# ✅ FIX: Use IPv4 instead of localhost (::1)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
+    CMD wget --spider --quiet http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

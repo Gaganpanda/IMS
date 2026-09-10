@@ -14,6 +14,12 @@ export default function ItemCard({ item }) {
   const [showVariants, setShowVariants] = useState(false);
   const [imgError, setImgError] = useState(false);
   const hasVariants = item.variants && item.variants.length > 0;
+  // Archived variants are hidden from active use (see VariantSelectModal),
+  // so the pill should reflect what's actually selectable, not the raw
+  // count including ones the user has archived away.
+  const activeVariantCount = item.variants
+    ? item.variants.filter((v) => !v.archived).length
+    : 0;
   const statusVariant = STATUS_BADGE_MAP[item.developmentStatus] || "neutral";
   const hasAlert = Boolean(item.hasOverdueFeedback || item.hasOverdueTot);
 
@@ -75,7 +81,9 @@ export default function ItemCard({ item }) {
             {hasVariants ? (
               <span className="item-card__variant-pill">
                 <Icon name="layers" size={12} strokeWidth={2} />
-                {item.variants.length} variant{item.variants.length !== 1 ? "s" : ""}
+                {activeVariantCount > 0
+                  ? `${activeVariantCount} variant${activeVariantCount !== 1 ? "s" : ""}`
+                  : "All variants archived"}
               </span>
             ) : (
               <span className="item-card__variant-pill item-card__variant-pill--muted">

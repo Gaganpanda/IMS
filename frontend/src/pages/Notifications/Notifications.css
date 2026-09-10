@@ -408,7 +408,6 @@
 
 .notif-page__item:hover {
   background: var(--color-surface-alt);
-  box-shadow: inset 0 0 0 9999px transparent;
 }
 
 .notif-page__item--unread {
@@ -421,53 +420,25 @@
 }
 
 /* ── Urgent items (ToT expired/renewing, feedback overdue, sample pending) ──
-   Same red "traveling border" motif as the dashboard's due-date card, sized
-   down to sit comfortably inside a list row. Clears automatically once the
-   notification is marked read. */
-@property --notif-flash-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
+   A calm, *static* left-edge accent instead of the earlier "traveling"
+   rotating border — a thin conic-gradient ring that visibly spun around
+   the row's edge read as flashing/moving instead of as a status cue, and
+   was called out as distracting. This keeps the same "something here
+   needs attention" signal via a steady left border plus a gentle,
+   non-directional background pulse; nothing about it moves around the
+   row. Clears automatically once the notification is marked read. */
 .notif-page__item--urgent {
   background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface));
-  animation: notifGlowPulse 2.2s ease-in-out infinite;
+  border-left: 3px solid var(--color-danger);
+  animation: notifGlowPulse 2.8s ease-in-out infinite;
 }
 
 @keyframes notifGlowPulse {
-  0%, 100% { box-shadow: inset 0 0 0 0 color-mix(in srgb, var(--color-danger) 30%, transparent); }
-  50%      { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-danger) 0%, transparent); }
-}
-
-.notif-page__item--urgent::after {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  border-radius: 8px;
-  padding: 1.5px;
-  background: conic-gradient(
-    from var(--notif-flash-angle),
-    transparent 0deg,
-    var(--color-danger) 14deg,
-    color-mix(in srgb, var(--color-danger) 35%, transparent) 32deg,
-    transparent 60deg,
-    transparent 360deg
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  animation: notifBorderTravel 2.8s linear infinite;
-}
-
-@keyframes notifBorderTravel {
-  from { --notif-flash-angle: 0deg; }
-  to   { --notif-flash-angle: 360deg; }
+  0%, 100% { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 22%, transparent); }
+  50%      { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--color-danger) 10%, transparent); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .notif-page__item--urgent::after { animation: none; }
   .notif-page__item--urgent { animation: none; }
 }
 
@@ -840,8 +811,34 @@
 
 @media (max-width: 640px) {
   .notif-page__tabbar { flex-wrap: wrap; }
-  .notif-page__top { flex-direction: column; }
+  .notif-page__top { flex-direction: column; align-items: flex-start; }
   .notif-page__header-actions { width: 100%; }
+  .notif-page__btn { flex: 1; justify-content: center; }
+}
+
+/* On narrow screens the row of per-item controls (time, view, archive,
+ * delete) previously sat in the same flex row as the icon + body with no
+ * wrapping allowance, so it silently overflowed the card and forced
+ * horizontal scrolling. Stack the row into two lines instead: title/message
+ * on top, the action cluster below, right-aligned. */
+@media (max-width: 560px) {
+  .notif-page__item {
+    flex-wrap: wrap;
+    padding: 14px 16px 14px 0;
+    row-gap: 10px;
+  }
+  .notif-page__item-right {
+    margin-left: 0;
+    padding-left: 60px;
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+  .notif-page__item-view {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 

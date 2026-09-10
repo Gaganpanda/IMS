@@ -145,6 +145,12 @@ public class ItemService {
 
                 Item.DevelopmentStatus devStatus = parseEnum(Item.DevelopmentStatus.class, developmentStatus);
                 Item.ToTStatus tot = parseEnum(Item.ToTStatus.class, totStatus);
+                // See ItemRepository#findAllWithFilters — an item/variant with no
+                // ToT status set at all is NULL in the database, not the literal
+                // TO_BE_FILED constant, but should still show up under a
+                // "To Be Filed" filter since that's the state everything else in
+                // the app (dashboard %, badges) already treats it as.
+                boolean matchNullAsToBeFiled = tot == Item.ToTStatus.TO_BE_FILED;
 
                 // Map IPR filter string to iprDetailFilter key (joins IPRDetail table)
                 String iprDetailFilter = mapIprFilter(iprStatus);
@@ -162,7 +168,7 @@ public class ItemService {
                 Page<Item> itemPage = itemRepository.findAllWithFilters(
                                 ownerId,
                                 nullIfBlank(search), nullIfBlank(category),
-                                devStatus, tot, iprDetailFilter, trialsFilter, pageable);
+                                devStatus, tot, matchNullAsToBeFiled, iprDetailFilter, trialsFilter, pageable);
 
                 return itemPage.map(this::toSummary);
         }
@@ -1797,16 +1803,38 @@ public class ItemService {
         }
 
         private ItemDTO.Summary toSummary(Item item) {
-                List<String> stakeholderNames = trialStakeholderRepository.findByItemId(item.getId())
-                                .stream()
-                                .map(TrialStakeholder::getStakeholderName)
-                                .filter(n -> n != null && !n.isBlank())
-                                .toList();
-
                 List<ItemVariantDTO> variants = itemVariantRepository.findByItemId(item.getId())
                                 .stream()
                                 .map(v -> toVariantDTO(v, item))
                                 .toList();
+
+                // Trial-stakeholder names shown on the table/card row. Previously this
+                // only looked at stakeholders linked directly to the item
+                // (trialStakeholderRepository.findByItemId), so an item that had been
+                // converted to variants — where every stakeholder now hangs off a
+                // variant instead — always showed "—" here even with active trials,
+                // even though the filters/warning icons already correctly look at
+                // both places (see ItemRepository#findAllWithFilters,
+                // #itemHasOverdueFeedback below). Now pulls from every variant too.
+                java.util.List<String> stakeholderNames = new java.util.ArrayList<>(
+                                trialStakeholderRepository.findByItemId(item.getId())
+                                                .stream()
+                                                .map(TrialStakeholder::getStakeholderName)
+                                                .filter(n -> n != null && !n.isBlank())
+                                                .toList());
+                variants.forEach(v -> {
+                        if (v.isArchived()) {
+                                return; // archived variants are hidden from active use, same as the modal
+                        }
+                        if (v.getTrialStakeholders() != null) {
+                                v.getTrialStakeholders().forEach(s -> {
+                                        if (s.getStakeholderName() != null && !s.getStakeholderName().isBlank()
+                                                        && !stakeholderNames.contains(s.getStakeholderName())) {
+                                                stakeholderNames.add(s.getStakeholderName());
+                                        }
+                                });
+                        }
+                });
 
                 return ItemDTO.Summary.builder()
                                 .id(item.getId())
@@ -1815,13 +1843,23 @@ public class ItemService {
                                 .description(item.getDescription())
                                 .imageUrl(item.getImageUrl())
                                 .inventor(item.getInventor())
-                                .developmentStatus(formatEnum(item.getDevelopmentStatus()))
-                                .totStatus(formatEnum(item.getTotStatus()))
-                                .iprStatus(formatEnum(item.getIprStatus()))
-                                .iprStatusLabel(item.getIprTypesLabel() != null
-                                                ? item.getIprTypesLabel()
-                                                : formatEnum(item.getIprStatus()))
-                                .trialsStatus(formatEnum(item.getTrialsStatus()))
+                                .developmentStatus(aggregatedStatus(
+                                                formatEnum(item.getDevelopmentStatus()), variants,
+                                                ItemVariantDTO::getDevelopmentStatus))
+                                .totStatus(aggregatedStatus(
+                                                formatEnum(item.getTotStatus()), variants,
+                                                ItemVariantDTO::getTotStatus))
+                                .iprStatus(aggregatedStatus(
+                                                formatEnum(item.getIprStatus()), variants,
+                                                ItemVariantDTO::getIprStatus))
+                                .iprStatusLabel(aggregatedStatus(
+                                                item.getIprTypesLabel() != null
+                                                                ? item.getIprTypesLabel()
+                                                                : formatEnum(item.getIprStatus()),
+                                                variants, ItemVariantDTO::getIprStatusLabel))
+                                .trialsStatus(aggregatedStatus(
+                                                formatEnum(item.getTrialsStatus()), variants,
+                                                ItemVariantDTO::getTrialsStatus))
                                 .trialStakeholderNames(stakeholderNames)
                                 .variants(variants)
                                 .hasVariants(!variants.isEmpty())
@@ -1829,6 +1867,37 @@ public class ItemService {
                                 .hasOverdueTot(itemHasOverdueTot(item.getId()))
                                 .updatedAt(item.getUpdatedAt())
                                 .build();
+        }
+
+        /**
+         * Once an item has variants, each variant owns its own independent
+         * status (development/ToT/IPR/trials) and the item's own field is left
+         * as a stale snapshot from the moment it was converted (see
+         * #convertToVariant) — it's never kept in sync afterwards. Showing that
+         * frozen item-level value on the summary table/card would silently lie
+         * about the item's actual current status. Instead: if every variant
+         * agrees on a status, show that (still true and more informative than
+         * the item's own possibly-stale field); if they disagree, say so
+         * explicitly ("Multiple") rather than picking one arbitrarily. Items
+         * with no variants are unaffected — their own field is authoritative.
+         */
+        private String aggregatedStatus(String itemLevel, List<ItemVariantDTO> variants,
+                        java.util.function.Function<ItemVariantDTO, String> extractor) {
+                if (variants == null || variants.isEmpty()) {
+                        return itemLevel;
+                }
+                java.util.Set<String> distinct = variants.stream()
+                                .filter(v -> !v.isArchived())
+                                .map(extractor)
+                                .filter(s -> s != null && !s.isBlank())
+                                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+                if (distinct.isEmpty()) {
+                        return null;
+                }
+                if (distinct.size() == 1) {
+                        return distinct.iterator().next();
+                }
+                return "Multiple";
         }
 
         /**

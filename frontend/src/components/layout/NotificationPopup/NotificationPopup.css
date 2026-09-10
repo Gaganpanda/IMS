@@ -253,6 +253,14 @@
   color: var(--color-text-secondary);
   line-height: 1.45;
   margin-bottom: 4px;
+  /* Clamp long, sentence-length activity text (e.g. ToT/feedback reminder
+     messages) to 2 lines with an ellipsis instead of stretching every
+     dropdown item to 4-5 lines — hover shows the full text via the
+     `title` attribute set alongside this class. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .notif-popup__item-time {

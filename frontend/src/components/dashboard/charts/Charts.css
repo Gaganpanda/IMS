@@ -1,17 +1,36 @@
+/* ── Fluid sizing note ──
+   Every size below that used to be a fixed px value (padding, gaps, font
+   sizes, icon sizes, min-heights) is now `clamp(min, Xvh, max)`. The
+   dashboard's mid/bottom rows are height-constrained to fit one viewport
+   (see Dashboard.css), so at a short viewport or high browser zoom the
+   *available* height per card shrinks — with fixed px content, that meant
+   content no longer fit and had to scroll or overlap. With vh-based
+   clamps, the content itself shrinks together with the available space
+   (down to a sane floor) so the whole dashboard keeps fitting on screen at
+   any window size or zoom level, the way a real, polished dashboard would,
+   instead of growing a scrollbar. */
+
 .chart-card {
-  padding: 18px;
+  padding: clamp(10px, 1.8vh, 18px);
   height: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* Safety net only, not a primary sizing strategy: with fluid clamp()
+     sizing throughout this file content should always fit its card, but
+     if something still doesn't (an extreme dataset, an extreme zoom), this
+     clips rather than visually overlapping other rows. No visible
+     scrollbar is intentional — the fluid sizing above is what's supposed
+     to keep everything on screen and in view. */
+  overflow: hidden;
 }
 
 .chart-card__title {
-  font-size: 13.5px;
+  font-size: clamp(11.5px, 1.35vh, 13.5px);
   font-weight: 700;
   color: var(--color-text-primary);
-  margin-bottom: 14px;
+  margin-bottom: clamp(6px, 1.3vh, 14px);
   flex: 0 0 auto;
 }
 
@@ -28,7 +47,7 @@
    the whole dashboard fit one viewport without a page-level scrollbar. */
 .chart-card__chart-wrap {
   flex: 1 1 auto;
-  min-height: 90px;
+  min-height: clamp(56px, 9vh, 90px);
   position: relative;
 }
 
@@ -36,7 +55,7 @@
    than the generic minimum so each bar renders as a clearly visible
    thick track rather than a thin line. */
 .chart-card__chart-wrap--tot {
-  min-height: 180px;
+  min-height: clamp(110px, 17vh, 180px);
 }
 
 /* Donut charts (Dev Status / IPR) need a sized box to render their
@@ -45,7 +64,7 @@
 .chart-card__donut-wrap {
   position: relative;
   flex: 1 1 auto;
-  min-height: 110px;
+  min-height: clamp(70px, 10.5vh, 110px);
   width: 100%;
 }
 .chart-card__donut-wrap--sm { flex: 1 1 auto; }
@@ -60,21 +79,23 @@
   flex: 0 0 auto;
   flex-direction: row;
   align-items: center;
-  gap: 14px;
+  gap: clamp(8px, 1.4vh, 14px);
 }
 .chart-card__body--split .chart-card__donut-wrap {
   flex: 1 1 55%;
   height: 100%;
 }
 
-/* Fixed, modest square so the ring reads as a compact donut rather than
-   stretching to fill the card's height. (Selector matches the compound
+/* Fixed-proportion square (not a hard pixel size any more) so the ring
+   reads as a compact donut rather than stretching to fill the card's
+   height, while still shrinking together with the card at low viewport
+   heights instead of overflowing it. (Selector matches the compound
    `.chart-card__body--split .chart-card__donut-wrap` specificity above so
    this override actually wins instead of being silently beaten by it.) */
 .chart-card__body--split .chart-card__donut-wrap--dev {
   flex: 0 0 auto;
-  width: 150px;
-  height: 150px;
+  width: clamp(96px, 15vh, 150px);
+  height: clamp(96px, 15vh, 150px);
   min-height: 0;
 }
 
@@ -82,14 +103,14 @@
   flex: 1 1 45%;
   margin-top: 0;
   justify-content: center;
-  gap: 12px;
+  gap: clamp(6px, 1.2vh, 12px);
 }
 @media (max-width: 1300px) {
   .chart-card__body--split { flex-direction: column; }
   .chart-card__body--split .chart-card__donut-wrap { width: 100%; flex: 1 1 auto; }
   .chart-card__legend--side { width: 100%; flex: 0 0 auto; }
-  .chart-card__donut-wrap--dev { width: 150px; margin: 0 auto; }
-  .chart-card__body--split .chart-card__donut-wrap--dev { width: 150px; flex: 0 0 auto; margin: 0 auto; }
+  .chart-card__donut-wrap--dev { width: clamp(96px, 15vh, 150px); margin: 0 auto; }
+  .chart-card__body--split .chart-card__donut-wrap--dev { width: clamp(96px, 15vh, 150px); flex: 0 0 auto; margin: 0 auto; }
 }
 
 /* Decorative wave strip — fills the space left over below the (now
@@ -116,7 +137,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 70px;
+  height: clamp(34px, 7vh, 70px);
   pointer-events: none;
   z-index: 0;
 }
@@ -126,8 +147,8 @@
   height: 100%;
 }
 
-@media (max-width: 900px) { .chart-card__wave { height: 54px; } }
-@media (max-width: 480px) { .chart-card__wave { height: 40px; } }
+@media (max-width: 900px) { .chart-card__wave { height: clamp(28px, 6vh, 54px); } }
+@media (max-width: 480px) { .chart-card__wave { height: clamp(22px, 5vh, 40px); } }
 
 /* Centre donut label */
 .chart-card__centre-label {
@@ -141,7 +162,7 @@
 
 .chart-card__centre-val {
   display: block;
-  font-size: 22px;
+  font-size: clamp(16px, 2.4vh, 22px);
   font-weight: 800;
   color: var(--color-text-primary);
   letter-spacing: -0.03em;
@@ -150,7 +171,7 @@
 
 .chart-card__centre-sub {
   display: block;
-  font-size: 11px;
+  font-size: clamp(9.5px, 1.1vh, 11px);
   color: var(--color-text-muted);
   font-weight: 500;
   margin-top: 2px;
@@ -160,8 +181,9 @@
 .chart-card__legend {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  margin-top: 10px;
+  gap: clamp(4px, 0.9vh, 7px);
+  margin-top: clamp(6px, 1.2vh, 10px);
+  flex-shrink: 0;
 }
 
 /* Two-column wrap — used by charts with more legend entries (e.g. the
@@ -169,8 +191,8 @@
 .chart-card__legend--wrap {
   flex-direction: row;
   flex-wrap: wrap;
-  row-gap: 6px;
-  column-gap: 14px;
+  row-gap: clamp(4px, 0.8vh, 6px);
+  column-gap: clamp(8px, 1.6vh, 14px);
 }
 .chart-card__legend--wrap .chart-card__legend-item {
   flex: 0 0 calc(50% - 7px);
@@ -179,8 +201,8 @@
 .chart-card__legend-item {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
+  gap: clamp(4px, 0.8vh, 7px);
+  font-size: clamp(10.5px, 1.15vh, 12px);
 }
 
 /* Legend rows double as filter shortcuts — reset button chrome, keep the
@@ -207,8 +229,8 @@
 }
 
 .chart-card__legend-dot {
-  width: 9px;
-  height: 9px;
+  width: clamp(7px, 0.9vh, 9px);
+  height: clamp(7px, 0.9vh, 9px);
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -226,7 +248,7 @@
 
 .chart-card__legend-pct {
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: clamp(9.5px, 1.05vh, 11px);
   min-width: 44px;
   text-align: right;
 }
@@ -236,42 +258,50 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: clamp(6px, 1.2vh, 12px);
   flex: 1 1 auto;
-  min-height: 90px;
-  padding: 30px 20px;
+  min-height: clamp(56px, 9vh, 90px);
+  padding: clamp(12px, 2.6vh, 30px) clamp(10px, 1.8vh, 20px);
   text-align: center;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: clamp(11px, 1.25vh, 13px);
 }
 .chart-card__empty-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: clamp(32px, 4.6vh, 48px);
+  height: clamp(32px, 4.6vh, 48px);
   border-radius: 50%;
   background: var(--color-surface-alt);
   color: var(--color-text-muted);
+  flex-shrink: 0;
 }
-.chart-card__empty-icon svg { width: 22px; height: 22px; }
+.chart-card__empty-icon svg { width: 55%; height: 55%; }
 
 .chart-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0 4px;
-  margin-bottom: 4px;
+  padding: 0 0 clamp(2px, 0.4vh, 4px);
+  margin-bottom: clamp(2px, 0.4vh, 4px);
+  /* Pinned to its natural size (never allowed to flex-shrink) so it always
+     keeps its own space instead of being compressed toward zero-height at
+     low viewport heights, which used to let the row right below it (e.g.
+     "Patent") render visually on top of it. Combined with the fluid
+     clamp() sizing throughout this file, the content below should now
+     shrink to fit rather than needing to compress the header at all. */
+  flex-shrink: 0;
 }
 
 .chart-card__filter-select {
-  font-size: 11.5px;
+  font-size: clamp(10.5px, 1.15vh, 11.5px);
   font-weight: 600;
   color: var(--color-text-secondary);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  padding: 4px 10px;
+  padding: clamp(3px, 0.6vh, 4px) 10px;
   cursor: pointer;
   outline: none;
 }
@@ -286,9 +316,9 @@
 }
 
 .chart-card__type-tab {
-  font-size: 11px;
+  font-size: clamp(10px, 1.1vh, 11px);
   font-weight: 600;
-  padding: 4px 10px;
+  padding: clamp(3px, 0.6vh, 4px) 10px;
   border-radius: 6px;
   border: 1px solid var(--color-border);
   background: var(--color-surface-alt);
@@ -310,13 +340,14 @@
 
 /* Small pill stat shown in a chart-card__header, e.g. "6 of 10 certified" */
 .chart-card__badge {
-  font-size: 11px;
+  font-size: clamp(10px, 1.1vh, 11px);
   font-weight: 700;
   color: var(--color-success);
   background: var(--color-success-bg);
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: clamp(3px, 0.6vh, 4px) 10px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ToT legend as a tidy 3-column grid instead of a wrapping row, so six
@@ -324,10 +355,11 @@
 .chart-card__legend--grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px 12px;
-  margin-top: 14px;
-  padding-top: 12px;
+  gap: clamp(5px, 1vh, 8px) 12px;
+  margin-top: clamp(8px, 1.5vh, 14px);
+  padding-top: clamp(7px, 1.3vh, 12px);
   border-top: 1px solid var(--color-border-light);
+  flex-shrink: 0;
 }
 .chart-card__legend--grid .chart-card__legend-item { flex: none; }
 @media (max-width: 1400px) {
@@ -341,17 +373,26 @@
 .ipr-progress {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 16px;
+  /* Was `center`: with exactly 4 fixed rows, if the row content ever
+     runs a touch taller than the scroll-body's available height,
+     centering distributes that overflow to *both* ends — pushing the
+     last row's bottom (the "100%" label on a fully-granted type like
+     Copyright) past the parent's `overflow: hidden` edge and clipping
+     it. Anchoring to the top means any leftover slack shows up below
+     the last row instead, where clipping is invisible, and the first
+     row is never at risk. */
+  justify-content: flex-start;
+  gap: clamp(6px, 1.3vh, 12px);
   flex: 1 1 auto;
-  min-height: 90px;
-  padding: 4px 0;
+  min-height: 0;
+  padding: clamp(2px, 0.5vh, 4px) 0 clamp(4px, 0.8vh, 6px);
 }
 
 .ipr-progress__row {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: clamp(3px, 0.55vh, 5px);
+  flex-shrink: 0;
 }
 
 .ipr-progress__label-row {
@@ -362,7 +403,7 @@
 }
 
 .ipr-progress__type {
-  font-size: 12.5px;
+  font-size: clamp(11px, 1.25vh, 12.5px);
   font-weight: 700;
   color: var(--color-text-secondary);
 }
@@ -371,7 +412,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: clamp(10px, 1.1vh, 11.5px);
 }
 
 .ipr-progress__sep { color: var(--color-text-muted); }
@@ -391,12 +432,22 @@
 
 .ipr-progress__track {
   position: relative;
-  height: 20px;
-  border-radius: 7px;
+  height: clamp(13px, 1.7vh, 17px);
+  /* Was 7px — exactly half of this track's own minimum height (14px), so
+     at that minimum size (small/short viewports, where the clamp() above
+     bottoms out) the rounded corners meet in the middle with no flat
+     vertical zone left at all: the track becomes a full capsule end-to-end,
+     and anything flush against the right edge — the % label at 100%, or
+     even the crisp right edge of a lower fill — sits inside the curved
+     mask and gets clipped no matter how much padding it's given. Dropping
+     to 5px guarantees a few pixels of flat, unclipped zone even at the
+     smallest size the track ever renders at. */
+  border-radius: 5px;
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border-light);
   overflow: hidden;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .ipr-progress__track-empty {
@@ -405,7 +456,7 @@
   display: flex;
   align-items: center;
   padding-left: 9px;
-  font-size: 10.5px;
+  font-size: clamp(9.5px, 1vh, 10.5px);
   color: var(--color-text-muted);
   font-style: italic;
 }
@@ -417,14 +468,22 @@
   justify-content: flex-end;
   height: 100%;
   min-width: 0;
-  border-radius: 6px;
+  /* Right corners stay square instead of matching the track's rounded
+     corner: at 100% width the fill's own edge sits flush against the
+     track's right border, so a matching border-radius there was carving
+     a chunk out of the last few px of content width — exactly where the
+     right-aligned percentage label lives — and clipping the trailing
+     character (most visible on "100%"). Left corners keep a slightly
+     smaller radius than the track's own, so the fill nests cleanly inside
+     it instead of leaving a sliver of background visible at the seam. */
+  border-radius: 4px 0 0 4px;
   background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ipr-progress__fill-pct {
-  padding-right: 8px;
-  font-size: 10.5px;
+  padding-right: 10px;
+  font-size: clamp(9.5px, 1vh, 10.5px);
   font-weight: 800;
   color: #fff;
   white-space: nowrap;
@@ -435,16 +494,36 @@
   top: 50%;
   left: 8px;
   transform: translateY(-50%);
-  font-size: 10.5px;
+  font-size: clamp(9.5px, 1vh, 10.5px);
   font-weight: 800;
   color: var(--color-text-secondary);
   pointer-events: none;
 }
 
+/* Generic content region for a chart-card that sits between a pinned
+   header and a pinned footer/legend: takes whatever space is left and, at
+   the sizes that content realistically appears at, never needs to scroll
+   because everything inside it (see .ipr-progress above) uses fluid
+   clamp() sizing that shrinks together with the available room. No
+   scrollbar by design — see the .chart-card note at the top of this file. */
+.chart-card__scroll-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  /* Small reserved buffer so a row's descenders/labels never sit flush
+     against the clipping edge — see the .ipr-progress justify-content
+     note above for the clipping this guards against. */
+  padding-bottom: 2px;
+}
+
 .ipr-progress__legend {
-  margin-top: 12px;
-  padding-top: 10px;
+  margin-top: clamp(7px, 1.4vh, 12px);
+  padding-top: clamp(6px, 1.2vh, 10px);
   border-top: 1px solid var(--color-border-light);
+  /* Pinned below .chart-card__scroll-body, same reasoning as the header:
+     always keeps its own space instead of being squeezed to nothing (or
+     overlapping the row above it) when the card runs short on height. */
+  flex-shrink: 0;
 }
 
 /* ── Full-width trend chart (Item Growth Trend) ── */

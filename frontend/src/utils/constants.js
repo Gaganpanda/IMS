@@ -119,4 +119,7 @@ export const STATUS_BADGE_MAP = {
   "Pending":           "neutral",
   "Completed":         "success",
   "On Hold":           "warning",
+  // Shown on the Items table/card for a variant item whose variants don't
+  // all share the same status for that column — see ItemService#aggregatedStatus.
+  "Multiple":          "teal",
 };

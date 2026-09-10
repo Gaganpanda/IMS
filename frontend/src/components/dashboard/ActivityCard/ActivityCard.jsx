@@ -42,7 +42,7 @@ function ActivityList({ items }) {
           {!isLast && <span className="activity-card__rail-line" />}
         </div>
         <div className="activity-card__body">
-          <span className="activity-card__msg">{a.message}</span>
+          <span className="activity-card__msg" title={a.message}>{a.message}</span>
           <span className="activity-card__time">{timeAgo(a.createdAt)}</span>
         </div>
       </div>
