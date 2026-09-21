@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { authApi } from "../api/authApi";
+import { tokenStorage } from "../../utils/tokenStorage";
 
 /* ── Async thunks ── */
 export const loginAsync = createAsyncThunk(
@@ -7,7 +8,7 @@ export const loginAsync = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const res = await authApi.login(credentials);
-      localStorage.setItem("token", res.data.data.token);
+      tokenStorage.set(res.data.data.token);
       return res.data.data; // { token, tokenType, user }
     } catch (err) {
       return rejectWithValue(
@@ -40,7 +41,7 @@ export const logoutAsync = createAsyncThunk("auth/logout", async () => {
   try {
     await authApi.logout();
   } catch (_) {}
-  localStorage.removeItem("token");
+  tokenStorage.clear();
 });
 
 /* ── Slice ── */
@@ -48,7 +49,7 @@ const authSlice = createSlice({
   name: "auth",
   initialState: {
     user:    null,
-    token:   localStorage.getItem("token") || null,
+    token:   tokenStorage.get() || null,
     loading: false,
     error:   null,
   },
@@ -56,7 +57,7 @@ const authSlice = createSlice({
     logout(state) {
       state.user  = null;
       state.token = null;
-      localStorage.removeItem("token");
+      tokenStorage.clear();
     },
     clearAuthError(state) {
       state.error = null;
@@ -85,20 +86,19 @@ const authSlice = createSlice({
       // FIX: this used to clear the token/user on ANY rejection of
       // /auth/me — including plain network errors, timeouts, or a request
       // that got cancelled because the tab was closing. That meant a
-      // perfectly valid, unexpired token in localStorage could get wiped
-      // out by a transient failure (e.g. the backend not answering fast
-      // enough right as the app remounts after reopening a closed tab),
-      // silently bouncing a still-logged-in user back to the login page.
-      // Only a real "you are not authenticated" response (401/403) should
-      // end the session; anything else (no response at all, 5xx, etc.)
-      // just leaves the existing token in place so the next request can
-      // retry.
+      // perfectly valid, unexpired token could get wiped out by a
+      // transient failure (e.g. the backend not answering fast enough
+      // right as the app remounts), silently bouncing a still-logged-in
+      // user back to the login page. Only a real "you are not
+      // authenticated" response (401/403) should end the session;
+      // anything else (no response at all, 5xx, etc.) just leaves the
+      // existing token in place so the next request can retry.
       .addCase(fetchCurrentUserAsync.rejected, (state, action) => {
         const status = action.payload?.status;
         if (status === 401 || status === 403) {
           state.user  = null;
           state.token = null;
-          localStorage.removeItem("token");
+          tokenStorage.clear();
         }
       });
 
@@ -111,3 +111,4 @@ const authSlice = createSlice({
 
 export const { logout, clearAuthError } = authSlice.actions;
 export default authSlice.reducer;
+

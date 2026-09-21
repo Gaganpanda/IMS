@@ -1,5 +1,6 @@
 import axios from "axios";
 import toast from "react-hot-toast";
+import { tokenStorage } from "../utils/tokenStorage";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
@@ -12,7 +13,7 @@ const axiosInstance = axios.create({
 /* ── Request interceptor — attach JWT ── */
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = tokenStorage.get();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
@@ -30,16 +31,23 @@ axiosInstance.interceptors.response.use(
                  || "Something went wrong";
 
     // FIX: a failed /auth/login attempt (wrong password) also comes back as a
-    // 401, and it used to fall into this same branch — so on top of the
-    // correct inline "Invalid username or password" message under the field,
-    // the user also got a misleading "Session expired. Please login again."
-    // toast for a login they never had a session for in the first place. Only
-    // treat a 401 as a stale/expired session when it's *not* the login call
-    // itself.
+    // 401. The isLoginRequest branch below correctly skipped the misleading
+    // "Session expired. Please login again." toast for it, but a 401 that
+    // isn't caught by any of the more-specific `else if`s still fell all the
+    // way through to the generic `else if (status)` catch-all at the bottom,
+    // which toasted the same message Login.jsx already renders inline
+    // (`loginAsync.rejected`'s payload → state.auth.error) — so every failed
+    // login showed the identical "Invalid username or password" text twice:
+    // once inline, once as a toast. Returning early here instead of just
+    // skipping one branch stops it from reaching that catch-all at all.
     const isLoginRequest = error.config?.url?.includes("/auth/login");
 
-    if (status === 401 && !isLoginRequest) {
-      localStorage.removeItem("token");
+    if (status === 401 && isLoginRequest) {
+      return Promise.reject(error);
+    }
+
+    if (status === 401) {
+      tokenStorage.clear();
       window.dispatchEvent(new CustomEvent("auth:unauthorized"));
       toast.error("Session expired. Please login again.");
     } else if (status === 403) {

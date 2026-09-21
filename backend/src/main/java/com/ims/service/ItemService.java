@@ -14,7 +14,6 @@ import com.ims.exception.ResourceNotFoundException;
 import com.ims.model.Item;
 import com.ims.model.ItemDocument;
 import com.ims.model.ItemVariant;
-import com.ims.model.Notification;
 import com.ims.model.ToTPartner;
 import com.ims.model.TrialFeedback;
 import com.ims.model.TrialStakeholder;
@@ -261,16 +260,14 @@ public class ItemService {
                 // for the full explanation. A brand-new item never has variants yet
                 // regardless (they're only created afterwards via convertToVariant).
 
-                // Only "item created" notification is fired here — all other automatic
-                // notifications have been intentionally removed. ToT validity
-                // reminders are handled separately by the scheduled ToTReminderService.
-                notificationService.createNotification(
-                                "Item created",
-                                saved.getName() + " has been added to the system.",
-                                Notification.NotificationType.ITEM_ADDED,
-                                saved.getId(), saved.getName(),
-                                saved.getCreatedBy() != null ? saved.getCreatedBy().getId() : null);
-
+                // NOTE: no "item created" notification is fired here (and none for
+                // "variant added" either — see createVariant below). Purely
+                // informational events like these don't need a bell notification:
+                // the person doing the action already knows it happened, and it
+                // clutters the feed for everyone else without giving them anything
+                // to act on. Only actionable reminders (renewal/feedback/sample
+                // pending, overdue) generate notifications — see ToTReminderService
+                // and FeedbackReminderService.
                 log.info("Item created: {}", saved.getName());
                 clearAfterCommit("items");
                 clearAfterCommit("dashboard");
@@ -315,8 +312,8 @@ public class ItemService {
                 // them from request.getVariants() on every whole-item save would
                 // wipe out that independent data.
 
-                // Intentionally no "item updated" notification — per requirements, only
-                // "item created" and ToT validity notifications should be generated.
+                // Intentionally no "item updated" notification — only actionable
+                // reminders (renewal/feedback/sample pending) generate notifications.
                 log.info("Item updated: {}", saved.getName());
                 evictItemCaches(id);
                 return toResponse(saved);
@@ -366,9 +363,11 @@ public class ItemService {
         }
 
         /**
-         * Resolves any overdue reminder for samples that now have feedback, and
-         * fires a "Feedback received" notification the first time a sample's
-         * feedbackReceivedDate transitions from unset to set.
+         * Resolves (clears) any stale "sample pending" / "feedback overdue"
+         * reminder notifications for samples that now have a submission date or
+         * a feedback-received date, so the bell doesn't keep nagging about
+         * something that's already been handled. Deliberately does NOT create a
+         * new "feedback received" notification — see the NOTE inline below.
          */
         private void notifyNewlyReceivedFeedback(
                         Item item,
@@ -400,20 +399,13 @@ public class ItemService {
 
                                 notificationService.resolveFeedbackOverdueNotifications(item.getId(), sampleNo);
 
-                                boolean isNewlyReceived = !previouslyReceivedBySample.containsKey(sampleNo)
-                                                || previouslyReceivedBySample.get(sampleNo) == null;
-                                if (isNewlyReceived) {
-                                        notificationService.createNotification(
-                                                        "Feedback received",
-                                                        item.getName() + ": Feedback received from "
-                                                                        + (s.getStakeholderName() != null
-                                                                                        ? s.getStakeholderName()
-                                                                                        : "stakeholder")
-                                                                        + " for Sample " + sampleNo + ".",
-                                                        Notification.NotificationType.FEEDBACK_RECEIVED,
-                                                        item.getId(), item.getName(), ownerId,
-                                                        variantId, s.getId(), f.getId(), sampleNo);
-                                }
+                                // NOTE: no "Feedback received" notification is fired here.
+                                // Feedback arrives outside the system (email/call/in person)
+                                // and the admin is the one typing the received date in —
+                                // they already know it happened, so notifying them (or every
+                                // other admin) about their own data entry is pure noise.
+                                // isNewlyReceived is unused now that no notification fires
+                                // here; keep the boolean out entirely (see below).
                         });
                 });
         }
@@ -1197,13 +1189,8 @@ public class ItemService {
                 // the user fills in every tab from scratch, completely independent of
                 // every other variant.
 
-                notificationService.createNotification(
-                                "Variant added",
-                                saved.getName() + " has been added as a new variant of " + item.getName() + ".",
-                                Notification.NotificationType.ITEM_ADDED,
-                                item.getId(), item.getName(),
-                                item.getCreatedBy() != null ? item.getCreatedBy().getId() : null,
-                                saved.getId(), null, null);
+                // NOTE: no "Variant added" notification — same reasoning as
+                // "Item created" above (see createItem).
 
                 evictItemCaches(id);
                 return toResponse(findById(id));

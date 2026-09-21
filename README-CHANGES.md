@@ -3,6 +3,10 @@
 Spring Boot (Java 17) backend + React (Vite) frontend, MySQL for storage,
 Redis for caching. Fully dockerized.
 
+Passes 1–7 are below. Pass 8 (frontend security/test audit) and Pass 9
+(notification cleanup + real-time push fix) are written up separately in
+`audit-report.md`/`production-report.md` and `pass-9-report.md`.
+
 ## Quick start (Docker)
 
 ```bash

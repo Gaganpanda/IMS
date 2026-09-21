@@ -114,20 +114,19 @@ public class ToTReminderService {
         long daysUntilDue = ChronoUnit.DAYS.between(today, dueDate);
 
         if (daysUntilDue == 7) {
-            String message = label + ": Product Development Completion is due on "
-                    + dueDate + " (in 7 days).";
+            String message = label + ": development due in 7 days (" + dueDate + ").";
             if (notificationService.alreadySentToday(itemId, Notification.NotificationType.DEV_COMPLETION, message))
                 return;
             notificationService.createNotification(
-                    "Product development due soon", message,
+                    "Development due soon", message,
                     Notification.NotificationType.DEV_COMPLETION,
                     itemId, itemName, ownerId);
         } else if (daysUntilDue == 0) {
-            String message = label + ": Product Development Completion is due today (" + dueDate + ").";
+            String message = label + ": development due today.";
             if (notificationService.alreadySentToday(itemId, Notification.NotificationType.DEV_COMPLETION, message))
                 return;
             notificationService.createNotification(
-                    "Product development due today", message,
+                    "Development due today", message,
                     Notification.NotificationType.DEV_COMPLETION,
                     itemId, itemName, ownerId);
         } else if (daysUntilDue < 0) {
@@ -136,12 +135,11 @@ public class ToTReminderService {
             // same cadence as the ToT-validity "renewal pending" reminder.
             long daysOverdue = -daysUntilDue;
             if (daysOverdue % 7 == 0) {
-                String message = label + ": Product Development Completion was due on " + dueDate
-                        + " and the item is still not marked Developed.";
+                String message = label + ": development overdue by " + daysOverdue + "d (was due " + dueDate + ").";
                 if (notificationService.alreadySentToday(itemId, Notification.NotificationType.DEV_COMPLETION, message))
                     return;
                 notificationService.createNotification(
-                        "Product development overdue", message,
+                        "Development overdue", message,
                         Notification.NotificationType.DEV_COMPLETION,
                         itemId, itemName, ownerId);
             }
@@ -183,14 +181,14 @@ public class ToTReminderService {
                 // each day gets its own reminder instead of a single "one week out"
                 // notice, so the urgency actually ramps up as the date gets closer.
                 String dayWord = daysUntilExpiry == 1 ? "day" : "days";
-                String message = label + ": ToT validity with " + firmLabel
-                        + " expires on " + validityDate + " (in " + daysUntilExpiry + " " + dayWord + ").";
+                String message = label + ": ToT with " + firmLabel
+                        + " expires in " + daysUntilExpiry + " " + dayWord + " (" + validityDate + ").";
                 if (notificationService.alreadySentToday(item.getId(), Notification.NotificationType.TOT_VALIDITY,
                         message))
                     return;
                 String title = daysUntilExpiry == 1
-                        ? "ToT validity expires tomorrow"
-                        : "ToT validity expiring in " + daysUntilExpiry + " " + dayWord;
+                        ? "ToT expires tomorrow"
+                        : "ToT expiring in " + daysUntilExpiry + " " + dayWord;
                 notificationService.createNotification(
                         title, message,
                         Notification.NotificationType.TOT_VALIDITY,
@@ -200,10 +198,9 @@ public class ToTReminderService {
                 long daysSinceExpiry = -daysUntilExpiry;
                 if (daysSinceExpiry % 7 == 0) {
                     String message = daysSinceExpiry == 0
-                            ? label + ": ToT validity with " + firmLabel + " expires today (" + validityDate
-                                    + "). Renewal is pending."
-                            : label + ": ToT validity with " + firmLabel + " expired on " + validityDate
-                                    + " (" + daysSinceExpiry + " days ago). Renewal is still pending.";
+                            ? label + ": ToT with " + firmLabel + " expires today — renewal pending."
+                            : label + ": ToT with " + firmLabel + " expired " + daysSinceExpiry
+                                    + "d ago — renewal pending.";
                     if (notificationService.alreadySentToday(item.getId(), Notification.NotificationType.TOT_VALIDITY,
                             message))
                         return;

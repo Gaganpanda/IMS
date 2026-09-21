@@ -34,7 +34,17 @@ public class SecurityConfig {
             "/swagger-ui.html",
             "/v3/api-docs/**",
             "/actuator/health",
-            "/uploads/**"
+            "/uploads/**",
+            // The WebSocket/SockJS handshake can't carry a Bearer header (browsers
+            // don't allow custom headers on the WebSocket upgrade, and SockJS's
+            // XHR-streaming/polling fallbacks are opened by the sockjs-client
+            // library itself, not our own fetch/axios code). Authentication for
+            // this endpoint happens inside the handshake instead — see
+            // WsJwtHandshakeInterceptor — which validates a ?token= query param
+            // and refuses the handshake outright if it's missing or invalid, so
+            // this is not an open door: nothing reaches the STOMP broker without
+            // a valid JWT.
+            "/ws/**"
     };
 
     @Bean
