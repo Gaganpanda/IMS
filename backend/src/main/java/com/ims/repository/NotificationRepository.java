@@ -52,6 +52,26 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
                         @Param("type") Notification.NotificationType type);
 
         /**
+         * Same "clear the stale one before raising a fresh one" idea as the
+         * sample-keyed delete above, for the item/variant-level recurring
+         * reminders that have no sampleNo (ToT validity, dev-completion, IPR
+         * grant-pending): any still-unread reminder of this type for this
+         * exact item+variant combination is removed right before the next
+         * cycle's notification is created, so the bell always shows one
+         * current status per record instead of every past week's firing
+         * piling up forever. variantId is nullable (an item-level record has
+         * none), hence the explicit IS NULL branch — a plain "= :variantId"
+         * never matches a NULL column via SQL's three-valued logic.
+         */
+        @Modifying
+        @Query("DELETE FROM Notification n WHERE n.itemId = :itemId AND n.type = :type AND n.read = false "
+                        + "AND ((:variantId IS NULL AND n.variantId IS NULL) OR n.variantId = :variantId)")
+        void deleteByItemIdAndVariantIdAndTypeAndReadFalse(
+                        @Param("itemId") Long itemId,
+                        @Param("variantId") Long variantId,
+                        @Param("type") Notification.NotificationType type);
+
+        /**
          * Any existing (read or unread) overdue notification for this feedback —
          * used to avoid firing duplicate reminders.
          */

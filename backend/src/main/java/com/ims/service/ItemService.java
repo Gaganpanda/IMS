@@ -260,14 +260,15 @@ public class ItemService {
                 // for the full explanation. A brand-new item never has variants yet
                 // regardless (they're only created afterwards via convertToVariant).
 
-                // NOTE: no "item created" notification is fired here (and none for
-                // "variant added" either — see createVariant below). Purely
-                // informational events like these don't need a bell notification:
-                // the person doing the action already knows it happened, and it
-                // clutters the feed for everyone else without giving them anything
-                // to act on. Only actionable reminders (renewal/feedback/sample
-                // pending, overdue) generate notifications — see ToTReminderService
-                // and FeedbackReminderService.
+                // FIX: an "Item created" / "Variant added" notification used to fire
+                // here on every save. It's a pure log entry — nothing to action, no
+                // due date, nothing that ever needs a reminder — and it crowded the
+                // bell with noise next to the reminders that actually matter (sample
+                // pending, feedback pending, ToT validity, dev completion, IPR grant
+                // pending). Removed per product decision; ToT/feedback/dev-completion
+                // reminders are still handled separately by the scheduled
+                // ToTReminderService / FeedbackReminderService.
+
                 log.info("Item created: {}", saved.getName());
                 clearAfterCommit("items");
                 clearAfterCommit("dashboard");
@@ -312,8 +313,8 @@ public class ItemService {
                 // them from request.getVariants() on every whole-item save would
                 // wipe out that independent data.
 
-                // Intentionally no "item updated" notification — only actionable
-                // reminders (renewal/feedback/sample pending) generate notifications.
+                // Intentionally no "item updated" notification — per requirements, only
+                // "item created" and ToT validity notifications should be generated.
                 log.info("Item updated: {}", saved.getName());
                 evictItemCaches(id);
                 return toResponse(saved);
@@ -324,7 +325,6 @@ public class ItemService {
                         List<TrialStakeholderDTO> stakeholders) {
 
                 List<TrialStakeholder> previous = trialStakeholderRepository.findByItemId(item.getId());
-                java.util.Map<String, LocalDate> previouslyReceivedBySample = previousReceivedBySample(previous);
                 trialStakeholderRepository.deleteAll(previous);
 
                 if (stakeholders == null)
@@ -336,7 +336,7 @@ public class ItemService {
                         trialStakeholderRepository.save(t);
                 });
 
-                notifyNewlyReceivedFeedback(item, stakeholders, previouslyReceivedBySample, null);
+                notifyNewlyReceivedFeedback(item, stakeholders);
 
                 // Always re-derive the item's overall trials status from its stakeholders
                 // so the dashboard and item list always reflect individual stakeholder statuses
@@ -347,36 +347,22 @@ public class ItemService {
         }
 
         /**
-         * Snapshot of sampleNo → feedbackReceivedDate before a stakeholder list
-         * is wiped and rebuilt, so we can tell "feedback just came in on this
-         * save" apart from "feedback has been sitting here for a while" and
-         * avoid re-notifying every time the form is re-saved.
-         */
-        private java.util.Map<String, LocalDate> previousReceivedBySample(List<TrialStakeholder> previous) {
-                java.util.Map<String, LocalDate> map = new java.util.HashMap<>();
-                previous.forEach(s -> trialFeedbackRepository.findByTrialStakeholderId(s.getId()).forEach(f -> {
-                        if (f.getSampleNo() != null && !f.getSampleNo().isBlank()) {
-                                map.put(f.getSampleNo(), f.getFeedbackReceivedDate());
-                        }
-                }));
-                return map;
-        }
-
-        /**
-         * Resolves (clears) any stale "sample pending" / "feedback overdue"
-         * reminder notifications for samples that now have a submission date or
-         * a feedback-received date, so the bell doesn't keep nagging about
-         * something that's already been handled. Deliberately does NOT create a
-         * new "feedback received" notification — see the NOTE inline below.
+         * Resolves any outstanding "sample pending" / "feedback pending"
+         * reminder once the corresponding date is actually recorded.
+         *
+         * This used to also fire a "Feedback received" notification the first
+         * time a sample's feedbackReceivedDate transitioned from unset to set
+         * (which needed the previous-state snapshot and variant id this method
+         * no longer takes, to tell "just arrived" apart from "already old")
+         * — removed per product decision: it's a pure log entry with nothing
+         * to action, and crowded the bell next to reminders that actually
+         * need attention.
          */
         private void notifyNewlyReceivedFeedback(
                         Item item,
-                        List<TrialStakeholderDTO> stakeholders,
-                        java.util.Map<String, LocalDate> previouslyReceivedBySample,
-                        Long variantId) {
+                        List<TrialStakeholderDTO> stakeholders) {
                 if (stakeholders == null)
                         return;
-                Long ownerId = item.getCreatedBy() != null ? item.getCreatedBy().getId() : null;
 
                 stakeholders.forEach(s -> {
                         List<TrialFeedbackDTO> feedbacks = s.getFeedbacks();
@@ -398,14 +384,6 @@ public class ItemService {
                                         return;
 
                                 notificationService.resolveFeedbackOverdueNotifications(item.getId(), sampleNo);
-
-                                // NOTE: no "Feedback received" notification is fired here.
-                                // Feedback arrives outside the system (email/call/in person)
-                                // and the admin is the one typing the received date in —
-                                // they already know it happened, so notifying them (or every
-                                // other admin) about their own data entry is pure noise.
-                                // isNewlyReceived is unused now that no notification fires
-                                // here; keep the boolean out entirely (see below).
                         });
                 });
         }
@@ -649,7 +627,6 @@ public class ItemService {
 
         private void saveVariantTrialStakeholders(ItemVariant variant, List<TrialStakeholderDTO> stakeholders) {
                 List<TrialStakeholder> previous = trialStakeholderRepository.findByItemVariantId(variant.getId());
-                java.util.Map<String, LocalDate> previouslyReceivedBySample = previousReceivedBySample(previous);
                 trialStakeholderRepository.deleteAll(previous);
                 if (stakeholders == null)
                         return;
@@ -659,8 +636,7 @@ public class ItemService {
                         trialStakeholderRepository.save(t);
                 });
                 if (variant.getItem() != null) {
-                        notifyNewlyReceivedFeedback(variant.getItem(), stakeholders, previouslyReceivedBySample,
-                                        variant.getId());
+                        notifyNewlyReceivedFeedback(variant.getItem(), stakeholders);
                 }
                 if (!stakeholders.isEmpty()) {
                         variant.setTrialsStatus(deriveTrialsStatus(stakeholders));
@@ -1189,8 +1165,8 @@ public class ItemService {
                 // the user fills in every tab from scratch, completely independent of
                 // every other variant.
 
-                // NOTE: no "Variant added" notification — same reasoning as
-                // "Item created" above (see createItem).
+                // "Variant added" notification removed — see the matching note on
+                // item creation above.
 
                 evictItemCaches(id);
                 return toResponse(findById(id));

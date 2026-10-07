@@ -310,11 +310,17 @@ const Icons = {
   ),
 };
 
+// "item_added" and "feedback_received" were removed from here on purpose —
+// the backend no longer creates either type (pure log entries with nothing
+// to action) and purges any pre-existing rows on startup, so neither can
+// appear in real data any more. Nothing special needed if a stray one ever
+// does show up: TYPE_CONFIG.default below covers any unrecognized type.
 const TYPE_CONFIG = {
-  item_added: { color: "green", icon: "checkCirc", label: "Item Added" },
   status_changed: { color: "purple", icon: "layers", label: "Status Changed" },
   document_filled: { color: "orange", icon: "file", label: "Document Filled" },
-  ipr_changed: { color: "red", icon: "shield", label: "IPR Changed" },
+  // Fires when a patent/trademark/design/copyright has been filed but not
+  // yet granted, every 30 days — see ToTReminderService#checkIprCategory.
+  ipr_changed: { color: "red", icon: "shield", label: "IPR Grant Pending" },
   document_upload: {
     color: "blue",
     icon: "upload",
@@ -322,8 +328,10 @@ const TYPE_CONFIG = {
   },
   procurement: { color: "gold", icon: "cart", label: "Procurement" },
   trial_update: { color: "teal", icon: "flask", label: "Trial Update" },
-  feedback_received: { color: "green", icon: "checkCirc", label: "Feedback Received" },
-  feedback_overdue: { color: "red", icon: "alertTriangle", label: "Feedback Overdue" },
+  // Labelled "Feedback Pending" (not "Overdue") to match the softer wording
+  // used in the notification's own title/message — see
+  // FeedbackReminderService#checkAndNotify.
+  feedback_overdue: { color: "red", icon: "alertTriangle", label: "Feedback Pending" },
   sample_pending: { color: "orange", icon: "alertCircle", label: "Sample Pending" },
   tot_validity: { color: "blue", icon: "fileCheck", label: "ToT Validity" },
   dev_completion: { color: "purple", icon: "clock", label: "Dev Completion" },

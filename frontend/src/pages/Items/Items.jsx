@@ -71,7 +71,6 @@ const STATS = [
     key: "total",
     title: "Total Items",
     color: "blue",
-    link: "View all items",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
         strokeLinecap="round" strokeLinejoin="round">
@@ -177,7 +176,7 @@ export default function Items() {
     <div className="items-page animate-fade-in-up">
       {/* Stats row */}
       <div className="items-page__stats stagger-children">
-        {STATS.map(({ key, title, pctKey, color, icon, link }) => (
+        {STATS.map(({ key, title, pctKey, color, icon }) => (
           <div key={key} className={`items-stat-card items-stat-card--${color}`}>
             <div className="items-stat-card__icon">{icon}</div>
             <div className="items-stat-card__body">
@@ -187,11 +186,6 @@ export default function Items() {
               </span>
               {pctKey && dashStats?.[pctKey] != null && (
                 <span className="items-stat-card__sub">{dashStats[pctKey]}% of total</span>
-              )}
-              {link && (
-                <button className="items-stat-card__link" onClick={() => navigate("/items")}>
-                  {link}
-                </button>
               )}
             </div>
           </div>

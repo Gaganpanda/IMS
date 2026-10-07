@@ -3,10 +3,6 @@
 Spring Boot (Java 17) backend + React (Vite) frontend, MySQL for storage,
 Redis for caching. Fully dockerized.
 
-Passes 1–7 are below. Pass 8 (frontend security/test audit) and Pass 9
-(notification cleanup + real-time push fix) are written up separately in
-`audit-report.md`/`production-report.md` and `pass-9-report.md`.
-
 ## Quick start (Docker)
 
 ```bash
@@ -468,3 +464,101 @@ knowing if a similar mystery 500 shows up again on a different column.
   non-moving background pulse (previous pulse keyframes were also
   self-canceling — 0%/100% used a 0px-wide shadow and 50% used a
   fully-transparent one, so neither state was ever actually visible).
+
+## Pass 8 — Session persistence, notification overhaul, Items/Add Item UX
+
+### Changed (by request — session behavior)
+- **Login now requires credentials again every time the browser/tab is
+  closed**, even if the JWT itself hasn't expired yet (bank-style, not
+  "stay signed in" like Gmail). The token moved from `localStorage` to
+  `sessionStorage` (new `frontend/src/utils/tokenStorage.js`, used by
+  `authSlice.js` and `axiosInstance.js`) — `sessionStorage` survives an
+  in-tab refresh but is cleared automatically the instant the tab/browser
+  closes, with no timer or `beforeunload` handler needed. A stray leftover
+  token in `localStorage` from before this change is cleaned up
+  automatically on load.
+- Fixed a real bug found while adding tests for the above: a failed login
+  attempt showed its error message **twice** — once inline (correct) and
+  once as a duplicate toast, because the interceptor's `/auth/login`
+  special-case only skipped the *mislabeled* "Session expired" toast, not
+  the generic catch-all underneath it that still fired for any unhandled
+  401.
+
+### Fixed — notifications firing daily / piling up (by request)
+- **Root cause of "the same notification every day": ToT validity used to
+  send one reminder for every single day of its final week before expiry**
+  (7, 6, 5, 4, 3, 2, 1 days out — by design, not a bug, but exactly what
+  reads as daily spam). Collapsed to the same one-at-7-days /
+  one-on-the-day / one-every-7-days-after shape already used for
+  Development Completion.
+- **Root cause of the "Sample Pending" bell count growing to dozens of
+  entries:** every periodic reminder (sample pending, feedback
+  overdue/pending, ToT validity, dev completion) inserted a brand-new row
+  on every 7-day re-fire and never cleaned up the previous one, so an item
+  pending for months left behind one unread notification per week,
+  forever. `NotificationService` gained two methods —
+  `createSampleKeyedReminder` and `createRecurringReminder` — that delete
+  the previous still-unread reminder for the exact same record right
+  before creating the new one, so the bell always shows one current status
+  per record instead of an ever-growing backlog. Applied to every periodic
+  reminder in `FeedbackReminderService` and `ToTReminderService`.
+
+### Removed (by request — "of no use")
+- **"Item Added" and "Feedback Received" notifications removed entirely.**
+  Both were pure log entries with nothing to action, crowding the bell
+  next to reminders that actually matter. `ItemService` no longer creates
+  either type; `SchemaRepairRunner` now also purges any pre-existing rows
+  of both types on every boot (idempotent, like its other startup checks)
+  so existing deployments don't have to wait for them to be manually
+  cleared.
+- "Feedback Overdue" renamed to **"Feedback Pending"** (title, message
+  wording, and the frontend category label) — same 7-day threshold and
+  behavior, softer wording per product decision.
+
+### Added
+- **New "IPR Grant Pending" reminder** (`ToTReminderService
+  #sendIprGrantPendingReminders`): previously nothing ever followed up on
+  a patent/trademark/design/copyright that was filed but never resolved
+  to granted — it could sit "Filed" indefinitely with no nudge. Fires
+  every 30 days (not 7 — IP prosecution runs on a months/years timescale,
+  a weekly nudge would just be noise) for each of the four IPR categories,
+  independently, per item or variant. Reuses the existing `IPR_CHANGED`
+  enum value, which was declared but never actually used anywhere before
+  this.
+
+### Items page
+- Removed the "View all items" link under the Total Items stat card — it
+  navigated to `/items`, the page already being viewed, so it was a
+  no-op click.
+
+### Add Item page
+- **"Next" now validates Step 1's required fields (Item Name, Category,
+  Development Status, Description) before advancing to Step 2.**
+  Previously these were only checked when clicking "Create Item" on the
+  final step, which then had to jump the user all the way back to Step 1
+  if something was missing — now it's caught the moment you try to leave
+  the step it's on.
+- **"Cancel" now asks for confirmation if anything has actually been
+  entered** (Step 1 fields, an uploaded image, any ToT partner, IPR
+  filing, trial stakeholder, document, or procurement entry) instead of
+  discarding a partially-filled, possibly long record with one misclick.
+  Note: this covers the footer Cancel button specifically — the page's
+  breadcrumb "Items" link still navigates away immediately without asking,
+  since guarding it too would mean lifting this form's dirty-state up into
+  the parent page component, a larger change left for a follow-up if
+  wanted.
+
+### Testing
+- Added `tokenStorage.test.js` (5 tests) and updated
+  `authSlice.test.js`/`axiosInstance.test.js` to assert against
+  `sessionStorage`. Full frontend suite: 70/70 passing, verified by
+  actually running it. `npm run build` re-verified clean after every
+  change in this pass.
+- Backend changes (NotificationService, FeedbackReminderService,
+  ToTReminderService, ItemService, NotificationRepository,
+  SchemaRepairRunner) were reviewed by hand and cross-checked for
+  parameter/signature consistency across every call site, but **not
+  compiled** — this environment has no route to Maven Central, so there is
+  no automated backend verification for this pass. See
+  `production-report.md` for the full, honest accounting of what was and
+  wasn't verified.

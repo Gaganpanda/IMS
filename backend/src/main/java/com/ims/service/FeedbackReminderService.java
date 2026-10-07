@@ -21,20 +21,27 @@ import java.time.temporal.ChronoUnit;
  * Watches every trial-feedback round for stakeholders that have gone quiet.
  *
  * Rule: once a sample has been submitted and 7 days pass with no feedback
- * received, the round is marked Feedback Overdue, a ⚠ notification is fired,
- * and the item/variant gets its warning icon. The moment feedbackReceivedDate
- * is set (via the normal item/variant save), the overdue flag is cleared and
- * any outstanding reminder notification for that record is resolved — see
- * ItemService#buildStakeholder /
- * NotificationService#resolveFeedbackOverdueNotifications.
+ * received, the round is marked Feedback Overdue internally (the item/
+ * variant gets its warning icon), and a "Feedback pending" notification is
+ * fired. The moment feedbackReceivedDate is set (via the normal item/variant
+ * save), the overdue flag is cleared and any outstanding reminder
+ * notification for that record is resolved — see ItemService#buildStakeholder
+ * / NotificationService#resolveFeedbackOverdueNotifications.
  *
  * This job only ever *raises* the flag; it never lowers it (that happens the
  * moment feedback is recorded). Once a round crosses the 7-day mark it keeps
- * getting reminded every 7 days after that (same cadence as the ToT-validity
- * "renewal pending" reminder) instead of firing once and going silent, since
- * a still-unresolved round genuinely needs to keep surfacing until it's dealt
- * with. `alreadySentToday` (message text includes the exact day count) makes
- * sure re-running the scan on the same day can't spam duplicates.
+ * getting reminded every 7 days after that instead of firing once and going
+ * silent, since a still-unresolved round genuinely needs to keep surfacing
+ * until it's dealt with — but each new firing replaces the previous week's
+ * still-unread notification for that exact sample
+ * (NotificationService#createSampleKeyedReminder) rather than stacking on
+ * top of it, so the bell shows one current "Nd pending" status per sample,
+ * not a new entry every single week forever. `alreadySentToday` (message
+ * text includes the exact day count) separately guards against the same
+ * day's scan running twice (e.g. a restart right after the 08:00 cron).
+ *
+ * Same pattern and cadence below for samples that were requested but never
+ * submitted at all ("Sample submission pending").
  */
 @Service
 @RequiredArgsConstructor
@@ -127,15 +134,21 @@ public class FeedbackReminderService {
         ItemVariant variant = stakeholder.getItemVariant();
         String stakeholderLabel = stakeholderLabel(stakeholder);
 
+        // "Feedback pending" (not "overdue") — softer wording per product
+        // decision; the 7-day threshold itself hasn't changed.
         String message = item.getName() + " — feedback from " + stakeholderLabel
-                + " is " + daysSinceSubmission + "d overdue";
+                + " still pending (" + daysSinceSubmission + "d)";
         if (notificationService.alreadySentToday(item.getId(), Notification.NotificationType.FEEDBACK_OVERDUE,
                 message)) {
             return;
         }
 
-        notificationService.createNotification(
-                "Feedback overdue",
+        // createSampleKeyedReminder (not createNotification) clears last
+        // week's still-unread "feedback pending" entry for this exact sample
+        // before raising the new one, so the bell shows only the current
+        // 7/14/21-day status instead of a growing stack of every past week.
+        notificationService.createSampleKeyedReminder(
+                "Feedback pending",
                 message,
                 Notification.NotificationType.FEEDBACK_OVERDUE,
                 item.getId(), item.getName(), ownerId,
@@ -144,7 +157,7 @@ public class FeedbackReminderService {
                 f.getId(),
                 f.getSampleNo());
 
-        log.info("Feedback overdue reminder sent — item '{}', stakeholder '{}', {} days", item.getName(),
+        log.info("Feedback pending reminder sent — item '{}', stakeholder '{}', {} days", item.getName(),
                 stakeholderLabel, daysSinceSubmission);
     }
 
@@ -185,7 +198,10 @@ public class FeedbackReminderService {
             return;
         }
 
-        notificationService.createNotification(
+        // createSampleKeyedReminder clears last week's still-unread entry for
+        // this exact sample first — see the comment on the feedback-pending
+        // branch above for why.
+        notificationService.createSampleKeyedReminder(
                 "Sample submission pending",
                 message,
                 Notification.NotificationType.SAMPLE_PENDING,

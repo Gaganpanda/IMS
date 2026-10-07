@@ -106,10 +106,17 @@ const CRATES = [
   { size: 40, x: -190, y: -60, z: -10, ry: 40, delay: 0.9,  dur: 10.5 },
 ];
 
+/* These describe real capabilities of the system (item lifecycle
+   tracking, IPR status across patent/trademark/design/copyright,
+   and field-trial stakeholder/feedback tracking) rather than
+   fabricated "live" numbers — an earlier version of this screen
+   showed invented precise-looking stats (e.g. a specific item
+   count and accuracy percentage) that had no backing data source
+   and could mislead a user into thinking they were real metrics. */
 const READOUTS = [
-  { label: "Items Tracked",  value: "2,481", depth: 0.55, x: "6%",  y: "18%" },
-  { label: "Stock Accuracy", value: "98.6%", depth: 0.85, x: "62%", y: "8%"  },
-  { label: "Active Trials",  value: "24",    depth: 0.35, x: "70%", y: "62%" },
+  { label: "Item Lifecycle",  value: "Tracked", depth: 0.55, x: "6%",  y: "18%" },
+  { label: "IPR Status",      value: "Monitored", depth: 0.85, x: "62%", y: "8%"  },
+  { label: "Field Trials",    value: "Logged",  depth: 0.35, x: "70%", y: "62%" },
 ];
 
 export default function Login() {
@@ -215,7 +222,8 @@ export default function Login() {
     };
   }, [reduceMotion]);
 
-  const onSubmit = (data) => dispatch(loginAsync(data));
+  const onSubmit = (data) =>
+    dispatch(loginAsync({ ...data, username: data.username.trim() }));
 
   return (
     <div
@@ -330,7 +338,7 @@ export default function Login() {
               <p className="loginV2__subtitle">Sign in with your DIPAS credentials to continue</p>
 
               {error && (
-                <div className="loginV2__error" role="alert">
+                <div className="loginV2__error loginV2__error--shake" role="alert" key={error}>
                   <IconAlert />
                   {error}
                 </div>
@@ -346,14 +354,24 @@ export default function Login() {
                       className="field-input"
                       placeholder=" "
                       autoComplete="username"
+                      autoFocus
+                      aria-invalid={errors.username ? "true" : "false"}
+                      aria-describedby={errors.username ? "login-username-error" : undefined}
                       onFocus={() => setFocusField("username")}
                       onBlur={() => setFocusField(null)}
                       {...register("username", { required: "Username is required" })}
+                      onKeyUp={(e) => {
+                        if (typeof e.getModifierState === "function") {
+                          setCapsLockOn(e.getModifierState("CapsLock"));
+                        }
+                      }}
                     />
                     <label className="field-label" htmlFor="login-username">Username</label>
                   </div>
                   {errors.username && (
-                    <span className="field-error"><IconAlert />{errors.username.message}</span>
+                    <span className="field-error" id="login-username-error">
+                      <IconAlert />{errors.username.message}
+                    </span>
                   )}
                 </div>
 
@@ -367,6 +385,14 @@ export default function Login() {
                       className="field-input field-input--pw"
                       placeholder=" "
                       autoComplete="current-password"
+                      aria-invalid={errors.password ? "true" : "false"}
+                      aria-describedby={
+                        errors.password
+                          ? "login-password-error"
+                          : capsLockOn
+                          ? "login-password-capslock"
+                          : undefined
+                      }
                       onFocus={() => setFocusField("password")}
                       onBlur={() => setFocusField(null)}
                       {...register("password", { required: "Password is required" })}
@@ -387,10 +413,14 @@ export default function Login() {
                     </button>
                   </div>
                   {capsLockOn && !errors.password && (
-                    <span className="field-warning"><IconAlert />Caps Lock is on</span>
+                    <span className="field-warning" id="login-password-capslock">
+                      <IconAlert />Caps Lock is on
+                    </span>
                   )}
                   {errors.password && (
-                    <span className="field-error"><IconAlert />{errors.password.message}</span>
+                    <span className="field-error" id="login-password-error">
+                      <IconAlert />{errors.password.message}
+                    </span>
                   )}
                 </div>
 
@@ -409,6 +439,10 @@ export default function Login() {
                   )}
                 </button>
               </form>
+
+              <p className="loginV2__forgot">
+                Forgot your password? Contact your system administrator.
+              </p>
 
               <div className="loginV2__secure">
                 <span className="loginV2__secure-icon"><IconShield /></span>

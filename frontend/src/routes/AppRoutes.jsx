@@ -2,8 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchCurrentUserAsync } from "../redux/slices/authSlice";
-import { fetchNotificationsAsync, pushNotification } from "../redux/slices/notificationSlice";
-import { connectNotificationSocket, disconnectNotificationSocket } from "../services/notificationSocket";
+import { fetchNotificationsAsync } from "../redux/slices/notificationSlice";
 import MainLayout from "../components/layout/MainLayout/MainLayout";
 import Loader from "../components/common/Loader/Loader";
 
@@ -52,24 +51,11 @@ function AppBootstrap() {
     return () => window.removeEventListener("auth:unauthorized", handler);
   }, [navigate]);
 
-  /* Poll notifications every 60 s while logged in — a fallback safety net;
-   * the WebSocket connection below is what actually delivers notifications
-   * in real time, this just covers the gap during a reconnect. */
+  /* Poll notifications every 60 s while logged in */
   useEffect(() => {
     if (!token) return;
     const id = setInterval(() => dispatch(fetchNotificationsAsync()), 60_000);
     return () => clearInterval(id);
-  }, [token, dispatch]);
-
-  /* Real-time push over WebSocket/STOMP — see notificationSocket.js for why
-   * this didn't exist before and what it fixes. */
-  useEffect(() => {
-    if (!token) {
-      disconnectNotificationSocket();
-      return;
-    }
-    connectNotificationSocket(token, (notification) => dispatch(pushNotification(notification)));
-    return () => disconnectNotificationSocket();
   }, [token, dispatch]);
 
   return null;

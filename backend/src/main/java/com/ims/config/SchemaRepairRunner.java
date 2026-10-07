@@ -53,6 +53,29 @@ public class SchemaRepairRunner implements CommandLineRunner {
         widenColumnIfNeeded("notifications", "item_name", "VARCHAR(200) NULL");
         backfillVersionIfNeeded("items");
         backfillVersionIfNeeded("item_variants");
+        purgeRetiredNotificationTypes();
+    }
+
+    /**
+     * Product decision: "Item created" (ITEM_ADDED) and "Feedback received"
+     * (FEEDBACK_RECEIVED) notifications are pure log entries — nothing to
+     * action, no due date — and were crowding the bell next to reminders
+     * that actually need attention. The services that created them have been
+     * changed to stop generating new ones (ItemService), but any that were
+     * already sitting in the database before this change would otherwise
+     * stay there forever. This clears them out on every boot; idempotent —
+     * a no-op once none are left.
+     */
+    private void purgeRetiredNotificationTypes() {
+        try {
+            int deleted = jdbcTemplate.update(
+                    "DELETE FROM notifications WHERE type IN ('ITEM_ADDED', 'FEEDBACK_RECEIVED')");
+            if (deleted > 0) {
+                log.info("Schema repair: removed {} retired ITEM_ADDED/FEEDBACK_RECEIVED notification(s)", deleted);
+            }
+        } catch (Exception e) {
+            log.debug("Schema repair skipped for retired notification cleanup: {}", e.getMessage());
+        }
     }
 
     /**

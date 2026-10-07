@@ -281,6 +281,69 @@ public class NotificationService {
         }
     }
 
+    /*
+     * ── Recurring reminders: replace, don't pile up ──
+     *
+     * Every periodic reminder (sample pending, feedback overdue, ToT
+     * validity, dev-completion, IPR grant-pending) re-fires every 7 (or 30)
+     * days for as long as the underlying thing stays unresolved. Previously
+     * each firing just inserted a brand-new row, so a sample that's been
+     * sitting for a year accumulated a new unread "Sample Pending" entry
+     * every single week forever, with the old ones never going away on
+     * their own — that's what turned a handful of genuinely overdue items
+     * into dozens of stale, redundant notifications, and made the bell feel
+     * like it was firing constantly even though any one record only reminds
+     * once a week. These two methods delete the previous still-unread
+     * reminder for the exact same record right before creating the new one,
+     * so the bell always shows one current status per record, not a growing
+     * backlog of every past week's ping. (A reminder the user has already
+     * read is left alone — marking one read is "I've seen this", not
+     * "resolved", so it isn't touched here.)
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createSampleKeyedReminder(
+            String title,
+            String message,
+            Notification.NotificationType type,
+            Long itemId,
+            String itemName,
+            Long ownerUserId,
+            Long variantId,
+            Long stakeholderId,
+            Long feedbackId,
+            String sampleNo) {
+        if (itemId != null && sampleNo != null && !sampleNo.isBlank()) {
+            try {
+                notificationRepository.deleteByItemIdAndSampleNoAndTypeAndReadFalse(itemId, sampleNo, type);
+            } catch (Exception e) {
+                log.error("Failed to clear previous '{}' reminder for item {} sample '{}': {}",
+                        type, itemId, sampleNo, e.getMessage());
+            }
+        }
+        createNotification(title, message, type, itemId, itemName, ownerUserId, variantId, stakeholderId, feedbackId,
+                sampleNo);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createRecurringReminder(
+            String title,
+            String message,
+            Notification.NotificationType type,
+            Long itemId,
+            String itemName,
+            Long ownerUserId,
+            Long variantId) {
+        if (itemId != null) {
+            try {
+                notificationRepository.deleteByItemIdAndVariantIdAndTypeAndReadFalse(itemId, variantId, type);
+            } catch (Exception e) {
+                log.error("Failed to clear previous '{}' reminder for item {} variant {}: {}",
+                        type, itemId, variantId, e.getMessage());
+            }
+        }
+        createNotification(title, message, type, itemId, itemName, ownerUserId, variantId, null, null, null);
+    }
+
     /* ── Mapper ── */
     private NotificationDTO.Response toResponse(Notification n) {
         return NotificationDTO.Response.builder()

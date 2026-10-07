@@ -363,7 +363,8 @@ export default function AddItemForm({ onCancel, onSuccess }) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    trigger,
+    formState: { errors, isDirty },
   } = useForm();
 
   const iprHasErrors = () =>
@@ -372,12 +373,56 @@ export default function AddItemForm({ onCancel, onSuccess }) {
         (iprData[key].filed && !iprData[key].filingNo) ||
         (iprData[key].granted && !iprData[key].grantNo),
     );
-  const goNext = () => {
+
+  // FIX: "Next" used to advance straight from Step 1 to Step 2 with no
+  // validation at all — the required Item Name/Category/Development
+  // Status/Description fields only got checked once you clicked "Create
+  // Item" on the final step, which then had to jump you all the way back to
+  // Step 1 (see onInvalid below). Validating here means a missing required
+  // field is caught the moment you try to leave the step it's on, not five
+  // steps later after filling in ToT, IPR, trials, docs and procurement.
+  const goNext = async () => {
+    if (step === 1) {
+      const valid = await trigger(["name", "category", "developmentStatus", "description"]);
+      if (!valid) return;
+    }
     if (step === 3 && iprHasErrors()) return;
     setDone((p) => new Set([...p, step]));
     setStep((s) => Math.min(s + 1, STEPS.length));
   };
   const goPrev = () => setStep((s) => Math.max(s - 1, 1));
+
+  // Anything worth warning about losing on Cancel? Step 1's own fields are
+  // covered by react-hook-form's isDirty; everything else here (ToT
+  // partners, IPR filings, trial stakeholders, documentation, procurement,
+  // the uploaded image) lives in plain useState and wouldn't otherwise be
+  // noticed by isDirty at all.
+  const hasUnsavedWork = () =>
+    isDirty ||
+    !!imageFile ||
+    !!totStatus ||
+    totPartners.length > 0 ||
+    stakeholders.length > 0 ||
+    procurements.length > 0 ||
+    customDocuments.length > 0 ||
+    pendingFiles.length > 0 ||
+    checkedDocs.size > 0 ||
+    ["patent", "trademark", "design", "copyright"].some(
+      (key) => iprData[key].filed || iprData[key].granted,
+    );
+
+  // FIX: Cancel used to discard everything immediately with no confirmation
+  // — one misclick partway through a long record (trial stakeholders, ToT
+  // partners, procurement entries, an uploaded image...) meant redoing all
+  // of it. Now it only asks when there's actually something to lose.
+  const handleCancel = () => {
+    if (hasUnsavedWork() && !window.confirm(
+      "Discard this new item? Everything you've entered so far will be lost.",
+    )) {
+      return;
+    }
+    onCancel?.();
+  };
 
   const onSubmit = async (data) => {
     const payload = {
@@ -1376,7 +1421,7 @@ export default function AddItemForm({ onCancel, onSuccess }) {
             <button
               type="button"
               className="aif__nav-btn aif__nav-btn--cancel"
-              onClick={onCancel}>
+              onClick={handleCancel}>
               {Icons.close} Cancel
             </button>
             {step < STEPS.length ? (
